@@ -268,6 +268,37 @@ function processarMissa(clerigoId, valorTotal, listaParticipanteIds, custoIndivi
     });
 }
 
+function processarColeta(narradorId, recompensa, listaColetas) {
+    return new Promise((resolve, reject) => {
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION;");
+
+            const dataAtual = new Date().toISOString();
+            const motivoNarrador = "Recompensa por Narrar Missão de Coleta";
+
+            const sqlNarrador = `UPDATE usuarios SET saldo = saldo + ? WHERE discord_id = ?`;
+            db.run(sqlNarrador, [recompensa, narradorId]);
+            const sqlLogNarrador = `INSERT INTO transacoes (usuario_id, data, descricao, valor, tipo) VALUES (?, ?, ?, ?, 'RECOMPENSA')`;
+            db.run(sqlLogNarrador, [narradorId, dataAtual, motivoNarrador, recompensa]);
+
+            listaColetas.forEach(coleta => {
+                const motivoColeta = `Coleta de Missão: ${coleta.item}`;
+                const sqlLogColeta = `INSERT INTO transacoes (usuario_id, data, descricao, valor, tipo) VALUES (?, ?, ?, 0, 'RECOMPENSA')`;
+                db.run(sqlLogColeta, [coleta.jogadorId, dataAtual, motivoColeta]);
+            });
+
+            db.run("COMMIT;", (err) => {
+                if (err) {
+                    db.run("ROLLBACK;");
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    });
+}
+
 module.exports = {
     db,
     getUsuario,
@@ -279,5 +310,6 @@ module.exports = {
     registrarCooldown,
     registrarCooldownManavitra,
     registrarGasto,
-    processarMissa 
+    processarMissa,
+    processarColeta 
 };

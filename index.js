@@ -1,6 +1,17 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-const { getUsuario, addUsuario, realizarVenda, modificarSaldo, processarMissao, registrarGasto, processarMissa, registrarCooldownManavitra, registrarRecompensa } = require('./database.js');
+const { 
+    getUsuario, 
+    addUsuario, 
+    realizarVenda, 
+    modificarSaldo, 
+    processarMissao, 
+    registrarGasto, 
+    processarMissa, 
+    registrarCooldownManavitra, 
+    registrarRecompensa, 
+    processarColeta 
+} = require('./database.js');
 
 const commands = [
     {
@@ -42,6 +53,11 @@ const commands = [
         name: '!missa',
         description: 'Um clérigo vende o serviço de Missa, dividindo o custo total entre os participantes.',
         syntax: '!missa <valor_total> <@player1> <@player2> ...'
+    },
+    {
+        name: '!coleta',
+        description: 'Registra uma missão de coleta, dando recompensa ao narrador e itens (não-monetários) aos jogadores. (Apenas Admins)',
+        syntax: '!coleta <ND> $ <@Player1> $ <Item1> $ <@Player2> $ <Item2> ...'
     }
 ];
 
@@ -597,6 +613,71 @@ client.on('messageCreate', async (message) => {
         }
     }
 
+    else if (command === 'coleta') {
+
+        const conteudoComando = args.join(' ');
+        const parts = conteudoComando.split('$').map(p => p.trim());
+
+        if (parts.length < 3 || parts.length % 2 === 0) {
+            return message.reply("Sintaxe incorreta! Use: `!coleta <ND> $ <@Player1> $ <Item 1> $ <@Player2> $ <Item 2> ...`");
+        }
+
+        const nd = parseInt(parts[0]);
+        const argsColeta = parts.slice(1);
+
+        if (isNaN(nd) || nd < 1 || nd > 20) {
+            return message.reply("O ND (Nível de Desafio) deve ser um número entre 1 e 20.");
+        }
+
+        let coletas = [];
+        for (let i = 0; i < argsColeta.length; i += 2) {
+            const mencao = argsColeta[i];
+            const item = argsColeta[i + 1];
+            const jogadorId = mencao.replace(/[<@!>]/g, '');
+
+            if (!/^\d+$/.test(jogadorId) || !item) {
+                return message.reply(`Argumento inválido encontrado no par: \`${mencao}\` e \`${item}\`. Verifique a sintaxe.`);
+            }
+            coletas.push({ jogadorId, item });
+        }
+
+        const recompensaNarrador = nd * 2 * 100;
+        const narradorId = message.author.id;
+
+        try {
+            const dadosNarrador = await getUsuario(narradorId);
+            if (!dadosNarrador) return message.reply("Você (narrador) não está cadastrado!");
+
+            let dadosJogadores = [];
+            for (const coleta of coletas) {
+                const jogador = await getUsuario(coleta.jogadorId);
+                if (!jogador) {
+                    return message.reply(`Erro: O usuário <@${coleta.jogadorId}> não está cadastrado.`);
+                }
+                dadosJogadores.push({ ...jogador, itemColetado: coleta.item });
+            }
+
+            await processarColeta(narradorId, recompensaNarrador, coletas);
+
+            const listaColetasStr = dadosJogadores.map(p => `• ${p.personagem} coletou: **${p.itemColetado}**`).join('\n');
+            const sucessoEmbed = new EmbedBuilder()
+                .setColor('#2ECC71')
+                .setTitle('🌿 Missão de Coleta Concluída!')
+                .setDescription('As recompensas da missão foram distribuídas com sucesso.')
+                .addFields(
+                    { name: 'Recompensa do Narrador', value: `+ ${formatarMoeda(recompensaNarrador)} para ${dadosNarrador.personagem}` },
+                    { name: 'Itens Coletados pelos Jogadores', value: listaColetasStr }
+                )
+                .setTimestamp();
+
+            await message.channel.send({ embeds: [sucessoEmbed] });
+
+        } catch (err) {
+            console.error("Erro no comando !coleta:", err);
+            await message.reply("Ocorreu um erro crítico ao processar a coleta. A transação foi revertida para segurança.");
+        }
+    }
+
 });
 
-client.login('Seu token Aqui');
+client.login('Token');
