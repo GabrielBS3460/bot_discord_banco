@@ -32,6 +32,16 @@ const commands = [
         name: '!recompensa',
         description: 'Registra a recompensa para missões de quadro',
         syntax: '!recompensa <nd do player 1-20>'
+    },
+    {
+        name: '!gasto',
+        description: 'Registra um gasto pessoal e debita o valor do seu saldo.',
+        syntax: '!gasto <valor> <motivo do gasto>'
+    },
+    {
+        name: '!missa',
+        description: 'Um clérigo vende o serviço de Missa, dividindo o custo total entre os participantes.',
+        syntax: '!missa <valor_total> <@player1> <@player2> ...'
     }
 ];
 
@@ -589,4 +599,4 @@ client.on('messageCreate', async (message) => {
 
 });
 
-client.login("Seu Token Aqui");
+client.login('Seu token Aqui');
