@@ -1,17 +1,6 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-const { 
-    getUsuario, 
-    addUsuario, 
-    realizarVenda, 
-    modificarSaldo, 
-    processarMissao, 
-    registrarGasto, 
-    processarMissa, 
-    registrarCooldownManavitra, 
-    registrarRecompensa, 
-    processarColeta 
-} = require('./database.js');
+const prisma = require('./database.js');
 
 const commands = [
     {
@@ -25,9 +14,9 @@ const commands = [
         syntax: '!cadastrar <nome_do_personagem>'
     },
     {
-        name: '!saldo',
-        description: 'Verifica o seu saldo atual em conta.',
-        syntax: '!saldo'
+        name: '!extrato',
+        description: 'Mostra seu saldo atual e suas transações recentes.',
+        syntax: '!extrato'
     },
     {
         name: '!venda',
@@ -58,6 +47,11 @@ const commands = [
         name: '!coleta',
         description: 'Registra uma missão de coleta, dando recompensa ao narrador e itens (não-monetários) aos jogadores. (Apenas Admins)',
         syntax: '!coleta <ND> $ <@Player1> $ <Item1> $ <@Player2> $ <Item2> ...'
+    },
+    {
+        name: '!abandonar',
+        description: 'Arquiva seu personagem atual, permitindo que você crie um novo.',
+        syntax: '!abandonar'
     }
 ];
 
@@ -100,21 +94,7 @@ client.on('messageCreate', async (message) => {
     const args = message.content.slice(prefix.length).trim().split(/ +/);
     const command = args.shift().toLowerCase();
 
-    if (command === 'saldo') {
-        try {
-            const usuario = await getUsuario(message.author.id);
-            if (usuario) {
-                await message.reply(`Olá, ${usuario.personagem}! Seu saldo atual é de **${formatarMoeda(usuario.saldo)}**.`);
-            } else {
-                await message.reply("Você ainda não possui um personagem cadastrado. Use o comando `!cadastrar <nome_do_personagem>` para começar.");
-            }
-        } catch (err) {
-            console.error("Erro ao consultar saldo:", err);
-            await message.reply("Ocorreu um erro ao tentar consultar seu saldo.");
-        }
-    }
-
-    else if (command === 'cadastrar') {
+    if (command === 'cadastrar') {
         if (args.length === 0) {
             return message.reply("Uso incorreto! Digite `!cadastrar <nome do seu personagem>`.");
         }
@@ -122,13 +102,22 @@ client.on('messageCreate', async (message) => {
         const nomePersonagem = args.join(' ');
 
         try {
-            const usuarioExistente = await getUsuario(message.author.id);
+            const usuarioExistente = await prisma.usuarios.findUnique({
+                where: {
+                    discord_id: message.author.id,
+                },
+            });
 
             if (usuarioExistente) {
                 await message.reply(`Você já está cadastrado com o personagem **${usuarioExistente.personagem}**!`);
             } else {
-                await addUsuario(message.author.id, nomePersonagem);
-                await message.reply(`Parabéns! Seu personagem **${nomePersonagem}** foi criado com sucesso! Use \`!saldo\` para ver seu saldo inicial.`);
+                const novoUsuario = await prisma.usuarios.create({
+                    data: {
+                        discord_id: message.author.id,
+                        personagem: nomePersonagem,
+                    }
+                });
+                await message.reply(`Parabéns! Seu personagem **${novoUsuario.personagem}** foi criado com sucesso! Use \`!saldo\` para ver seu saldo inicial.`);
             }
         } catch (err) {
             console.error("Erro ao cadastrar usuário:", err);
@@ -150,7 +139,7 @@ client.on('messageCreate', async (message) => {
         const valor = parseFloat(parts[1]);
         const item = parts[2];
         const linkItem = parts[3];
-
+        
         if (!compradorMencionado || compradorMencionado.bot) {
             return message.reply("Você precisa mencionar um usuário válido que está comprando o item!");
         }
@@ -163,41 +152,35 @@ client.on('messageCreate', async (message) => {
         if (!item) {
             return message.reply("Você precisa especificar o item que está sendo vendido!");
         }
-        if (!linkItem) {
-            return message.reply("Você precisa fornecer um link válido para o item!");
+        if (!linkItem || !linkItem.startsWith('http')) {
+            return message.reply("Você precisa fornecer um link válido (que comece com http ou https) para o item!");
         }
 
         try {
-            const dadosVendedor = await getUsuario(vendedor.id);
-            const dadosComprador = await getUsuario(compradorMencionado.id);
+            const [dadosVendedor, dadosComprador] = await Promise.all([
+                prisma.usuarios.findUnique({ where: { discord_id: vendedor.id } }),
+                prisma.usuarios.findUnique({ where: { discord_id: compradorMencionado.id } })
+            ]);
 
             if (!dadosVendedor) return message.reply("Você não está cadastrado! Use `!cadastrar` primeiro.");
             if (!dadosComprador) return message.reply(`O usuário ${compradorMencionado.username} não está cadastrado.`);
-            if (dadosComprador.saldo < valor) return message.reply(`O comprador não tem saldo suficiente! Saldo dele: **T$${dadosComprador.saldo.toFixed(2)}**`);
+            if (dadosComprador.saldo < valor) return message.reply(`O comprador não tem saldo suficiente! Saldo dele: **${formatarMoeda(dadosComprador.saldo)}**`);
             
             const propostaEmbed = new EmbedBuilder()
                 .setColor('#0099FF')
                 .setTitle('❓ Proposta de Venda')
-                .setDescription(`${vendedor.username} está propondo vender **${item}** para ${compradorMencionado.username}.`)
+                .setDescription(`${vendedor.username} está propondo vender **[${item}](${linkItem})** para ${compradorMencionado.username}.`)
+                .setThumbnail(linkItem)
                 .addFields(
-                    { name: 'Valor da Transação', value: `T$${valor.toFixed(2)}` },
-                    { name: 'Comprador', value: `Aguardando confirmação de ${compradorMencionado.username}...` },
-                    { name: 'Link do item', value: `${linkItem}`}
+                    { name: 'Valor da Transação', value: formatarMoeda(valor) },
+                    { name: 'Comprador', value: `Aguardando confirmação de ${compradorMencionado.username}...` }
                 )
                 .setFooter({ text: 'Esta proposta expira em 60 segundos.'});
 
             const botoes = new ActionRowBuilder()
                 .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('confirmar_venda')
-                        .setLabel('Confirmar Compra')
-                        .setStyle(ButtonStyle.Success)
-                        .setEmoji('✔️'),
-                    new ButtonBuilder()
-                        .setCustomId('cancelar_venda')
-                        .setLabel('Cancelar')
-                        .setStyle(ButtonStyle.Danger)
-                        .setEmoji('✖️')
+                    new ButtonBuilder().setCustomId('confirmar_venda').setLabel('Confirmar Compra').setStyle(ButtonStyle.Success).setEmoji('✔️'),
+                    new ButtonBuilder().setCustomId('cancelar_venda').setLabel('Cancelar').setStyle(ButtonStyle.Danger).setEmoji('✖️')
                 );
 
             const mensagemProposta = await message.channel.send({
@@ -213,20 +196,51 @@ client.on('messageCreate', async (message) => {
                 await interaction.deferUpdate();
 
                 if (interaction.customId === 'confirmar_venda') {
-                    await realizarVenda(vendedor.id, compradorMencionado.id, valor, item);
+                    
+                    await prisma.$transaction([
+                        prisma.usuarios.update({
+                            where: { discord_id: compradorMencionado.id },
+                            data: { saldo: { decrement: valor } }
+                        }),
+                        prisma.usuarios.update({
+                            where: { discord_id: vendedor.id },
+                            data: { saldo: { increment: valor } }
+                        }),
+                        prisma.transacao.create({
+                            data: {
+                                usuario_id: compradorMencionado.id,
+                                descricao: `Compra de ${item} de ${vendedor.username}`,
+                                valor: valor,
+                                tipo: 'COMPRA'
+                            }
+                        }),
+                        prisma.transacao.create({
+                            data: {
+                                usuario_id: vendedor.id,
+                                descricao: `Venda de ${item} para ${compradorMencionado.username}`,
+                                valor: valor,
+                                tipo: 'VENDA'
+                            }
+                        })
+                    ]);
                     
                     const sucessoEmbed = new EmbedBuilder()
                         .setColor('#00FF00')
                         .setTitle('✅ Venda Realizada com Sucesso!')
-                        .setDescription(`**${item}** foi vendido com sucesso!`)
+                        .setDescription(`**[${item}](${linkItem})** foi vendido com sucesso!`)
+                        .setThumbnail(linkItem)
                         .addFields(
                             { name: 'Vendedor', value: vendedor.username, inline: true },
                             { name: 'Comprador', value: compradorMencionado.username, inline: true },
-                            { name: 'Valor', value: `T$${valor.toFixed(2)}` },
-                            { name: 'Link do item', value: `${linkItem}`}
+                            { name: 'Valor', value: formatarMoeda(valor) }
                         );
                     
-                    await mensagemProposta.edit({ embeds: [sucessoEmbed], components: [] });
+                    const linkButtonRow = new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder().setLabel('Ver Item Comprado').setStyle(ButtonStyle.Link).setURL(linkItem)
+                        );
+
+                    await mensagemProposta.edit({ embeds: [sucessoEmbed], components: [linkButtonRow] });
                     collector.stop();
                 } 
                 else if (interaction.customId === 'cancelar_venda') {
@@ -258,23 +272,40 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'modificar-saldo') {
+
         const alvo = message.mentions.users.first();
         const valor = parseFloat(args[1]);
         const motivo = args.slice(2).join(' ') || 'Modificação administrativa';
 
         if (!alvo || isNaN(valor)) {
-            return message.reply("Sintaxe incorreta! Use: `!modificar-saldo <@usuario> <valor>`");
+            return message.reply("Sintaxe incorreta! Use: `!modificar-saldo <@usuario> <valor> [motivo]`");
         }
 
         try {
-            const dadosAlvo = await getUsuario(alvo.id);
+            const dadosAlvo = await prisma.usuarios.findUnique({
+                where: { discord_id: alvo.id }
+            });
+
             if (!dadosAlvo) {
                 return message.reply("Este usuário não está cadastrado!");
             }
 
-            await modificarSaldo(alvo.id, valor, motivo);
+            const [updatedAlvo, _] = await prisma.$transaction([
+                prisma.usuarios.update({
+                    where: { discord_id: alvo.id },
+                    data: { saldo: { increment: valor } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        usuario_id: alvo.id,
+                        descricao: motivo,
+                        valor: Math.abs(valor),
+                        tipo: valor >= 0 ? 'RECOMPENSA' : 'GASTO'
+                    }
+                })
+            ]);
 
-            const novoSaldo = dadosAlvo.saldo + valor;
+            const novoSaldo = updatedAlvo.saldo;
 
             const embed = new EmbedBuilder()
                 .setColor('#FFA500')
@@ -282,8 +313,8 @@ client.on('messageCreate', async (message) => {
                 .setDescription(`O saldo de **${alvo.username}** foi modificado pelo administrador.`)
                 .addFields(
                     { name: 'Usuário Afetado', value: alvo.username, inline: true },
-                    { name: 'Modificação', value: `T$ ${valor.toFixed(2)}`, inline: true },
-                    { name: 'Novo Saldo', value: `**T$ ${novoSaldo.toFixed(2)}**` },
+                    { name: 'Modificação', value: `${valor >= 0 ? '+' : ''} ${formatarMoeda(valor)}`, inline: true },
+                    { name: 'Novo Saldo', value: `**${formatarMoeda(novoSaldo)}**` },
                     { name: 'Motivo', value: motivo }
                 )
                 .setFooter({ text: `Ação realizada por: ${message.author.username}` })
@@ -327,13 +358,16 @@ client.on('messageCreate', async (message) => {
         const dificuldade = parseInt(args[0]);
         const custoPorPlayer = parseFloat(args[1]);
         
-        const playerIds = MencoesDosPlayers.map(user => user.id);
+        const playerIds = MencoesDosPlayers.map(user => user.id).filter(id => id !== message.author.id);
 
         if (isNaN(dificuldade) || dificuldade < 1 || dificuldade > 20) {
             return message.reply("A dificuldade deve ser um número entre 1 e 20.");
         }
         if (isNaN(custoPorPlayer) || custoPorPlayer < 0) {
             return message.reply("O custo por player deve ser um número positivo.");
+        }
+        if (playerIds.length === 0) {
+            return message.reply("Nenhum jogador válido (que não seja você) foi fornecido para a cobrança.");
         }
 
         let patamar = 0;
@@ -346,31 +380,60 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
-            const narrador = await getUsuario(narradorId);
+            const todosOsIds = [narradorId, ...playerIds];
+            const todosOsUsuarios = await prisma.usuarios.findMany({
+                where: { discord_id: { in: todosOsIds } }
+            });
+
+            const userMap = new Map(todosOsUsuarios.map(u => [u.discord_id, u]));
+            
+            const narrador = userMap.get(narradorId);
             if (!narrador) return message.reply("Você (narrador) não está cadastrado no bot!");
 
             let playersData = [];
             for (const id of playerIds) {
-                if (id === narradorId) continue; 
-                
-                const player = await getUsuario(id);
+                const player = userMap.get(id);
                 if (!player) {
-                    return message.reply(`Erro: O usuário ${message.mentions.users.get(id).username} não foi encontrado ou não está cadastrado.`);
+                    return message.reply(`Erro: O usuário <@${id}> não foi encontrado ou não está cadastrado.`);
                 }
                 if (player.saldo < custoPorPlayer) {
-                    return message.reply(`Erro: O jogador ${player.personagem} não tem saldo suficiente! (Saldo: T$${player.saldo.toFixed(2)})`);
+                    return message.reply(`Erro: O jogador ${player.personagem} não tem saldo suficiente! (Saldo: ${formatarMoeda(player.saldo)})`);
                 }
                 playersData.push(player);
             }
 
-            const idsFinaisParaCobrar = playersData.map(p => p.discord_id);
-            if (idsFinaisParaCobrar.length === 0) {
-                return message.reply("Nenhum jogador válido foi fornecido para a cobrança.");
+            let operacoes = [];
+            operacoes.push(prisma.usuarios.update({
+                where: { discord_id: narradorId },
+                data: { saldo: { increment: recompensaNarrador } }
+            }));
+            operacoes.push(prisma.transacao.create({
+                data: {
+                    usuario_id: narradorId,
+                    descricao: `Recompensa por Narrar Missão Solicitada (ND ${dificuldade})`,
+                    valor: recompensaNarrador,
+                    tipo: 'RECOMPENSA'
+                }
+            }));
+
+            for (const player of playersData) {
+                operacoes.push(prisma.usuarios.update({
+                    where: { discord_id: player.discord_id },
+                    data: { saldo: { decrement: custoPorPlayer } }
+                }));
+                operacoes.push(prisma.transacao.create({
+                    data: {
+                        usuario_id: player.discord_id,
+                        descricao: `Custo de Missão Solicitada (Narrador: ${narrador.personagem})`,
+                        valor: custoPorPlayer,
+                        tipo: 'GASTO'
+                    }
+                }));
             }
 
-            await processarMissao(narradorId, recompensaNarrador, idsFinaisParaCobrar, custoPorPlayer);
+            await prisma.$transaction(operacoes);
 
-            const playersAfetadosStr = playersData.map(p => `• ${p.personagem} (- R$${custoPorPlayer.toFixed(2)})`).join('\n');
+            const playersAfetadosStr = playersData.map(p => `• ${p.personagem} (- ${formatarMoeda(custoPorPlayer)})`).join('\n');
             
             const sucessoEmbed = new EmbedBuilder()
                 .setColor('#5865F2')
@@ -378,7 +441,7 @@ client.on('messageCreate', async (message) => {
                 .setDescription('Os custos e recompensas da missão foram processados.')
                 .addFields(
                     { name: 'Narrador', value: `${narrador.personagem}`, inline: true },
-                    { name: 'Recompensa Recebida', value: `+ T$${recompensaNarrador.toFixed(2)}`, inline: true },
+                    { name: 'Recompensa Recebida', value: `+ ${formatarMoeda(recompensaNarrador)}`, inline: true },
                     { name: 'Dificuldade (Patamar)', value: `${dificuldade} (${patamar})`, inline: true },
                     { name: 'Jogadores Participantes', value: playersAfetadosStr }
                 )
@@ -404,7 +467,10 @@ client.on('messageCreate', async (message) => {
         }
 
         try {
-            const jogador = await getUsuario(message.author.id);
+            const jogador = await prisma.usuarios.findUnique({
+                where: { discord_id: message.author.id }
+            });
+
             if (!jogador) {
                 return message.reply("Você não está cadastrado! Use `!cadastrar` primeiro.");
             }
@@ -425,14 +491,31 @@ client.on('messageCreate', async (message) => {
             if (nd < 9) {
                 const patamar = (nd >= 1 && nd <= 4) ? 1 : 2;
                 const recompensaFinal = 100 * nd * patamar;
-                await registrarRecompensa(jogador.discord_id, recompensaFinal, `Recompensa de Missão Normal (ND ${nd})`);
+                
+                const [updatedJogador, _] = await prisma.$transaction([
+                    prisma.usuarios.update({
+                        where: { discord_id: jogador.discord_id },
+                        data: {
+                            saldo: { increment: recompensaFinal },
+                            ultimo_resgate_recompensa: new Date()
+                        }
+                    }),
+                    prisma.transacao.create({
+                        data: {
+                            usuario_id: jogador.discord_id,
+                            descricao: `Recompensa de Missão Normal (ND ${nd})`,
+                            valor: recompensaFinal,
+                            tipo: 'RECOMPENSA'
+                        }
+                    })
+                ]);
                 
                 const recompensaEmbed = new EmbedBuilder()
                     .setColor('#FFD700')
                     .setTitle('🏆 Recompensa Resgatada!')
                     .addFields(
-                        { name: 'Valor Recebido', value: `**+ T$${recompensaFinal.toFixed(2)}**` },
-                        { name: 'Novo Saldo', value: `T$${(jogador.saldo + recompensaFinal).toFixed(2)}` }
+                        { name: 'Valor Recebido', value: `**+ ${formatarMoeda(recompensaFinal)}**` },
+                        { name: 'Novo Saldo', value: formatarMoeda(updatedJogador.saldo) }
                     );
                 return message.reply({ embeds: [recompensaEmbed] });
             } 
@@ -467,21 +550,35 @@ client.on('messageCreate', async (message) => {
                         else if (nd >= 17 && nd <= 20) patamar = 4;
                         
                         const recompensaFinal = 100 * nd * patamar;
-                        await registrarRecompensa(jogador.discord_id, recompensaFinal, `Recompensa de Missão Normal (ND ${nd})`);
+
+                        const [updatedJogador, __] = await prisma.$transaction([
+                            prisma.usuarios.update({
+                                where: { discord_id: jogador.discord_id },
+                                data: {
+                                    saldo: { increment: recompensaFinal },
+                                    ultimo_resgate_recompensa: new Date()
+                                }
+                            }),
+                            prisma.transacao.create({
+                                data: {
+                                    usuario_id: jogador.discord_id,
+                                    descricao: `Recompensa de Missão Normal (ND ${nd})`,
+                                    valor: recompensaFinal,
+                                    tipo: 'RECOMPENSA'
+                                }
+                            })
+                        ]);
 
                         const recompensaEmbed = new EmbedBuilder()
                             .setColor('#FFD700').setTitle('🏆 Recompensa em Dinheiro Resgatada!')
                             .addFields(
-                                { name: 'Valor Recebido', value: `**+ T$${recompensaFinal.toFixed(2)}**` },
-                                { name: 'Novo Saldo', value: `T$${(jogador.saldo + recompensaFinal).toFixed(2)}` }
+                                { name: 'Valor Recebido', value: `**+ ${formatarMoeda(recompensaFinal)}**` },
+                                { name: 'Novo Saldo', value: formatarMoeda(updatedJogador.saldo) }
                             );
                         await interaction.editReply({ embeds: [recompensaEmbed], components: [] });
                     } 
                     else if (interaction.customId === 'recompensa_manavitra') {
-                        const jogadorAtualizado = await getUsuario(interaction.user.id);
-                        const ultimoResgateManavitra = jogadorAtualizado.ultimo_resgate_manavitra;
-
-                        if (ultimoResgateManavitra && isSameWeek(new Date(), new Date(ultimoResgateManavitra))) {
+                        if (jogador.ultimo_resgate_manavitra && isSameWeek(new Date(), new Date(jogador.ultimo_resgate_manavitra))) {
                             const erroEmbed = new EmbedBuilder()
                                 .setColor('#FF0000').setTitle('🚫 Limite Atingido')
                                 .setDescription('Você já resgatou uma Manavitra esta semana (Domingo a Sábado).');
@@ -489,7 +586,14 @@ client.on('messageCreate', async (message) => {
                             return collector.stop();
                         }
 
-                        await registrarCooldownManavitra(jogador.discord_id);
+                        await prisma.usuarios.update({
+                            where: { discord_id: jogador.discord_id },
+                            data: {
+                                ultimo_resgate_manavitra: new Date(),
+                                ultimo_resgate_recompensa: new Date()
+                            }
+                        });
+
                         const manavitraEmbed = new EmbedBuilder()
                             .setColor('#8A2BE2').setTitle('🔮 Uma Escolha Sábia!')
                             .setDescription(`${jogador.personagem} abdica das riquezas e recebe uma **Manavitra**!`);
@@ -523,7 +627,10 @@ client.on('messageCreate', async (message) => {
         }
 
         try {
-            const jogador = await getUsuario(message.author.id);
+            const jogador = await prisma.usuarios.findUnique({
+                where: { discord_id: message.author.id }
+            });
+
             if (!jogador) {
                 return message.reply("Você não está cadastrado! Use `!cadastrar` primeiro.");
             }
@@ -531,9 +638,22 @@ client.on('messageCreate', async (message) => {
                 return message.reply(`Você não tem saldo suficiente para este gasto! Seu saldo atual é de **${formatarMoeda(jogador.saldo)}**.`);
             }
 
-            await registrarGasto(jogador.discord_id, valorGasto, motivo);
+            const [updatedJogador, _] = await prisma.$transaction([
+                prisma.usuarios.update({
+                    where: { discord_id: jogador.discord_id },
+                    data: { saldo: { decrement: valorGasto } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        usuario_id: jogador.discord_id,
+                        descricao: motivo,
+                        valor: valorGasto,
+                        tipo: 'GASTO'
+                    }
+                })
+            ]);
 
-            const novoSaldo = jogador.saldo - valorGasto;
+            const novoSaldo = updatedJogador.saldo;
 
             const gastoEmbed = new EmbedBuilder()
                 .setColor('#FF0000')
@@ -556,8 +676,8 @@ client.on('messageCreate', async (message) => {
 
     else if (command === 'missa') {
         const clerigo = message.author;
-
         const Mencoes = message.mentions.users;
+
         if (args.length < 2 || Mencoes.size === 0) {
             return message.reply("Sintaxe incorreta! Use: `!missa <valor_total> <@player1> <@player2> ...`");
         }
@@ -576,12 +696,19 @@ client.on('messageCreate', async (message) => {
         const custoIndividual = valorTotal / participanteIds.length;
 
         try {
-            const dadosClerigo = await getUsuario(clerigo.id);
+            const todosOsIds = [clerigo.id, ...participanteIds];
+            const todosOsUsuarios = await prisma.usuarios.findMany({
+                where: { discord_id: { in: todosOsIds } }
+            });
+
+            const userMap = new Map(todosOsUsuarios.map(u => [u.discord_id, u]));
+
+            const dadosClerigo = userMap.get(clerigo.id);
             if (!dadosClerigo) return message.reply("Você (o clérigo) não está cadastrado! Use `!cadastrar`.");
 
             let dadosParticipantes = [];
             for (const id of participanteIds) {
-                const participante = await getUsuario(id);
+                const participante = userMap.get(id);
                 if (!participante) {
                     return message.reply(`Erro: O usuário <@${id}> não está cadastrado.`);
                 }
@@ -591,7 +718,37 @@ client.on('messageCreate', async (message) => {
                 dadosParticipantes.push(participante);
             }
 
-            await processarMissa(clerigo.id, valorTotal, participanteIds, custoIndividual);
+            const operacoes = [
+                prisma.usuarios.update({
+                    where: { discord_id: clerigo.id },
+                    data: { saldo: { increment: valorTotal } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        usuario_id: clerigo.id,
+                        descricao: `Venda de serviço de Missa para ${dadosParticipantes.length} jogadores`,
+                        valor: valorTotal,
+                        tipo: 'VENDA'
+                    }
+                })
+            ];
+
+            for (const participante of dadosParticipantes) {
+                operacoes.push(prisma.usuarios.update({
+                    where: { discord_id: participante.discord_id },
+                    data: { saldo: { decrement: custoIndividual } }
+                }));
+                operacoes.push(prisma.transacao.create({
+                    data: {
+                        usuario_id: participante.discord_id,
+                        descricao: `Custo de serviço de Missa com ${dadosClerigo.personagem}`,
+                        valor: custoIndividual,
+                        tipo: 'GASTO'
+                    }
+                }));
+            }
+
+            await prisma.$transaction(operacoes);
 
             const listaParticipantesStr = dadosParticipantes.map(p => `• ${p.personagem}`).join('\n');
             const sucessoEmbed = new EmbedBuilder()
@@ -645,19 +802,52 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
-            const dadosNarrador = await getUsuario(narradorId);
+            const todosOsIds = [narradorId, ...coletas.map(c => c.jogadorId)];
+            const todosOsUsuarios = await prisma.usuarios.findMany({
+                where: { discord_id: { in: todosOsIds } }
+            });
+
+            const userMap = new Map(todosOsUsuarios.map(u => [u.discord_id, u]));
+            
+            const dadosNarrador = userMap.get(narradorId);
             if (!dadosNarrador) return message.reply("Você (narrador) não está cadastrado!");
 
             let dadosJogadores = [];
             for (const coleta of coletas) {
-                const jogador = await getUsuario(coleta.jogadorId);
+                const jogador = userMap.get(coleta.jogadorId);
                 if (!jogador) {
                     return message.reply(`Erro: O usuário <@${coleta.jogadorId}> não está cadastrado.`);
                 }
                 dadosJogadores.push({ ...jogador, itemColetado: coleta.item });
             }
 
-            await processarColeta(narradorId, recompensaNarrador, coletas);
+            const operacoes = [
+                prisma.usuarios.update({
+                    where: { discord_id: narradorId },
+                    data: { saldo: { increment: recompensaNarrador } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        usuario_id: narradorId,
+                        descricao: `Recompensa por Narrar Missão de Coleta (ND ${nd})`,
+                        valor: recompensaNarrador,
+                        tipo: 'RECOMPENSA'
+                    }
+                })
+            ];
+
+            for (const coleta of coletas) {
+                operacoes.push(prisma.transacao.create({
+                    data: {
+                        usuario_id: coleta.jogadorId,
+                        descricao: `Coleta de Missão: ${coleta.item}`,
+                        valor: 0,
+                        tipo: 'RECOMPENSA'
+                    }
+                }));
+            }
+
+            await prisma.$transaction(operacoes);
 
             const listaColetasStr = dadosJogadores.map(p => `• ${p.personagem} coletou: **${p.itemColetado}**`).join('\n');
             const sucessoEmbed = new EmbedBuilder()
@@ -678,6 +868,118 @@ client.on('messageCreate', async (message) => {
         }
     }
 
+    else if (command === 'abandonar') {
+        try {
+            const jogador = await prisma.usuarios.findUnique({
+                where: { discord_id: message.author.id }
+            });
+
+            if (!jogador) {
+                return message.reply("Você não possui um personagem para abandonar.");
+            }
+
+            const confirmacaoEmbed = new EmbedBuilder()
+                .setColor('#FF0000')
+                .setTitle(`⚠️ Confirmação de Abandono`)
+                .setDescription(`Você tem certeza que deseja abandonar o personagem **${jogador.personagem}**?`)
+                .addFields({ name: 'Consequências', value: 'Você perderá o acesso a este personagem e seu saldo. Esta ação não pode ser desfeita. Você ficará livre para criar um novo personagem.'})
+                .setFooter({ text: 'Esta confirmação expira em 30 segundos.' });
+
+            const botoes = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder().setCustomId('confirmar_abandono').setLabel('Sim, abandonar').setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder().setCustomId('cancelar_abandono').setLabel('Não, cancelar').setStyle(ButtonStyle.Secondary)
+                );
+            
+            const mensagemConfirmacao = await message.reply({
+                embeds: [confirmacaoEmbed],
+                components: [botoes],
+                fetchReply: true
+            });
+
+            const filter = i => i.user.id === message.author.id;
+            const collector = mensagemConfirmacao.createMessageComponentCollector({ filter, time: 30000 });
+
+            collector.on('collect', async interaction => {
+                await interaction.deferUpdate();
+                if (interaction.customId === 'confirmar_abandono') {
+                    const idArquivado = `ARQUIVADO-${jogador.discord_id}`;
+
+                    await prisma.usuarios.update({
+                        where: { discord_id: jogador.discord_id },
+                        data: { discord_id: idArquivado }
+                    });
+
+                    const sucessoEmbed = new EmbedBuilder()
+                        .setColor('#808080')
+                        .setTitle('🏴 Personagem Abandonado')
+                        .setDescription(`O personagem **${jogador.personagem}** foi arquivado com sucesso. Você agora está livre para usar o comando \`!cadastrar\` e iniciar uma nova jornada.`);
+                    
+                    await interaction.editReply({ embeds: [sucessoEmbed], components: [] });
+                } else {
+                    await interaction.editReply({ content: 'Ação cancelada.', embeds: [], components: [] });
+                }
+                collector.stop();
+            });
+
+            collector.on('end', collected => {
+                if (collected.size === 0) {
+                    mensagemConfirmacao.edit({ content: 'Confirmação expirada.', embeds: [], components: [] });
+                }
+            });
+
+        } catch (err) {
+            console.error("Erro no comando !abandonar:", err);
+            await message.reply("Ocorreu um erro ao tentar abandonar seu personagem.");
+        }
+    }
+
+    else if (command === 'extrato') {
+        try {
+            const usuarioComTransacoes = await prisma.usuarios.findUnique({
+                where: {
+                    discord_id: message.author.id,
+                },
+                include: {
+                    transacoes: {
+                        orderBy: {
+                            data: 'desc',
+                        },
+                        take: 10,
+                    },
+                },
+            });
+
+            if (!usuarioComTransacoes) {
+                return message.reply("Você não está cadastrado! Use `!cadastrar` primeiro.");
+            }
+
+            const extratoEmbed = new EmbedBuilder()
+                .setColor('#1ABC9C')
+                .setTitle(`Extrato de ${usuarioComTransacoes.personagem}`)
+                .addFields(
+                    { name: 'Saldo Atual', value: `**${formatarMoeda(usuarioComTransacoes.saldo)}**` }
+                );
+
+            if (usuarioComTransacoes.transacoes.length > 0) {
+                const transacoesStr = usuarioComTransacoes.transacoes.map(t => {
+                    const sinal = (t.tipo === 'GASTO' || t.tipo === 'COMPRA') ? '-' : '+';
+                    const dataFormatada = new Date(t.data).toLocaleDateString('pt-BR');
+                    return `\`${dataFormatada}\` ${sinal} ${formatarMoeda(t.valor)} - *${t.descricao}*`;
+                }).join('\n');
+
+                extratoEmbed.addFields({ name: 'Transações Recentes', value: transacoesStr });
+            } else {
+                extratoEmbed.addFields({ name: 'Transações Recentes', value: 'Nenhuma transação registrada.' });
+            }
+            
+            await message.reply({ embeds: [extratoEmbed] });
+
+        } catch (err) {
+            console.error("Erro no comando !extrato:", err);
+            await message.reply("Ocorreu um erro ao tentar buscar seu extrato.");
+        }
+    }
 });
 
-client.login('Token');
+client.login('');

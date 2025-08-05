@@ -1,0 +1,30 @@
+datasource db {
+  provider = "postgresql" // Definimos que nosso banco de dados é PostgreSQL
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Usuarios {
+  discord_id                String      @id
+  personagem                String?
+  saldo                     Float       @default(0)
+  ultimo_resgate_recompensa DateTime?
+  ultimo_resgate_manavitra  DateTime?
+
+  transacoes Transacao[]
+}
+
+model Transacao {
+  id        Int      @id @default(autoincrement())
+  data      DateTime @default(now())
+  descricao String
+  valor     Float
+  tipo      String // VENDA, COMPRA, GASTO, etc.
+
+  // Define a relação com a tabela Usuarios
+  usuario    Usuarios @relation(fields: [usuario_id], references: [discord_id], onUpdate: Cascade)
+  usuario_id String
+}
