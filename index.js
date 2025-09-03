@@ -894,10 +894,6 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
-            const resultadoMestre = await verificarLimiteMestre(dadosNarrador); 
-            if (resultadoMestre.limiteAtingido) {
-                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
-            }
             const todosOsIds = [narradorId, ...coletas.map(c => c.jogadorId)];
             const todosOsUsuarios = await prisma.usuarios.findMany({
                 where: { discord_id: { in: todosOsIds } }
@@ -907,6 +903,11 @@ client.on('messageCreate', async (message) => {
             
             const dadosNarrador = userMap.get(narradorId);
             if (!dadosNarrador) return message.reply("Você (narrador) não está cadastrado!");
+
+            const resultadoMestre = await verificarLimiteMestre(dadosNarrador); 
+            if (resultadoMestre.limiteAtingido) {
+                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
+            }
 
             let dadosJogadores = [];
             for (const coleta of coletas) {
@@ -1206,10 +1207,6 @@ client.on('messageCreate', async (message) => {
         const recompensaNarrador = 100 * nd * patamar;
 
         try {
-            const resultadoMestre = await verificarLimiteMestre(dadosNarrador); 
-            if (resultadoMestre.limiteAtingido) {
-                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
-            }
             const [dadosNarrador, dadosJogador] = await Promise.all([
                 prisma.usuarios.findUnique({ where: { discord_id: narrador.id } }),
                 prisma.usuarios.findUnique({ where: { discord_id: jogadorMencionado.id } })
@@ -1217,6 +1214,12 @@ client.on('messageCreate', async (message) => {
 
             if (!dadosNarrador) return message.reply("Você (o mestre) não está cadastrado!");
             if (!dadosJogador) return message.reply(`O jogador mencionado, ${jogadorMencionado.username}, não está cadastrado.`);
+
+            const resultadoMestre = await verificarLimiteMestre(dadosNarrador); 
+            if (resultadoMestre.limiteAtingido) {
+                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
+            }
+
             if (dadosJogador.saldo < custoCaptura) {
                 return message.reply(`O jogador ${dadosJogador.personagem} não tem os ${formatarMoeda(custoCaptura)} necessários para a captura.`);
             }
