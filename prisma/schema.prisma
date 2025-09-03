@@ -23,6 +23,7 @@ model Transacao {
   descricao String
   valor     Float
   tipo      String // VENDA, COMPRA, GASTO, etc.
+  categoria String?  
 
   // Define a relação com a tabela Usuarios
   usuario    Usuarios @relation(fields: [usuario_id], references: [discord_id], onUpdate: Cascade)

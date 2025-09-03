@@ -61,9 +61,9 @@ const commands = [
         syntax: '!coleta <ND> $ <@Player1> $ <Item1> $ <@Player2> $ <Item2> ...'
     },
     {
-        name: '!capturar',
+        name: '!adestramento',
         description: 'Mestre registra a captura de uma criatura por um jogador.',
-        syntax: '!capturar <ND> <@Player> "<Nome da Criatura>"'
+        syntax: '!adestramento <ND> <@Player> "<Nome da Criatura>"'
     }
 ];
 
@@ -82,6 +82,47 @@ function isSameWeek(date1, date2) {
 function formatarMoeda(valor) {
     const numero = Number(valor) || 0;
     return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$', 'T$');
+}
+
+async function verificarLimiteMestre(mestreId) {
+    const agora = new Date();
+    const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    
+    const missoesMestradas = await prisma.transacao.count({
+        where: {
+            usuario_id: mestreId,
+            data: { gte: inicioDoMes }, // gte = Greater Than or Equal (maior ou igual a)
+            categoria: { in: ['MESTRAR_SOLICITADA', 'MESTRAR_COLETA', 'MESTRAR_CAPTURA'] }
+        }
+    });
+
+    return missoesMestradas >= 4;
+}
+
+async function verificarLimiteJogadores(listaIds) {
+    const agora = new Date();
+    const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+
+    const contagemPorJogador = await prisma.transacao.groupBy({
+        by: ['usuario_id'],
+        where: {
+            usuario_id: { in: listaIds },
+            data: { gte: inicioDoMes },
+            categoria: 'JOGAR_SOLICITADA'
+        },
+        _count: {
+            usuario_id: true
+        }
+    });
+
+    for (const jogador of contagemPorJogador) {
+        if (jogador._count.usuario_id >= 4) {
+            // Retorna o ID do primeiro jogador que atingiu o limite
+            return jogador.usuario_id; 
+        }
+    }
+
+    return null; // Retorna null se ninguém atingiu o limite
 }
 
 const client = new Client({
@@ -150,7 +191,9 @@ client.on('messageCreate', async (message) => {
     const compradorMencionado = message.mentions.users.first();
     const valor = parseFloat(parts[1]);
     const item = parts[2];
-    const linkItem = parts[3];
+    const link = parts[3];
+
+    const linkItem = link.replace(/[\u200B-\u200D\u2060]/g, '');
     
     if (!compradorMencionado || compradorMencionado.bot) {
         return message.reply("Você precisa mencionar um usuário válido que está comprando o item!");
@@ -165,6 +208,7 @@ client.on('messageCreate', async (message) => {
         return message.reply("Você precisa especificar o item que está sendo vendido!");
     }
     if (!linkItem || !linkItem.startsWith('http')) {
+        console.log(linkItem);
         return message.reply("Você precisa fornecer um link válido (que comece com http ou https) para o item!");
     }
 
@@ -182,7 +226,6 @@ client.on('messageCreate', async (message) => {
             .setColor('#0099FF')
             .setTitle('❓ Proposta de Venda')
             .setDescription(`${vendedor.username} está propondo vender **[${item}](${linkItem})** para ${compradorMencionado.username}.`)
-            .setThumbnail(linkItem)
             .addFields(
                 { name: 'Valor da Transação', value: formatarMoeda(valor) },
                 { name: 'Comprador', value: `Aguardando confirmação de ${compradorMencionado.username}...` }
@@ -240,7 +283,6 @@ client.on('messageCreate', async (message) => {
                     .setColor('#00FF00')
                     .setTitle('✅ Venda Realizada com Sucesso!')
                     .setDescription(`**[${item}](${linkItem})** foi vendido com sucesso!`)
-                    .setThumbnail(linkItem)
                     .addFields(
                         { name: 'Vendedor', value: vendedor.username, inline: true },
                         { name: 'Comprador', value: compradorMencionado.username, inline: true },
@@ -392,6 +434,16 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
+            const limiteMestreAtingido = await verificarLimiteMestre(narradorId);
+            if (limiteMestreAtingido) {
+                return message.reply("Você já atingiu o seu limite de 4 missões mestradas este mês.");
+            }
+
+            const jogadorComLimite = await verificarLimiteJogadores(playerIds);
+            if (jogadorComLimite) {
+                const usuarioDiscord = await client.users.fetch(jogadorComLimite);
+                return message.reply(`O jogador ${usuarioDiscord.username} já atingiu o limite de 4 missões solicitadas jogadas este mês.`);
+            }
             const todosOsIds = [narradorId, ...playerIds];
             const todosOsUsuarios = await prisma.usuarios.findMany({
                 where: { discord_id: { in: todosOsIds } }
@@ -424,7 +476,8 @@ client.on('messageCreate', async (message) => {
                     usuario_id: narradorId,
                     descricao: `Recompensa por Narrar Missão Solicitada (ND ${dificuldade})`,
                     valor: recompensaNarrador,
-                    tipo: 'RECOMPENSA'
+                    tipo: 'RECOMPENSA',
+                    categoria: 'MESTRAR_SOLICITADA'
                 }
             }));
 
@@ -438,7 +491,8 @@ client.on('messageCreate', async (message) => {
                         usuario_id: player.discord_id,
                         descricao: `Custo de Missão Solicitada (Narrador: ${narrador.personagem})`,
                         valor: custoPorPlayer,
-                        tipo: 'GASTO'
+                        tipo: 'GASTO',
+                        categoria: 'JOGAR_SOLICITADA'
                     }
                 }));
             }
@@ -454,7 +508,7 @@ client.on('messageCreate', async (message) => {
                 .addFields(
                     { name: 'Narrador', value: `${narrador.personagem}`, inline: true },
                     { name: 'Recompensa Recebida', value: `+ ${formatarMoeda(recompensaNarrador)}`, inline: true },
-                    { name: 'Dificuldade (Patamar)', value: `${dificuldade} (${patamar})`, inline: true },
+                    { name: 'ND Mestre (Patamar)', value: `${dificuldade} (${patamar})`, inline: true },
                     { name: 'Jogadores Participantes', value: playersAfetadosStr }
                 )
                 .setTimestamp();
@@ -814,6 +868,10 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
+            const limiteMestreAtingido = await verificarLimiteMestre(narradorId);
+            if (limiteMestreAtingido) {
+                return message.reply("Você já atingiu o seu limite de 4 missões mestradas este mês.");
+            }
             const todosOsIds = [narradorId, ...coletas.map(c => c.jogadorId)];
             const todosOsUsuarios = await prisma.usuarios.findMany({
                 where: { discord_id: { in: todosOsIds } }
@@ -843,7 +901,8 @@ client.on('messageCreate', async (message) => {
                         usuario_id: narradorId,
                         descricao: `Recompensa por Narrar Missão de Coleta (ND ${nd})`,
                         valor: recompensaNarrador,
-                        tipo: 'RECOMPENSA'
+                        tipo: 'RECOMPENSA',
+                        categoria: 'MESTRAR_COLETA'
                     }
                 })
             ];
@@ -1093,7 +1152,7 @@ client.on('messageCreate', async (message) => {
     }
     }
 
-    else if (command === 'capturar') {
+    else if (command === 'adestramento') {
 
         const custoCaptura = 500; 
         const narrador = message.author;
@@ -1103,7 +1162,7 @@ client.on('messageCreate', async (message) => {
         const nomeCriaturaMatch = message.content.match(/"([^"]+)"/);
 
         if (isNaN(nd) || nd < 1 || nd > 20 || !jogadorMencionado || !nomeCriaturaMatch) {
-            return message.reply("Sintaxe incorreta! Use: `!capturar <ND 1-20> <@Player> \"<Nome da Criatura>\"`");
+            return message.reply("Sintaxe incorreta! Use: `!adestramento <ND 1-20> <@Player> \"<Nome da Criatura>\"`");
         }
         
         const nomeCriatura = nomeCriaturaMatch[1];
@@ -1121,6 +1180,10 @@ client.on('messageCreate', async (message) => {
         const recompensaNarrador = 100 * nd * patamar;
 
         try {
+            const limiteMestreAtingido = await verificarLimiteMestre(narradorId);
+            if (limiteMestreAtingido) {
+                return message.reply("Você já atingiu o seu limite de 4 missões mestradas este mês.");
+            }
             const [dadosNarrador, dadosJogador] = await Promise.all([
                 prisma.usuarios.findUnique({ where: { discord_id: narrador.id } }),
                 prisma.usuarios.findUnique({ where: { discord_id: jogadorMencionado.id } })
@@ -1154,14 +1217,15 @@ client.on('messageCreate', async (message) => {
                         usuario_id: narrador.id,
                         descricao: `Recompensa por mestrar captura de ${nomeCriatura} (ND ${nd})`,
                         valor: recompensaNarrador,
-                        tipo: 'RECOMPENSA'
+                        tipo: 'RECOMPENSA',
+                        categoria: 'MESTRAR_CAPTURA'
                     }
                 })
             ]);
 
             const sucessoEmbed = new EmbedBuilder()
                 .setColor('#A52A2A')
-                .setTitle('🐾 Missão de Captura Concluída!')
+                .setTitle('🐾 Missão de Adestramento Concluída!')
                 .setDescription(`A captura de **${nomeCriatura}** foi registrada com sucesso!`)
                 .addFields(
                     { name: 'Mestre da Missão', value: `${dadosNarrador.personagem} (+${formatarMoeda(recompensaNarrador)})` },
@@ -1172,7 +1236,7 @@ client.on('messageCreate', async (message) => {
             await message.channel.send({ embeds: [sucessoEmbed] });
 
         } catch (err) {
-            console.error("Erro no comando !capturar:", err);
+            console.error("Erro no comando !adestramento:", err);
             await message.reply("Ocorreu um erro ao registrar a captura. A transação foi revertida.");
         }
     }
