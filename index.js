@@ -129,7 +129,7 @@ client.on('messageCreate', async (message) => {
                         personagem: nomePersonagem,
                     }
                 });
-                await message.reply(`Parabéns! Seu personagem **${novoUsuario.personagem}** foi criado com sucesso! Use \`!saldo\` para ver seu saldo inicial.`);
+                await message.reply(`Parabéns! Seu personagem **${novoUsuario.personagem}** foi criado com sucesso! Use \`!extrato\` para ver seu saldo inicial.`);
             }
         } catch (err) {
             console.error("Erro ao cadastrar usuário:", err);
@@ -138,144 +138,144 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'venda') {
-        const vendedor = message.author;
+    const vendedor = message.author;
 
-        const conteudoComando = args.join(' ');
-        const parts = conteudoComando.split('$').map(p => p.trim());
+    const contentWithoutCommand = message.content.slice(prefix.length + command.length).trim();
+    const parts = contentWithoutCommand.split('$').map(p => p.trim());
 
-        if (parts.length !== 4) {
-            return message.reply("Sintaxe incorreta! Use: `!venda <@usuário> $ <valor> $ <item vendido> $ <link do item>`");
-        }
+    if (parts.length !== 4) {
+        return message.reply("Sintaxe incorreta! Use: `!venda <@usuário> $ <valor> $ <item vendido> $ <link do item>`");
+    }
 
-        const compradorMencionado = message.mentions.users.first();
-        const valor = parseFloat(parts[1]);
-        const item = parts[2];
-        const linkItem = parts[3];
+    const compradorMencionado = message.mentions.users.first();
+    const valor = parseFloat(parts[1]);
+    const item = parts[2];
+    const linkItem = parts[3];
+    
+    if (!compradorMencionado || compradorMencionado.bot) {
+        return message.reply("Você precisa mencionar um usuário válido que está comprando o item!");
+    }
+    if (compradorMencionado.id === vendedor.id) {
+        return message.reply("Você não pode vender um item para si mesmo!");
+    }
+    if (isNaN(valor) || valor <= 0) {
+        return message.reply("O valor da venda deve ser um número positivo!");
+    }
+    if (!item) {
+        return message.reply("Você precisa especificar o item que está sendo vendido!");
+    }
+    if (!linkItem || !linkItem.startsWith('http')) {
+        return message.reply("Você precisa fornecer um link válido (que comece com http ou https) para o item!");
+    }
+
+    try {
+        const [dadosVendedor, dadosComprador] = await Promise.all([
+            prisma.usuarios.findUnique({ where: { discord_id: vendedor.id } }),
+            prisma.usuarios.findUnique({ where: { discord_id: compradorMencionado.id } })
+        ]);
+
+        if (!dadosVendedor) return message.reply("Você não está cadastrado! Use `!cadastrar` primeiro.");
+        if (!dadosComprador) return message.reply(`O usuário ${compradorMencionado.username} não está cadastrado.`);
+        if (dadosComprador.saldo < valor) return message.reply(`O comprador não tem saldo suficiente! Saldo dele: **${formatarMoeda(dadosComprador.saldo)}**`);
         
-        if (!compradorMencionado || compradorMencionado.bot) {
-            return message.reply("Você precisa mencionar um usuário válido que está comprando o item!");
-        }
-        if (compradorMencionado.id === vendedor.id) {
-            return message.reply("Você não pode vender um item para si mesmo!");
-        }
-        if (isNaN(valor) || valor <= 0) {
-            return message.reply("O valor da venda deve ser um número positivo!");
-        }
-        if (!item) {
-            return message.reply("Você precisa especificar o item que está sendo vendido!");
-        }
-        if (!linkItem || !linkItem.startsWith('http')) {
-            return message.reply("Você precisa fornecer um link válido (que comece com http ou https) para o item!");
-        }
+        const propostaEmbed = new EmbedBuilder()
+            .setColor('#0099FF')
+            .setTitle('❓ Proposta de Venda')
+            .setDescription(`${vendedor.username} está propondo vender **[${item}](${linkItem})** para ${compradorMencionado.username}.`)
+            .setThumbnail(linkItem)
+            .addFields(
+                { name: 'Valor da Transação', value: formatarMoeda(valor) },
+                { name: 'Comprador', value: `Aguardando confirmação de ${compradorMencionado.username}...` }
+            )
+            .setFooter({ text: 'Esta proposta expira em 60 segundos.'});
 
-        try {
-            const [dadosVendedor, dadosComprador] = await Promise.all([
-                prisma.usuarios.findUnique({ where: { discord_id: vendedor.id } }),
-                prisma.usuarios.findUnique({ where: { discord_id: compradorMencionado.id } })
-            ]);
+        const botoes = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder().setCustomId('confirmar_venda').setLabel('Confirmar Compra').setStyle(ButtonStyle.Success).setEmoji('✔️'),
+                new ButtonBuilder().setCustomId('cancelar_venda').setLabel('Cancelar').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+            );
 
-            if (!dadosVendedor) return message.reply("Você não está cadastrado! Use `!cadastrar` primeiro.");
-            if (!dadosComprador) return message.reply(`O usuário ${compradorMencionado.username} não está cadastrado.`);
-            if (dadosComprador.saldo < valor) return message.reply(`O comprador não tem saldo suficiente! Saldo dele: **${formatarMoeda(dadosComprador.saldo)}**`);
-            
-            const propostaEmbed = new EmbedBuilder()
-                .setColor('#0099FF')
-                .setTitle('❓ Proposta de Venda')
-                .setDescription(`${vendedor.username} está propondo vender **[${item}](${linkItem})** para ${compradorMencionado.username}.`)
-                .setThumbnail(linkItem)
-                .addFields(
-                    { name: 'Valor da Transação', value: formatarMoeda(valor) },
-                    { name: 'Comprador', value: `Aguardando confirmação de ${compradorMencionado.username}...` }
-                )
-                .setFooter({ text: 'Esta proposta expira em 60 segundos.'});
+        const mensagemProposta = await message.channel.send({
+            content: `${compradorMencionado}, você aceita esta proposta?`,
+            embeds: [propostaEmbed],
+            components: [botoes]
+        });
 
-            const botoes = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder().setCustomId('confirmar_venda').setLabel('Confirmar Compra').setStyle(ButtonStyle.Success).setEmoji('✔️'),
-                    new ButtonBuilder().setCustomId('cancelar_venda').setLabel('Cancelar').setStyle(ButtonStyle.Danger).setEmoji('✖️')
-                );
+        const filter = i => i.user.id === compradorMencionado.id;
+        const collector = mensagemProposta.createMessageComponentCollector({ filter, time: 60000 });
 
-            const mensagemProposta = await message.channel.send({
-                content: `${compradorMencionado}, você aceita esta proposta?`,
-                embeds: [propostaEmbed],
-                components: [botoes]
-            });
+        collector.on('collect', async interaction => {
+            await interaction.deferUpdate();
 
-            const filter = i => i.user.id === compradorMencionado.id;
-            const collector = mensagemProposta.createMessageComponentCollector({ filter, time: 60000 });
+            if (interaction.customId === 'confirmar_venda') {
+                
+                await prisma.$transaction([
+                    prisma.usuarios.update({
+                        where: { discord_id: compradorMencionado.id },
+                        data: { saldo: { decrement: valor } }
+                    }),
+                    prisma.usuarios.update({
+                        where: { discord_id: vendedor.id },
+                        data: { saldo: { increment: valor } }
+                    }),
+                    prisma.transacao.create({
+                        data: {
+                            usuario_id: compradorMencionado.id,
+                            descricao: `Compra de ${item} de ${vendedor.username}`,
+                            valor: valor,
+                            tipo: 'COMPRA'
+                        }
+                    }),
+                    prisma.transacao.create({
+                        data: {
+                            usuario_id: vendedor.id,
+                            descricao: `Venda de ${item} para ${compradorMencionado.username}`,
+                            valor: valor,
+                            tipo: 'VENDA'
+                        }
+                    })
+                ]);
+                
+                const sucessoEmbed = new EmbedBuilder()
+                    .setColor('#00FF00')
+                    .setTitle('✅ Venda Realizada com Sucesso!')
+                    .setDescription(`**[${item}](${linkItem})** foi vendido com sucesso!`)
+                    .setThumbnail(linkItem)
+                    .addFields(
+                        { name: 'Vendedor', value: vendedor.username, inline: true },
+                        { name: 'Comprador', value: compradorMencionado.username, inline: true },
+                        { name: 'Valor', value: formatarMoeda(valor) }
+                    );
+                
+                const linkButtonRow = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder().setLabel('Ver Item Comprado').setStyle(ButtonStyle.Link).setURL(linkItem)
+                    );
 
-            collector.on('collect', async interaction => {
-                await interaction.deferUpdate();
+                await mensagemProposta.edit({ embeds: [sucessoEmbed], components: [linkButtonRow] });
+                collector.stop();
+            } 
+            else if (interaction.customId === 'cancelar_venda') {
+                const canceladoEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('✖️ Venda Cancelada')
+                    .setDescription(`A venda de **${item}** foi cancelada pelo comprador.`);
+                
+                await mensagemProposta.edit({ embeds: [canceladoEmbed], components: [] });
+                collector.stop();
+            }
+        });
 
-                if (interaction.customId === 'confirmar_venda') {
-                    
-                    await prisma.$transaction([
-                        prisma.usuarios.update({
-                            where: { discord_id: compradorMencionado.id },
-                            data: { saldo: { decrement: valor } }
-                        }),
-                        prisma.usuarios.update({
-                            where: { discord_id: vendedor.id },
-                            data: { saldo: { increment: valor } }
-                        }),
-                        prisma.transacao.create({
-                            data: {
-                                usuario_id: compradorMencionado.id,
-                                descricao: `Compra de ${item} de ${vendedor.username}`,
-                                valor: valor,
-                                tipo: 'COMPRA'
-                            }
-                        }),
-                        prisma.transacao.create({
-                            data: {
-                                usuario_id: vendedor.id,
-                                descricao: `Venda de ${item} para ${compradorMencionado.username}`,
-                                valor: valor,
-                                tipo: 'VENDA'
-                            }
-                        })
-                    ]);
-                    
-                    const sucessoEmbed = new EmbedBuilder()
-                        .setColor('#00FF00')
-                        .setTitle('✅ Venda Realizada com Sucesso!')
-                        .setDescription(`**[${item}](${linkItem})** foi vendido com sucesso!`)
-                        .setThumbnail(linkItem)
-                        .addFields(
-                            { name: 'Vendedor', value: vendedor.username, inline: true },
-                            { name: 'Comprador', value: compradorMencionado.username, inline: true },
-                            { name: 'Valor', value: formatarMoeda(valor) }
-                        );
-                    
-                    const linkButtonRow = new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder().setLabel('Ver Item Comprado').setStyle(ButtonStyle.Link).setURL(linkItem)
-                        );
-
-                    await mensagemProposta.edit({ embeds: [sucessoEmbed], components: [linkButtonRow] });
-                    collector.stop();
-                } 
-                else if (interaction.customId === 'cancelar_venda') {
-                    const canceladoEmbed = new EmbedBuilder()
-                        .setColor('#FF0000')
-                        .setTitle('✖️ Venda Cancelada')
-                        .setDescription(`A venda de **${item}** foi cancelada pelo comprador.`);
-                    
-                    await mensagemProposta.edit({ embeds: [canceladoEmbed], components: [] });
-                    collector.stop();
-                }
-            });
-
-            collector.on('end', collected => {
-                if (collected.size === 0) {
-                    const expiradoEmbed = new EmbedBuilder()
-                        .setColor('#808080')
-                        .setTitle('⌛ Proposta Expirada')
-                        .setDescription(`A proposta de venda para **${item}** expirou pois não houve resposta.`);
-                    
-                    mensagemProposta.edit({ embeds: [expiradoEmbed], components: [] });
-                }
-            });
+        collector.on('end', collected => {
+            if (collected.size === 0) {
+                const expiradoEmbed = new EmbedBuilder()
+                    .setColor('#808080')
+                    .setTitle('⌛ Proposta Expirada')
+                    .setDescription(`A proposta de venda para **${item}** expirou pois não houve resposta.`);
+                
+                mensagemProposta.edit({ embeds: [expiradoEmbed], components: [] });
+            }
+        });
 
         } catch (err) {
             console.error("Erro no comando !venda:", err);
