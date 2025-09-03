@@ -1001,7 +1001,7 @@ client.on('messageCreate', async (message) => {
             collector.on('collect', async interaction => {
                 await interaction.deferUpdate();
                 if (interaction.customId === 'confirmar_abandono') {
-                    const idArquivado = `ARQUIVADO-${jogador.discord_id}`;
+                    const idArquivado = `ARQUIVADO-${jogador.discord_id}-${Date.now()}`;
 
                     await prisma.usuarios.update({
                         where: { discord_id: jogador.discord_id },
