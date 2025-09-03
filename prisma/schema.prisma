@@ -11,6 +11,7 @@ model Usuarios {
   discord_id                String      @id
   personagem                String?
   saldo                     Float       @default(0)
+  nivel_narrador            Int         @default(1)
   ultimo_resgate_recompensa DateTime?
   ultimo_resgate_manavitra  DateTime?
 

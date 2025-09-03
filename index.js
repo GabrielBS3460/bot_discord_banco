@@ -84,19 +84,45 @@ function formatarMoeda(valor) {
     return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$', 'T$');
 }
 
-async function verificarLimiteMestre(mestreId) {
+async function verificarLimiteMestre(mestre) {
+    let limite = 0;
+    switch (mestre.nivel_narrador) {
+        case 1:
+            limite = 0; 
+            break;
+        case 2:
+            limite = 2;
+            break;
+        case 3:
+            limite = 4;
+            break;
+        default:
+            if (mestre.nivel_narrador > 3) {
+                limite = Math.pow(2, mestre.nivel_narrador - 1);
+            }
+            break;
+    }
+
+    if (limite === 0) {
+        return { limiteAtingido: true, limite: 0, contagem: 0 };
+    }
+
     const agora = new Date();
     const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
     
     const missoesMestradas = await prisma.transacao.count({
         where: {
-            usuario_id: mestreId,
-            data: { gte: inicioDoMes }, // gte = Greater Than or Equal (maior ou igual a)
+            usuario_id: mestre.discord_id,
+            data: { gte: inicioDoMes },
             categoria: { in: ['MESTRAR_SOLICITADA', 'MESTRAR_COLETA', 'MESTRAR_CAPTURA'] }
         }
     });
 
-    return missoesMestradas >= 4;
+    return {
+        limiteAtingido: missoesMestradas >= limite,
+        limite: limite,
+        contagem: missoesMestradas
+    };
 }
 
 async function verificarLimiteJogadores(listaIds) {
@@ -434,9 +460,9 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
-            const limiteMestreAtingido = await verificarLimiteMestre(narradorId);
-            if (limiteMestreAtingido) {
-                return message.reply("Você já atingiu o seu limite de 4 missões mestradas este mês.");
+            const resultadoMestre = await verificarLimiteMestre(dadosNarrador); 
+            if (resultadoMestre.limiteAtingido) {
+                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
             }
 
             const jogadorComLimite = await verificarLimiteJogadores(playerIds);
@@ -868,9 +894,9 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
-            const limiteMestreAtingido = await verificarLimiteMestre(narradorId);
-            if (limiteMestreAtingido) {
-                return message.reply("Você já atingiu o seu limite de 4 missões mestradas este mês.");
+            const resultadoMestre = await verificarLimiteMestre(dadosNarrador); 
+            if (resultadoMestre.limiteAtingido) {
+                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
             }
             const todosOsIds = [narradorId, ...coletas.map(c => c.jogadorId)];
             const todosOsUsuarios = await prisma.usuarios.findMany({
@@ -1180,9 +1206,9 @@ client.on('messageCreate', async (message) => {
         const recompensaNarrador = 100 * nd * patamar;
 
         try {
-            const limiteMestreAtingido = await verificarLimiteMestre(narradorId);
-            if (limiteMestreAtingido) {
-                return message.reply("Você já atingiu o seu limite de 4 missões mestradas este mês.");
+            const resultadoMestre = await verificarLimiteMestre(dadosNarrador); 
+            if (resultadoMestre.limiteAtingido) {
+                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
             }
             const [dadosNarrador, dadosJogador] = await Promise.all([
                 prisma.usuarios.findUnique({ where: { discord_id: narrador.id } }),
@@ -1240,6 +1266,41 @@ client.on('messageCreate', async (message) => {
             await message.reply("Ocorreu um erro ao registrar a captura. A transação foi revertida.");
         }
     }
+
+    else if (command === 'setnivel') {
+    if (message.author.id !== process.env.ADMIN_ID) {
+        return message.reply("Você não tem permissão para usar este comando!");
+    }
+
+    const alvo = message.mentions.users.first();
+    const nivel = parseInt(args[1]);
+
+    if (!alvo || isNaN(nivel) || nivel <= 0) {
+        return message.reply("Sintaxe incorreta! Use: `!setnivel <@usuario> <nível>`");
+    }
+
+    try {
+        const updatedUser = await prisma.usuarios.update({
+            where: { discord_id: alvo.id },
+            data: { nivel_narrador: nivel }
+        });
+
+        const embed = new EmbedBuilder()
+            .setColor('#F1C40F')
+            .setTitle('⭐ Nível de Narrador Atualizado!')
+            .setDescription(`O nível de narrador de **${updatedUser.personagem}** foi definido para **Nível ${updatedUser.nivel_narrador}**.`);
+
+        await message.channel.send({ embeds: [embed] });
+
+    } catch (err) {
+        if (err.code === 'P2025') {
+            await message.reply(`Erro: O usuário ${alvo.username} não está cadastrado.`);
+        } else {
+            console.error("Erro no comando !setnivel:", err);
+            await message.reply("Ocorreu um erro ao tentar definir o nível.");
+        }
+    }
+}
 });
 
 client.login(process.env.DISCORD_TOKEN);
