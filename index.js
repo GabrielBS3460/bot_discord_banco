@@ -16,11 +16,6 @@ const commands = [
         syntax: '!cadastrar <nome_do_personagem>'
     },
     {
-        name: '!saldo',
-        description: 'Verifica o seu saldo atual em conta.',
-        syntax: '!saldo'
-    },
-    {
         name: '!extrato',
         description: 'Mostra seu saldo atual e suas últimas 5 transações.',
         syntax: '!extrato'
