@@ -460,11 +460,6 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
-            const resultadoMestre = await verificarLimiteMestre(narrador); 
-            if (resultadoMestre.limiteAtingido) {
-                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
-            }
-
             const jogadorComLimite = await verificarLimiteJogadores(playerIds);
             if (jogadorComLimite) {
                 const usuarioDiscord = await client.users.fetch(jogadorComLimite);
@@ -479,6 +474,11 @@ client.on('messageCreate', async (message) => {
             
             const narrador = userMap.get(narradorId);
             if (!narrador) return message.reply("Você (narrador) não está cadastrado no bot!");
+
+            const resultadoMestre = await verificarLimiteMestre(narrador); 
+            if (resultadoMestre.limiteAtingido) {
+                return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
+            }
 
             let playersData = [];
             for (const id of playerIds) {
