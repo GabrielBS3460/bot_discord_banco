@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 const prisma = require('./database.js');
@@ -1181,4 +1183,4 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-client.login('CHAVE DO DISCORD');
+client.login(process.env.DISCORD_TOKEN);
