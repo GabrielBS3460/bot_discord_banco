@@ -1268,10 +1268,6 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'setnivel') {
-    if (message.author.id !== process.env.ADMIN_ID) {
-        return message.reply("Você não tem permissão para usar este comando!");
-    }
-
     const alvo = message.mentions.users.first();
     const nivel = parseInt(args[1]);
 
