@@ -460,7 +460,7 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
-            const resultadoMestre = await verificarLimiteMestre(dadosNarrador); 
+            const resultadoMestre = await verificarLimiteMestre(narrador); 
             if (resultadoMestre.limiteAtingido) {
                 return message.reply(`Você já atingiu o seu limite de **${resultadoMestre.limite}** missões mestradas este mês (você já mestrou ${resultadoMestre.contagem}).`);
             }
