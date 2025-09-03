@@ -14,24 +14,14 @@ const commands = [
         syntax: '!cadastrar <nome_do_personagem>'
     },
     {
+        name: '!saldo',
+        description: 'Verifica o seu saldo atual em conta.',
+        syntax: '!saldo'
+    },
+    {
         name: '!extrato',
-        description: 'Mostra seu saldo atual e suas transações recentes.',
+        description: 'Mostra seu saldo atual e suas últimas 5 transações.',
         syntax: '!extrato'
-    },
-    {
-        name: '!venda',
-        description: 'Inicia uma proposta de venda para outro usuário.',
-        syntax: '!venda <@usuário> $ <valor> $ <item>'
-    },
-    {
-        name: '!solicitada',
-        description: 'Registra a recompensa de missão solicitada para o mestre e os gastos para os players.',
-        syntax: '!solicitada <nd do mestre 1-20> <custo por player> <ID player1> <ID player2> ...'
-    },
-    {
-        name: '!recompensa',
-        description: 'Registra a recompensa para missões de quadro',
-        syntax: '!recompensa <nd do player 1-20>'
     },
     {
         name: '!gasto',
@@ -39,19 +29,44 @@ const commands = [
         syntax: '!gasto <valor> <motivo do gasto>'
     },
     {
-        name: '!missa',
-        description: 'Um clérigo vende o serviço de Missa, dividindo o custo total entre os participantes.',
-        syntax: '!missa <valor_total> <@player1> <@player2> ...'
-    },
-    {
-        name: '!coleta',
-        description: 'Registra uma missão de coleta, dando recompensa ao narrador e itens (não-monetários) aos jogadores. (Apenas Admins)',
-        syntax: '!coleta <ND> $ <@Player1> $ <Item1> $ <@Player2> $ <Item2> ...'
+        name: '!recompensa',
+        description: 'Resgata a recompensa de uma missão. Oferece uma escolha especial para NDs altos.',
+        syntax: '!recompensa <ND 1-20>'
     },
     {
         name: '!abandonar',
         description: 'Arquiva seu personagem atual, permitindo que você crie um novo.',
         syntax: '!abandonar'
+    },
+    {
+        name: '!venda',
+        description: 'Inicia uma proposta de venda para outro usuário.',
+        syntax: '!venda <@usuário> $ <valor> $ <item> $ <link do item>' 
+    },
+    {
+        name: '!missa',
+        description: 'Um clérigo vende o serviço de Missa, dividindo o custo total entre os participantes.',
+        syntax: '!missa <valor_total> <@player1> <@player2> ...'
+    },
+    {
+        name: '!magia',
+        description: 'Um conjurador vende uma magia, dividindo o custo total entre os participantes.',
+        syntax: '!magia <custo_total> "<nome da magia>" <@player1> ...'
+    },
+    {
+        name: '!solicitada',
+        description: 'Registra a recompensa de missão solicitada para o mestre.', 
+        syntax: '!solicitada <ND 1-20> <custo> <@player1> <@player2> ...'
+    },
+    {
+        name: '!coleta',
+        description: 'Registra uma missão de coleta, dando recompensa ao narrador e itens aos jogadores.',
+        syntax: '!coleta <ND> $ <@Player1> $ <Item1> $ <@Player2> $ <Item2> ...'
+    },
+    {
+        name: '!capturar',
+        description: 'Mestre registra a captura de uma criatura por um jogador.',
+        syntax: '!capturar <ND> <@Player> "<Nome da Criatura>"'
     }
 ];
 
@@ -980,6 +995,190 @@ client.on('messageCreate', async (message) => {
             await message.reply("Ocorreu um erro ao tentar buscar seu extrato.");
         }
     }
+
+    else if (command === 'magia') {
+    const conjurador = message.author;
+
+    const Mencoes = message.mentions.users;
+    
+    const nomeMagiaMatch = message.content.match(/"([^"]+)"/);
+
+    if (args.length < 3 || Mencoes.size === 0 || !nomeMagiaMatch) {
+        return message.reply("Sintaxe incorreta! Use: `!magia <custo_total> \"<nome da magia>\" <@player1> <@player2> ...`");
+    }
+
+    const valorTotal = parseFloat(args[0]);
+    const nomeMagia = nomeMagiaMatch[1]; 
+    const participantesMencionados = Mencoes.filter(user => user.id !== conjurador.id);
+    const participanteIds = participantesMencionados.map(user => user.id);
+
+    if (isNaN(valorTotal) || valorTotal <= 0) {
+        return message.reply("O custo total deve ser um número positivo.");
+    }
+    if (participanteIds.length === 0) {
+        return message.reply("Você precisa mencionar pelo menos um jogador para receber a magia.");
+    }
+
+    const custoIndividual = valorTotal / participanteIds.length;
+
+    try {
+        const todosOsIds = [conjurador.id, ...participanteIds];
+        const todosOsUsuarios = await prisma.usuarios.findMany({
+            where: { discord_id: { in: todosOsIds } }
+        });
+
+        const userMap = new Map(todosOsUsuarios.map(u => [u.discord_id, u]));
+
+        const dadosConjurador = userMap.get(conjurador.id);
+        if (!dadosConjurador) return message.reply("Você (o conjurador) não está cadastrado! Use `!cadastrar`.");
+
+        let dadosParticipantes = [];
+        for (const id of participanteIds) {
+            const participante = userMap.get(id);
+            if (!participante) {
+                return message.reply(`Erro: O usuário <@${id}> não está cadastrado.`);
+            }
+            if (participante.saldo < custoIndividual) {
+                return message.reply(`Erro: O jogador ${participante.personagem} não tem saldo suficiente para pagar a parte dele de **${formatarMoeda(custoIndividual)}**.`);
+            }
+            dadosParticipantes.push(participante);
+        }
+
+        const operacoes = [
+            prisma.usuarios.update({
+                where: { discord_id: conjurador.id },
+                data: { saldo: { increment: valorTotal } }
+            }),
+            prisma.transacao.create({
+                data: {
+                    usuario_id: conjurador.id,
+                    descricao: `Venda da magia "${nomeMagia}" para ${dadosParticipantes.length} jogadores`,
+                    valor: valorTotal,
+                    tipo: 'VENDA'
+                }
+            })
+        ];
+
+        for (const participante of dadosParticipantes) {
+            operacoes.push(prisma.usuarios.update({
+                where: { discord_id: participante.discord_id },
+                data: { saldo: { decrement: custoIndividual } }
+            }));
+            operacoes.push(prisma.transacao.create({
+                data: {
+                    usuario_id: participante.discord_id,
+                    descricao: `Custo da magia "${nomeMagia}" de ${dadosConjurador.personagem}`,
+                    valor: custoIndividual,
+                    tipo: 'GASTO'
+                }
+            }));
+        }
+
+        await prisma.$transaction(operacoes);
+
+        const listaParticipantesStr = dadosParticipantes.map(p => `• ${p.personagem}`).join('\n');
+        const sucessoEmbed = new EmbedBuilder()
+            .setColor('#8A2BE2')
+            .setTitle('✨ Magia Conjurada com Sucesso!')
+            .setDescription(`O conjurador **${dadosConjurador.personagem}** vendeu a magia **"${nomeMagia}"** com sucesso.`)
+            .addFields(
+                { name: 'Valor Total Recebido pelo Conjurador', value: `+ ${formatarMoeda(valorTotal)}` },
+                { name: 'Custo Individual', value: formatarMoeda(custoIndividual) },
+                { name: 'Alvos da Magia', value: listaParticipantesStr }
+            )
+            .setTimestamp();
+
+        await message.channel.send({ embeds: [sucessoEmbed] });
+
+    } catch (err) {
+        console.error("Erro no comando !magia:", err);
+        await message.reply("Ocorreu um erro crítico ao processar a venda da magia. A transação foi revertida.");
+    }
+    }
+
+    else if (command === 'capturar') {
+
+        const custoCaptura = 500; 
+        const narrador = message.author;
+
+        const nd = parseInt(args[0]);
+        const jogadorMencionado = message.mentions.users.first();
+        const nomeCriaturaMatch = message.content.match(/"([^"]+)"/);
+
+        if (isNaN(nd) || nd < 1 || nd > 20 || !jogadorMencionado || !nomeCriaturaMatch) {
+            return message.reply("Sintaxe incorreta! Use: `!capturar <ND 1-20> <@Player> \"<Nome da Criatura>\"`");
+        }
+        
+        const nomeCriatura = nomeCriaturaMatch[1];
+        
+        if (jogadorMencionado.id === narrador.id) {
+            return message.reply("O mestre não pode capturar a criatura para si mesmo através deste comando.");
+        }
+
+        let patamar = 0;
+        if (nd >= 1 && nd <= 4) patamar = 1;
+        else if (nd >= 5 && nd <= 10) patamar = 2;
+        else if (nd >= 11 && nd <= 16) patamar = 3;
+        else if (nd >= 17 && nd <= 20) patamar = 4;
+        
+        const recompensaNarrador = 100 * nd * patamar;
+
+        try {
+            const [dadosNarrador, dadosJogador] = await Promise.all([
+                prisma.usuarios.findUnique({ where: { discord_id: narrador.id } }),
+                prisma.usuarios.findUnique({ where: { discord_id: jogadorMencionado.id } })
+            ]);
+
+            if (!dadosNarrador) return message.reply("Você (o mestre) não está cadastrado!");
+            if (!dadosJogador) return message.reply(`O jogador mencionado, ${jogadorMencionado.username}, não está cadastrado.`);
+            if (dadosJogador.saldo < custoCaptura) {
+                return message.reply(`O jogador ${dadosJogador.personagem} não tem os ${formatarMoeda(custoCaptura)} necessários para a captura.`);
+            }
+
+            await prisma.$transaction([
+                prisma.usuarios.update({
+                    where: { discord_id: jogadorMencionado.id },
+                    data: { saldo: { decrement: custoCaptura } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        usuario_id: jogadorMencionado.id,
+                        descricao: `Custo pela captura de: ${nomeCriatura}`,
+                        valor: custoCaptura,
+                        tipo: 'GASTO'
+                    }
+                }),
+                prisma.usuarios.update({
+                    where: { discord_id: narrador.id },
+                    data: { saldo: { increment: recompensaNarrador } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        usuario_id: narrador.id,
+                        descricao: `Recompensa por mestrar captura de ${nomeCriatura} (ND ${nd})`,
+                        valor: recompensaNarrador,
+                        tipo: 'RECOMPENSA'
+                    }
+                })
+            ]);
+
+            const sucessoEmbed = new EmbedBuilder()
+                .setColor('#A52A2A')
+                .setTitle('🐾 Missão de Captura Concluída!')
+                .setDescription(`A captura de **${nomeCriatura}** foi registrada com sucesso!`)
+                .addFields(
+                    { name: 'Mestre da Missão', value: `${dadosNarrador.personagem} (+${formatarMoeda(recompensaNarrador)})` },
+                    { name: 'Jogador Caçador', value: `${dadosJogador.personagem} (-${formatarMoeda(custoCaptura)})` }
+                )
+                .setTimestamp();
+            
+            await message.channel.send({ embeds: [sucessoEmbed] });
+
+        } catch (err) {
+            console.error("Erro no comando !capturar:", err);
+            await message.reply("Ocorreu um erro ao registrar a captura. A transação foi revertida.");
+        }
+    }
 });
 
-client.login('');
+client.login('CHAVE DO DISCORD');
