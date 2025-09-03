@@ -53,17 +53,17 @@ const commands = [
     {
         name: '!solicitada',
         description: 'Registra a recompensa de missão solicitada para o mestre.', 
-        syntax: '!solicitada <ND 1-20> <custo> <@player1> <@player2> ...'
+        syntax: '!solicitada <ND do mestre 1-20> <custo> <@player1> <@player2> ...'
     },
     {
         name: '!coleta',
         description: 'Registra uma missão de coleta, dando recompensa ao narrador e itens aos jogadores.',
-        syntax: '!coleta <ND> $ <@Player1> $ <Item1> $ <@Player2> $ <Item2> ...'
+        syntax: '!coleta <ND do mestre 1-20> $ <@Player1> $ <Item1> $ <@Player2> $ <Item2> ...'
     },
     {
         name: '!adestramento',
         description: 'Mestre registra a captura de uma criatura por um jogador.',
-        syntax: '!adestramento <ND> <@Player> "<Nome da Criatura>"'
+        syntax: '!adestramento <ND do mestre 1-20> <@Player> "<Nome da Criatura>"'
     }
 ];
 
