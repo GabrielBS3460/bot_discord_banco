@@ -96,6 +96,9 @@ async function verificarLimiteMestre(mestre) {
         case 3:
             limite = 4;
             break;
+        case 4:
+            limite = 4;
+            break;    
         default:
             if (mestre.nivel_narrador > 3) {
                 limite = Math.pow(2, mestre.nivel_narrador - 1);
@@ -526,6 +529,10 @@ client.on('messageCreate', async (message) => {
             await prisma.$transaction(operacoes);
 
             const playersAfetadosStr = playersData.map(p => `• ${p.personagem} (- ${formatarMoeda(custoPorPlayer)})`).join('\n');
+            const novaContagem = resultadoMestre.contagem + 1;
+            const missoesRestantes = resultadoMestre.limite - novaContagem;
+            const footerText = `Missões do Mestre este mês: ${novaContagem}/${resultadoMestre.limite} | Restantes: ${missoesRestantes}`;
+
             
             const sucessoEmbed = new EmbedBuilder()
                 .setColor('#5865F2')
@@ -537,6 +544,7 @@ client.on('messageCreate', async (message) => {
                     { name: 'ND Mestre (Patamar)', value: `${dificuldade} (${patamar})`, inline: true },
                     { name: 'Jogadores Participantes', value: playersAfetadosStr }
                 )
+                .setFooter({ text: footerText })
                 .setTimestamp();
             
             await message.channel.send({ embeds: [sucessoEmbed] });
@@ -948,6 +956,10 @@ client.on('messageCreate', async (message) => {
             await prisma.$transaction(operacoes);
 
             const listaColetasStr = dadosJogadores.map(p => `• ${p.personagem} coletou: **${p.itemColetado}**`).join('\n');
+            const novaContagem = resultadoMestre.contagem + 1;
+            const missoesRestantes = resultadoMestre.limite - novaContagem;
+            const footerText = `Missões do Mestre este mês: ${novaContagem}/${resultadoMestre.limite} | Restantes: ${missoesRestantes}`;
+
             const sucessoEmbed = new EmbedBuilder()
                 .setColor('#2ECC71')
                 .setTitle('🌿 Missão de Coleta Concluída!')
@@ -956,6 +968,7 @@ client.on('messageCreate', async (message) => {
                     { name: 'Recompensa do Narrador', value: `+ ${formatarMoeda(recompensaNarrador)} para ${dadosNarrador.personagem}` },
                     { name: 'Itens Coletados pelos Jogadores', value: listaColetasStr }
                 )
+                .setFooter({ text: footerText })
                 .setTimestamp();
 
             await message.channel.send({ embeds: [sucessoEmbed] });
@@ -1252,6 +1265,11 @@ client.on('messageCreate', async (message) => {
                 })
             ]);
 
+            const novaContagem = resultadoMestre.contagem + 1;
+            const missoesRestantes = resultadoMestre.limite - novaContagem;
+            const footerText = `Missões do Mestre este mês: ${novaContagem}/${resultadoMestre.limite} | Restantes: ${missoesRestantes}`;
+
+
             const sucessoEmbed = new EmbedBuilder()
                 .setColor('#A52A2A')
                 .setTitle('🐾 Missão de Adestramento Concluída!')
@@ -1260,6 +1278,7 @@ client.on('messageCreate', async (message) => {
                     { name: 'Mestre da Missão', value: `${dadosNarrador.personagem} (+${formatarMoeda(recompensaNarrador)})` },
                     { name: 'Jogador Caçador', value: `${dadosJogador.personagem} (-${formatarMoeda(custoCaptura)})` }
                 )
+                .setFooter({ text: footerText })
                 .setTimestamp();
             
             await message.channel.send({ embeds: [sucessoEmbed] });
