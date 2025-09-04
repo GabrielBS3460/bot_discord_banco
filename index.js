@@ -128,32 +128,6 @@ async function verificarLimiteMestre(mestre) {
     };
 }
 
-async function verificarLimiteJogadores(listaIds) {
-    const agora = new Date();
-    const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
-
-    const contagemPorJogador = await prisma.transacao.groupBy({
-        by: ['usuario_id'],
-        where: {
-            usuario_id: { in: listaIds },
-            data: { gte: inicioDoMes },
-            categoria: 'JOGAR_SOLICITADA'
-        },
-        _count: {
-            usuario_id: true
-        }
-    });
-
-    for (const jogador of contagemPorJogador) {
-        if (jogador._count.usuario_id >= 4) {
-            // Retorna o ID do primeiro jogador que atingiu o limite
-            return jogador.usuario_id; 
-        }
-    }
-
-    return null; // Retorna null se ninguém atingiu o limite
-}
-
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -463,11 +437,6 @@ client.on('messageCreate', async (message) => {
         const narradorId = message.author.id;
 
         try {
-            const jogadorComLimite = await verificarLimiteJogadores(playerIds);
-            if (jogadorComLimite) {
-                const usuarioDiscord = await client.users.fetch(jogadorComLimite);
-                return message.reply(`O jogador ${usuarioDiscord.username} já atingiu o limite de 4 missões solicitadas jogadas este mês.`);
-            }
             const todosOsIds = [narradorId, ...playerIds];
             const todosOsUsuarios = await prisma.usuarios.findMany({
                 where: { discord_id: { in: todosOsIds } }
