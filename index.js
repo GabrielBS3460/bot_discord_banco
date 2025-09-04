@@ -287,7 +287,7 @@ client.on('messageCreate', async (message) => {
                     .setTitle('✅ Venda Realizada com Sucesso!')
                     .setDescription(`**[${item}](${linkItem})** foi vendido com sucesso!`)
                     .addFields(
-                        { name: 'Vendedor', value: vendedor.username, inline: true },
+                        { name: 'Vendedor', value: vendedor.personagem, inline: true },
                         { name: 'Comprador', value: compradorMencionado.username, inline: true },
                         { name: 'Valor', value: formatarMoeda(valor) }
                     );
