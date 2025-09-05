@@ -194,9 +194,8 @@ client.on('messageCreate', async (message) => {
     const compradorMencionado = message.mentions.users.first();
     const valor = parseFloat(parts[1]);
     const item = parts[2];
-    const link = parts[3];
-
-    const linkItem = link.replace(/[\u200B-\u200D\u2060]/g, '');
+    const linkItemOriginal = parts[3];
+    const linkItem = linkItemOriginal.replace(/[\u200B-\u200D\u2060]/g, '');
     
     if (!compradorMencionado || compradorMencionado.bot) {
         return message.reply("Você precisa mencionar um usuário válido que está comprando o item!");
@@ -211,7 +210,6 @@ client.on('messageCreate', async (message) => {
         return message.reply("Você precisa especificar o item que está sendo vendido!");
     }
     if (!linkItem || !linkItem.startsWith('http')) {
-        console.log(linkItem);
         return message.reply("Você precisa fornecer um link válido (que comece com http ou https) para o item!");
     }
 
@@ -232,8 +230,13 @@ client.on('messageCreate', async (message) => {
             .addFields(
                 { name: 'Valor da Transação', value: formatarMoeda(valor) },
                 { name: 'Comprador', value: `Aguardando confirmação de ${compradorMencionado.username}...` }
-            )
-            .setFooter({ text: 'Esta proposta expira em 60 segundos.'});
+            );
+
+        if (/\.(jpeg|jpg|gif|png|webp)$/i.test(linkItem)) {
+            propostaEmbed.setThumbnail(linkItem);
+        }
+            
+        propostaEmbed.setFooter({ text: 'Esta proposta expira em 60 segundos.'});
 
         const botoes = new ActionRowBuilder()
             .addComponents(
@@ -267,7 +270,7 @@ client.on('messageCreate', async (message) => {
                     prisma.transacao.create({
                         data: {
                             usuario_id: compradorMencionado.id,
-                            descricao: `Compra de ${item} de ${vendedor.username}`,
+                            descricao: `Compra de ${item} de ${dadosVendedor.personagem}`,
                             valor: valor,
                             tipo: 'COMPRA'
                         }
@@ -275,7 +278,7 @@ client.on('messageCreate', async (message) => {
                     prisma.transacao.create({
                         data: {
                             usuario_id: vendedor.id,
-                            descricao: `Venda de ${item} para ${compradorMencionado.username}`,
+                            descricao: `Venda de ${item} para ${dadosComprador.personagem}`,
                             valor: valor,
                             tipo: 'VENDA'
                         }
@@ -287,11 +290,15 @@ client.on('messageCreate', async (message) => {
                     .setTitle('✅ Venda Realizada com Sucesso!')
                     .setDescription(`**[${item}](${linkItem})** foi vendido com sucesso!`)
                     .addFields(
-                        { name: 'Vendedor', value: vendedor.personagem, inline: true },
-                        { name: 'Comprador', value: compradorMencionado.username, inline: true },
+                        { name: 'Vendedor', value: dadosVendedor.personagem, inline: true },
+                        { name: 'Comprador', value: dadosComprador.personagem, inline: true },
                         { name: 'Valor', value: formatarMoeda(valor) }
                     );
                 
+                if (/\.(jpeg|jpg|gif|png|webp)$/i.test(linkItem)) {
+                    sucessoEmbed.setThumbnail(linkItem);
+                }
+
                 const linkButtonRow = new ActionRowBuilder()
                     .addComponents(
                         new ButtonBuilder().setLabel('Ver Item Comprado').setStyle(ButtonStyle.Link).setURL(linkItem)
@@ -322,10 +329,10 @@ client.on('messageCreate', async (message) => {
             }
         });
 
-        } catch (err) {
-            console.error("Erro no comando !venda:", err);
-            await message.reply("Ocorreu um erro ao processar a venda.");
-        }
+    } catch (err) {
+        console.error("Erro no comando !venda:", err);
+        await message.reply("Ocorreu um erro ao processar a venda.");
+    }
     }
 
     else if (command === 'modificar-saldo') {
