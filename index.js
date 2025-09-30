@@ -4,6 +4,8 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder
 
 const prisma = require('./database.js');
 
+const express = require('express');
+
 const commands = [
     {
         name: '!help',
@@ -1295,6 +1297,17 @@ client.on('messageCreate', async (message) => {
         }
     }
 }
+});
+
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('O bot está online. O servidor de keep-alive está funcionando!');
+});
+
+app.listen(port, () => {
+  console.log(`Servidor de keep-alive rodando em http://localhost:${port}`);
 });
 
 client.login(process.env.DISCORD_TOKEN);
