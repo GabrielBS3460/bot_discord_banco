@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql" // Definimos que nosso banco de dados é PostgreSQL
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -8,14 +8,29 @@ generator client {
 }
 
 model Usuarios {
-  discord_id                String      @id
-  personagem                String?
-  saldo                     Float       @default(0)
-  nivel_narrador            Int         @default(1)
+  discord_id     String  @id
+  nivel_narrador Int     @default(1)
+  
+  personagens Personagens[]
+  
+  personagemAtivo   Personagens? @relation("PersonagemAtivo", fields: [personagem_ativo_id], references: [id])
+  personagem_ativo_id Int?         @unique 
+}
+
+model Personagens {
+  id        Int      @id @default(autoincrement()) 
+  nome      String   @unique
+  saldo     Float    @default(0)
+
   ultimo_resgate_recompensa DateTime?
   ultimo_resgate_manavitra  DateTime?
+  
+  jogador    Usuarios @relation(fields: [usuario_id], references: [discord_id])
+  usuario_id String  
 
   transacoes Transacao[]
+
+  utilizadorAtivo Usuarios? @relation("PersonagemAtivo")
 }
 
 model Transacao {
@@ -23,10 +38,9 @@ model Transacao {
   data      DateTime @default(now())
   descricao String
   valor     Float
-  tipo      String // VENDA, COMPRA, GASTO, etc.
-  categoria String?  
+  tipo      String
+  categoria String?
 
-  // Define a relação com a tabela Usuarios
-  usuario    Usuarios @relation(fields: [usuario_id], references: [discord_id], onUpdate: Cascade)
-  usuario_id String
+  personagem    Personagens @relation(fields: [personagem_id], references: [id], onUpdate: Cascade)
+  personagem_id Int
 }
