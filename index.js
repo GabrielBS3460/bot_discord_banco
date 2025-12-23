@@ -1158,7 +1158,7 @@ client.on('messageCreate', async (message) => {
 
             const embed = new EmbedBuilder()
                 .setColor('#2ECC71') 
-                .setTitle('💸 Transferência Realizada (Tix)')
+                .setTitle('💸 Tix Realizado')
                 .addFields(
                     { name: 'Remetente', value: charRemetente.nome, inline: true },
                     { name: 'Destinatário', value: charDestinatario.nome, inline: true },
