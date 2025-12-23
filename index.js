@@ -421,7 +421,7 @@ client.on('messageCreate', async (message) => {
 
             const msg = await message.channel.send({ content: `${compradorMencionado}`, embeds: [propostaEmbed], components: [botoes] });
 
-            const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === compradorMencionado.id, time: 60000 });
+            const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === compradorMencionado.id, time: 3456789 });
 
             collector.on('collect', async interaction => {
                 await interaction.deferUpdate(); 
