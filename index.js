@@ -61,6 +61,11 @@ const commands = [
         name: '!adestramento',
         description: '(Mestre) Registra adestramento/captura de criatura.',
         syntax: '!adestramento <ND> <@Player> Nome da Criatura'
+    },
+    {
+        name: '!tix',
+        description: 'Transfere T$ do seu personagem para outro jogador.',
+        syntax: '!tix <@usuário> <valor>'
     }
 ];
 
@@ -293,7 +298,6 @@ client.on('messageCreate', async (message) => {
                 fetchReply: true
             });
 
-            // 3. Coletor de Interação
             const filter = i => i.user.id === message.author.id;
             const collector = mensagemConfirmacao.createMessageComponentCollector({ filter, time: 30000 });
 
@@ -1090,6 +1094,83 @@ client.on('messageCreate', async (message) => {
             }
             console.error("Erro no !admin-criar:", err);
             await message.reply("Ocorreu um erro ao tentar criar o personagem administrativamente.");
+        }
+    }
+
+    else if (command === 'tix') {
+
+        const destinatarioUser = message.mentions.users.first();
+        if (!destinatarioUser || destinatarioUser.bot) {
+            return message.reply("Você precisa mencionar para quem vai enviar os T$. Ex: `!tix @Amigo 500`");
+        }
+        
+        if (destinatarioUser.id === message.author.id) {
+            return message.reply("Você não pode transferir dinheiro para si mesmo.");
+        }
+
+        const valorStr = args.find(arg => !isNaN(parseFloat(arg)) && !arg.includes('<@'));
+        const valor = parseFloat(valorStr);
+
+        if (isNaN(valor) || valor <= 0) {
+            return message.reply("Valor inválido. Digite um valor positivo maior que zero.");
+        }
+
+        try {
+            const [charRemetente, charDestinatario] = await Promise.all([
+                getPersonagemAtivo(message.author.id),
+                getPersonagemAtivo(destinatarioUser.id)
+            ]);
+
+            if (!charRemetente) return message.reply("Você não tem um personagem ativo para enviar dinheiro.");
+            if (!charDestinatario) return message.reply(`O usuário **${destinatarioUser.username}** não tem um personagem ativo para receber.`);
+
+            if (charRemetente.saldo < valor) {
+                return message.reply(`🚫 **${charRemetente.nome}** não tem saldo suficiente. Atual: **${formatarMoeda(charRemetente.saldo)}**.`);
+            }
+
+            await prisma.$transaction([
+                prisma.personagens.update({
+                    where: { id: charRemetente.id },
+                    data: { saldo: { decrement: valor } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        personagem_id: charRemetente.id,
+                        descricao: `Transferiu para ${charDestinatario.nome}`,
+                        valor: valor,
+                        tipo: 'GASTO' 
+                    }
+                }),
+                
+                prisma.personagens.update({
+                    where: { id: charDestinatario.id },
+                    data: { saldo: { increment: valor } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        personagem_id: charDestinatario.id,
+                        descricao: `Recebeu de ${charRemetente.nome}`,
+                        valor: valor,
+                        tipo: 'RECOMPENSA' 
+                    }
+                })
+            ]);
+
+            const embed = new EmbedBuilder()
+                .setColor('#2ECC71') 
+                .setTitle('💸 Transferência Realizada (Tix)')
+                .addFields(
+                    { name: 'Remetente', value: charRemetente.nome, inline: true },
+                    { name: 'Destinatário', value: charDestinatario.nome, inline: true },
+                    { name: 'Valor', value: `**${formatarMoeda(valor)}**`, inline: false }
+                )
+                .setTimestamp();
+
+            await message.reply({ embeds: [embed] });
+
+        } catch (err) {
+            console.error("Erro no comando !tix:", err);
+            await message.reply("Ocorreu um erro ao processar a transferência.");
         }
     }
 });
