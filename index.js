@@ -1291,6 +1291,58 @@ client.on('messageCreate', async (message) => {
             message.reply("Ocorreu um erro ao processar o bônus.");
         }
     }
+
+    else if (command === 'admin-extrato') {
+        
+        if (message.author.id !== process.env.ADMIN_ID) {
+            return message.reply("🚫 Você não tem permissão para usar este comando.");
+        }
+
+        const alvo = message.mentions.users.first();
+        if (!alvo) return message.reply("Sintaxe: `!admin-extrato <@usuario>`");
+
+        try {
+            const personagem = await getPersonagemAtivo(alvo.id);
+            
+            if (!personagem) {
+                return message.reply(`O usuário **${alvo.username}** não tem nenhum personagem ativo no momento.`);
+            }
+
+            const transacoes = await prisma.transacao.findMany({
+                where: { personagem_id: personagem.id },
+                orderBy: { data: 'desc' },
+                take: 10 
+            });
+
+            const extratoEmbed = new EmbedBuilder()
+                .setColor('#F1C40F') 
+                .setTitle(`🕵️ Extrato Administrativo: ${personagem.nome}`)
+                .setDescription(`**Dono:** ${alvo.username} | **Saldo Atual:** ${formatarMoeda(personagem.saldo)}`)
+                .setFooter({ text: 'Visualização restrita de administrador' });
+
+            if (transacoes.length > 0) {
+                const transacoesStr = transacoes.map(t => {
+                    let icone = '🔹'; 
+                    if (t.tipo === 'GASTO') icone = '🔴';
+                    if (t.tipo === 'RECOMPENSA' || t.tipo === 'VENDA') icone = '🟢';
+                    if (t.tipo === 'COMPRA') icone = '💸';
+
+                    const dataFormatada = new Date(t.data).toLocaleDateString('pt-BR');
+                    return `\`#${t.id}\` \`${dataFormatada}\` ${icone} **${formatarMoeda(t.valor)}**\n╰ *${t.descricao}*`;
+                }).join('\n');
+                
+                extratoEmbed.addFields({ name: 'Últimas 10 Transações', value: transacoesStr });
+            } else {
+                extratoEmbed.addFields({ name: 'Histórico', value: 'Nenhuma transação registrada para este personagem.' });
+            }
+            
+            await message.channel.send({ embeds: [extratoEmbed] });
+
+        } catch (err) {
+            console.error("Erro no comando !admin-extrato:", err);
+            await message.reply("Erro ao buscar o extrato do usuário.");
+        }
+    }
 });
 
 const app = express();
