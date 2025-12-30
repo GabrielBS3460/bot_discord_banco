@@ -1226,7 +1226,7 @@ client.on('messageCreate', async (message) => {
             const embed = new EmbedBuilder()
                 .setColor('#9B59B6') 
                 .setTitle('🎁 Itens Entregues!')
-                .setDescription(`O administrador **${message.author.username}** entregou itens para **${charDestinatario.nome}**.`)
+                .setDescription(`O player **${message.author.username}** entregou itens para **${charDestinatario.nome}**.`)
                 .addFields({ name: 'Itens Recebidos', value: listaFormatada })
                 .setTimestamp();
 
