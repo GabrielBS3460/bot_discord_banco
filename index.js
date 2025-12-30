@@ -40,7 +40,7 @@ const commands = [
     {
         name: '!recompensa',
         description: 'Resgata a recompensa diária/semanal de missão.',
-        syntax: '!recompensa <ND 1-20>'
+        syntax: '!recompensa <ND 1-20> <link da missão jogada/narrada>'
     },
     {
         name: '!venda',
