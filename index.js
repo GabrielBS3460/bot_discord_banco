@@ -665,27 +665,18 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'recompensa') {
-        if (args.length !== 1) return message.reply("Sintaxe incorreta! Use: `!recompensa <ND 1-20>`");
+        if (args.length < 2) return message.reply("Sintaxe incorreta! É obrigatório informar o link.\nUse: `!recompensa <ND 1-20> <Link do Relatório>`");
 
         const nd = parseInt(args[0]);
+        const link = args[1];
+
         if (isNaN(nd) || nd < 1 || nd > 20) return message.reply("O ND deve ser entre 1 e 20.");
+        
+        if (!link.startsWith('http')) return message.reply("O link fornecido parece inválido. Certifique-se de que começa com `http://` ou `https://`.");
 
         try {
             const personagem = await getPersonagemAtivo(message.author.id);
             if (!personagem) return message.reply("Você precisa selecionar um personagem ativo primeiro!");
-
-            if (personagem.ultimo_resgate_recompensa) {
-                const ultimoResgate = new Date(personagem.ultimo_resgate_recompensa);
-                const agora = new Date();
-                const diffHoras = (agora - ultimoResgate) / (1000 * 60 * 60);
-
-                if (diffHoras < 24) {
-                    const tempoRestante = 24 - diffHoras;
-                    const horas = Math.floor(tempoRestante);
-                    const minutos = Math.floor((tempoRestante - horas) * 60);
-                    return message.reply(`⏳ **${personagem.nome}** já resgatou hoje. Volte em **${horas}h e ${minutos}m**.`);
-                }
-            }
 
             let patamar = 0;
             if (nd >= 1 && nd <= 4) patamar = 1;
@@ -700,7 +691,7 @@ client.on('messageCreate', async (message) => {
                 );
                 
                 const msg = await message.reply({ 
-                    content: `✨ Missão de ND ${nd}! Escolha sua recompensa para **${personagem.nome}**:`, 
+                    content: `✨ Missão de ND ${nd}! Escolha sua recompensa para **${personagem.nome}**:\n🔗 Link registrado: <${link}>`, 
                     components: [botoesEscolha] 
                 });
 
@@ -708,31 +699,34 @@ client.on('messageCreate', async (message) => {
 
                 collector.on('collect', async interaction => {
                     await interaction.deferUpdate();
-                    
+
                     if (interaction.customId === 'recompensa_normal') {
                         const valor = 100 * nd * patamar;
                         
-                        const [updatedChar] = await prisma.$transaction([
+                        await prisma.$transaction([
                             prisma.personagens.update({
                                 where: { id: personagem.id },
-                                data: { saldo: { increment: valor }, ultimo_resgate_recompensa: new Date() }
+                                data: { 
+                                    saldo: { increment: valor }, 
+                                    ultimo_resgate_recompensa: new Date() 
+                                }
                             }),
                             prisma.transacao.create({
                                 data: {
                                     personagem_id: personagem.id,
-                                    descricao: `Recompensa Missão ND ${nd}`,
+                                    descricao: `Recompensa Missão ND ${nd} (Link: ${link})`, 
                                     valor: valor,
                                     tipo: 'RECOMPENSA'
                                 }
                             })
                         ]);
 
-                        await interaction.editReply({ content: `💰 **${personagem.nome}** recebeu **${formatarMoeda(valor)}**!`, components: [] });
+                        await interaction.editReply({ content: `💰 **${personagem.nome}** recebeu **${formatarMoeda(valor)}**!\n📝 Link vinculado ao resgate.`, components: [] });
                     } 
                     
                     else if (interaction.customId === 'recompensa_manavitra') {
                         if (personagem.ultimo_resgate_manavitra && isSameWeek(new Date(), new Date(personagem.ultimo_resgate_manavitra))) {
-                            return interaction.editReply({ content: `🚫 **${personagem.nome}** já pegou Manavitra esta semana!`, components: [] });
+                            return interaction.editReply({ content: `🚫 **${personagem.nome}** já pegou Manavitra esta semana! Escolha Ouro ou tente semana que vem.`, components: [] });
                         }
 
                         await prisma.personagens.update({
@@ -740,7 +734,16 @@ client.on('messageCreate', async (message) => {
                             data: { ultimo_resgate_manavitra: new Date(), ultimo_resgate_recompensa: new Date() }
                         });
 
-                        await interaction.editReply({ content: `🔮 **${personagem.nome}** recebeu uma **Manavitra**!`, components: [] });
+                        await prisma.transacao.create({
+                            data: {
+                                personagem_id: personagem.id,
+                                descricao: `Resgate Manavitra ND ${nd} (Link: ${link})`,
+                                valor: 0,
+                                tipo: 'RECOMPENSA'
+                            }
+                        });
+
+                        await interaction.editReply({ content: `🔮 **${personagem.nome}** recebeu uma **Manavitra**!\n📝 Link vinculado ao resgate.`, components: [] });
                     }
                     collector.stop();
                 });
@@ -748,7 +751,7 @@ client.on('messageCreate', async (message) => {
             }
 
             const valor = 100 * nd * patamar;
-            const [updatedChar] = await prisma.$transaction([
+            await prisma.$transaction([
                 prisma.personagens.update({
                     where: { id: personagem.id },
                     data: { saldo: { increment: valor }, ultimo_resgate_recompensa: new Date() }
@@ -756,14 +759,14 @@ client.on('messageCreate', async (message) => {
                 prisma.transacao.create({
                     data: {
                         personagem_id: personagem.id,
-                        descricao: `Recompensa Missão ND ${nd}`,
+                        descricao: `Recompensa Missão ND ${nd} (Link: ${link})`,
                         valor: valor,
                         tipo: 'RECOMPENSA'
                     }
                 })
             ]);
 
-            await message.reply(`💰 **${personagem.nome}** recebeu **${formatarMoeda(valor)}**!`);
+            await message.reply(`💰 **${personagem.nome}** recebeu **${formatarMoeda(valor)}**!\n📝 Link registrado com sucesso.`);
 
         } catch (err) {
             console.error(err);
