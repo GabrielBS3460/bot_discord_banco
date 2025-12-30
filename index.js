@@ -55,7 +55,7 @@ const commands = [
     {
         name: '!solicitada',
         description: '(Mestre) Registra missão solicitada e paga a recompensa.', 
-        syntax: '!solicitada <ND> <custo_por_player> <@player1> ...'
+        syntax: '!solicitada <ND do Mestre> <custo_por_player> <@player1> ...'
     },
     {
         name: '!adestramento',
@@ -66,6 +66,16 @@ const commands = [
         name: '!tix',
         description: 'Transfere T$ do seu personagem para outro jogador.',
         syntax: '!tix <@usuário> <valor>'
+    },
+    {
+        name: '!entregar',
+        description: 'Entrega um ou mais itens para um jogador. Separe por vírgulas.',
+        syntax: '!entregar <@usuario> <linkItem1>, ..., <linkItemN>'
+    },
+    {
+        name: '!primeiramissao',
+        description: 'Resgata um bônus de 300 T$ pela primeira missão do personagem (uso único).',
+        syntax: '!primeiramissao'
     }
 ];
 
@@ -1174,6 +1184,111 @@ client.on('messageCreate', async (message) => {
         } catch (err) {
             console.error("Erro no comando !tix:", err);
             await message.reply("Ocorreu um erro ao processar a transferência.");
+        }
+    }
+
+    else if (command === 'entregar') {
+
+        const destinatarioUser = message.mentions.users.first();
+        if (!destinatarioUser) {
+            return message.reply("Você precisa mencionar quem receberá os itens. Ex: `!entregar @Player Espada Longa, Poção`");
+        }
+
+        const conteudo = message.content.slice(prefix.length + command.length).trim();
+        const textoSemMencao = conteudo.replace(/<@!?\d+>/g, '').trim();
+
+        if (!textoSemMencao) return message.reply("Você precisa listar pelo menos um item.");
+
+        const listaItens = textoSemMencao.split(',').map(item => item.trim()).filter(item => item.length > 0);
+
+        try {
+            const charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
+            if (!charDestinatario) {
+                return message.reply(`O usuário **${destinatarioUser.username}** não tem personagem ativo para receber itens.`);
+            }
+
+            const operacoes = listaItens.map(item => 
+                prisma.transacao.create({
+                    data: {
+                        personagem_id: charDestinatario.id,
+                        descricao: `Recebeu Item: ${item}`,
+                        valor: 0,
+                        tipo: 'RECOMPENSA',
+                        categoria: 'ITEM'
+                    }
+                })
+            );
+
+            await prisma.$transaction(operacoes);
+
+            const listaFormatada = listaItens.map(i => `📦 ${i}`).join('\n');
+            
+            const embed = new EmbedBuilder()
+                .setColor('#9B59B6') 
+                .setTitle('🎁 Itens Entregues!')
+                .setDescription(`O administrador **${message.author.username}** entregou itens para **${charDestinatario.nome}**.`)
+                .addFields({ name: 'Itens Recebidos', value: listaFormatada })
+                .setTimestamp();
+
+            await message.channel.send({ embeds: [embed] });
+
+        } catch (err) {
+            console.error("Erro no comando !entregar:", err);
+            message.reply("Ocorreu um erro ao entregar os itens.");
+        }
+    }
+
+    else if (command === 'primeiramissao') {
+        try {
+            const personagem = await getPersonagemAtivo(message.author.id);
+            if (!personagem) {
+                return message.reply("Você precisa ter um personagem ativo para resgatar o bônus inicial.");
+            }
+
+            const jaResgatou = await prisma.transacao.findFirst({
+                where: {
+                    personagem_id: personagem.id,
+                    categoria: 'PRIMEIRA_MISSAO' 
+                }
+            });
+
+            if (jaResgatou) {
+                return message.reply(`🚫 O personagem **${personagem.nome}** já resgatou o bônus de primeira missão!`);
+            }
+
+            const bonus = 300;
+
+            await prisma.$transaction([
+                prisma.personagens.update({
+                    where: { id: personagem.id },
+                    data: { saldo: { increment: bonus } }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        personagem_id: personagem.id,
+                        descricao: 'Bônus de Primeira Missão (Substitui ND1)',
+                        valor: bonus,
+                        tipo: 'RECOMPENSA',
+                        categoria: 'PRIMEIRA_MISSAO'
+                    }
+                })
+            ]);
+
+            const embed = new EmbedBuilder()
+                .setColor('#00FFFF') 
+                .setTitle('✨ Primeira Aventura Concluída!')
+                .setDescription(`Parabéns por completar sua primeira missão com **${personagem.nome}**!`)
+                .addFields(
+                    { name: 'Bônus Recebido', value: formatarMoeda(bonus) },
+                    { name: 'Novo Saldo', value: formatarMoeda(personagem.saldo + bonus) }
+                )
+                .setFooter({ text: 'Este bônus é único por personagem.' });
+
+            await message.reply({ embeds: [embed] });
+
+        } catch (err) {
+            console.error("Erro no comando !primeiramissao:", err);
+            message.reply("Ocorreu um erro ao processar o bônus.");
         }
     }
 });
