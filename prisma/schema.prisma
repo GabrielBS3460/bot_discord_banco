@@ -1,6 +1,6 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = ""
 }
 
 generator client {
@@ -18,19 +18,53 @@ model Usuarios {
 }
 
 model Personagens {
-  id        Int      @id @default(autoincrement()) 
+  id        Int      @id @default(autoincrement())
   nome      String   @unique
   saldo     Float    @default(0)
-
+  
   ultimo_resgate_recompensa DateTime?
   ultimo_resgate_manavitra  DateTime?
   
+  ultimo_descanso           DateTime?
+
+  pontos_forja_atual        Float     @default(0) 
+  pontos_forja_diarios      Int       @default(1) 
+  ultimo_resgate_forja      DateTime?
+
+  vida_atual    Int     @default(10)
+  vida_max      Int     @default(10)
+  vida_temp     Int     @default(0)
+  mana_atual    Int     @default(0)
+  mana_max      Int     @default(0)
+  mana_temp     Int     @default(0)
+  deslocamento  String  @default("9m")
+  observacoes   String?
+  banner_url    String?
+
+  forca         Int     @default(0)
+  destreza      Int     @default(0)
+  constituicao  Int     @default(0)
+  inteligencia  Int     @default(0)
+  sabedoria     Int     @default(0)
+  carisma       Int     @default(0)
+  
   jogador    Usuarios @relation(fields: [usuario_id], references: [discord_id])
-  usuario_id String  
+  usuario_id String   
 
   transacoes Transacao[]
-
+  classes    PersonagemClasse[] 
   utilizadorAtivo Usuarios? @relation("PersonagemAtivo")
+}
+
+model PersonagemClasse {
+  id            Int         @id @default(autoincrement())
+  nome_classe   String
+  nivel         Int
+  
+  personagem    Personagens @relation(fields: [personagem_id], references: [id], onDelete: Cascade)
+  personagem_id Int
+
+  @@unique([personagem_id, nome_classe]) 
 }
 
 model Transacao {

@@ -1,10 +1,46 @@
 require('dotenv').config();
 
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, 
+        GatewayIntentBits, 
+        EmbedBuilder, 
+        ActionRowBuilder, 
+        ButtonBuilder, 
+        ButtonStyle, 
+        ModalBuilder,
+        TextInputBuilder,
+        TextInputStyle,
+        StringSelectMenuBuilder, 
+        StringSelectMenuOptionBuilder 
+    } = require('discord.js');
 
 const prisma = require('./database.js');
 
+const PungaSystem = require('./punga_sistema.js');
+
 const express = require('express');
+
+const ID_CARGO_ADMIN = "1463009702807081217"; 
+
+const LISTA_CLASSES_1 = [
+    "Arcanista", "Alquimista", "Atleta", "Bárbaro", "Bardo", "Burguês", 
+    "Bucaneiro", "Caçador", "Cavaleiro", "Clérigo", "Duelista", "Druída", 
+    "Ermitão", "Frade", "Guerreiro"
+];
+const LISTA_CLASSES_2 = [
+    "Inovador", "Inventor", "Ladino", "Lutador", "Machado de Pedra", 
+    "Magimarcialista", "Nobre", "Necromante", "Paladino", "Santo", 
+    "Seteiro", "Treinador", "Usurpador", "Vassalo", "Ventanista"
+];
+
+const CUSTO_FORJA = {
+    "Alimento": 0.2,
+    "Consumíveis": 1,
+    "Itens Permanentes": 2,
+    "Melhorias": 16,
+    "Encantamentos/Mágicos": 64,
+    "Poções/Pergaminhos (1-2)": 2,
+    "Poções/Pergaminhos (3-5)": 6
+};
 
 const commands = [
     {
@@ -76,6 +112,44 @@ const commands = [
         name: '!primeiramissao',
         description: 'Resgata um bônus de 300 T$ pela primeira missão do personagem (uso único).',
         syntax: '!primeiramissao'
+    },
+    {
+        name: '!ficha',
+        description: 'Exibe e edita a ficha (Status, Atributos, Classes, Descanso).',
+        syntax: '!ficha'
+    },
+    {
+        name: '!resgatarforja',
+        description: 'Resgata seus pontos de forja diários.',
+        syntax: '!resgatarforja'
+    },
+    {
+        name: '!forjar',
+        description: 'Abre a oficina para fabricar itens.',
+        syntax: '!forjar'
+    },
+    {
+        name: '!punga',
+        description: 'Realiza um saque aleatório (Dinheiro ou Item) baseado no ND do alvo.',
+        syntax: '!punga'
+    }
+];
+
+const adminCommands = [
+    {
+        name: '!admin-criar',
+        description: 'Cria um personagem forçadamente para outro usuário.',
+        syntax: '!admin-criar <@player> <Nome>'
+    },
+    {
+        name: '!admin-extrato',
+        description: 'Vê o extrato completo de um jogador.',
+        syntax: '!admin-extrato <@player>'
+    },
+    {
+        name: '!admin-setforja',
+        description: 'Define quantos pontos de forja um jogador ganha por dia.',
+        syntax: '!admin-setforja <@player> <pontos>'
     }
 ];
 
@@ -155,6 +229,15 @@ async function verificarLimiteMestre(mestre) {
         limite: limite,
         contagem: missoesMestradas
     };
+}
+
+function calcularNivelEPatamar(classes) {
+    const nivelTotal = classes.reduce((acc, c) => acc + c.nivel, 0) || 1;
+    let patamar = 1;
+    if (nivelTotal >= 5) patamar = 2;
+    if (nivelTotal >= 11) patamar = 3;
+    if (nivelTotal >= 17) patamar = 4;
+    return { nivelTotal, patamar };
 }
 
 const client = new Client({
@@ -1339,6 +1422,626 @@ client.on('messageCreate', async (message) => {
             await message.reply("Erro ao buscar o extrato do usuário.");
         }
     }
+
+    else if (command === 'ficha') {
+        const { MessageFlags } = require('discord.js');
+        
+        const LISTA_CLASSES_1 = ["Arcanista", "Alquimista", "Atleta", "Bárbaro", "Bardo", "Burguês", "Bucaneiro", "Caçador", "Cavaleiro", "Clérigo", "Duelista", "Druída", "Ermitão", "Frade", "Guerreiro"];
+        const LISTA_CLASSES_2 = ["Inovador", "Inventor", "Ladino", "Lutador", "Machado de Pedra", "Magimarcialista", "Nobre", "Necromante", "Paladino", "Santo", "Seteiro", "Treinador", "Usurpador", "Vassalo", "Ventanista"];
+
+        const ativo = await getPersonagemAtivo(message.author.id);
+        if (!ativo) return message.reply("Você não tem um personagem ativo.");
+
+        let char = await prisma.personagens.findFirst({
+            where: { id: ativo.id },
+            include: { classes: true }
+        });
+
+        const calcularDados = (p) => {
+            const nivelTotal = p.classes.reduce((acc, c) => acc + c.nivel, 0) || 1;
+            let patamar = 1;
+            if (nivelTotal >= 5) patamar = 2;
+            if (nivelTotal >= 11) patamar = 3;
+            if (nivelTotal >= 17) patamar = 4;
+            return { nivelTotal, patamar };
+        };
+
+        const montarEmbedFicha = (p) => {
+            const { nivelTotal, patamar } = calcularDados(p);
+            const calcCD = (mod) => 10 + mod + Math.floor(nivelTotal / 2);
+            
+            const txtVida = p.vida_temp > 0 ? `${p.vida_atual}/${p.vida_max} (+${p.vida_temp})` : `${p.vida_atual}/${p.vida_max}`;
+            const txtMana = p.mana_temp > 0 ? `${p.mana_atual}/${p.mana_max} (+${p.mana_temp})` : `${p.mana_atual}/${p.mana_max}`;
+            const obsTexto = p.observacoes ? p.observacoes : "Nenhuma observação registrada.";
+            
+            const textoClasses = p.classes.length > 0 
+                ? p.classes.map(c => `${c.nome_classe} ${c.nivel}`).join(' / ')
+                : "Nenhuma classe (Nível 1)";
+
+            const embed = new EmbedBuilder()
+                .setColor('#2B2D31')
+                .setTitle(`Ficha de ${p.nome}`)
+                .setDescription(`**${textoClasses}**\nNível Total: **${nivelTotal}** (Patamar ${patamar})`)
+                .addFields(
+                    { name: '❤️ Vida', value: txtVida, inline: true },
+                    { name: '⭐ Mana', value: txtMana, inline: true },
+                    { name: '🛠️ Forja', value: `${p.pontos_forja_atual.toFixed(1)} pts`, inline: true },
+                    { name: '🏃 Deslocamento', value: `${p.deslocamento}`, inline: true },
+                    { name: '\u200B', value: '**Atributos**' },
+                    { 
+                        name: 'Físicos', 
+                        value: `**FOR:** ${p.forca > 0 ? '+' : ''}${p.forca} (CD ${calcCD(p.forca)})\n**DES:** ${p.destreza > 0 ? '+' : ''}${p.destreza} (CD ${calcCD(p.destreza)})\n**CON:** ${p.constituicao > 0 ? '+' : ''}${p.constituicao} (CD ${calcCD(p.constituicao)})`, 
+                        inline: true 
+                    },
+                    { 
+                        name: 'Mentais', 
+                        value: `**INT:** ${p.inteligencia > 0 ? '+' : ''}${p.inteligencia} (CD ${calcCD(p.inteligencia)})\n**SAB:** ${p.sabedoria > 0 ? '+' : ''}${p.sabedoria} (CD ${calcCD(p.sabedoria)})\n**CAR:** ${p.carisma > 0 ? '+' : ''}${p.carisma} (CD ${calcCD(p.carisma)})`, 
+                        inline: true 
+                    },
+                    { name: '📝 Observações', value: obsTexto }
+                );
+
+            if (p.banner_url) embed.setImage(p.banner_url);
+            else embed.setThumbnail(message.author.displayAvatarURL());
+
+            return embed;
+        };
+
+        const getBotoes = () => new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('edit_classes').setLabel('Classes/Nível').setStyle(ButtonStyle.Success).setEmoji('📚'),
+            new ButtonBuilder().setCustomId('edit_status').setLabel('Status').setStyle(ButtonStyle.Primary).setEmoji('❤️'),
+            new ButtonBuilder().setCustomId('edit_fisico').setLabel('Físicos').setStyle(ButtonStyle.Secondary).setEmoji('💪'),
+            new ButtonBuilder().setCustomId('edit_mental').setLabel('Mentais').setStyle(ButtonStyle.Secondary).setEmoji('🧠'),
+            new ButtonBuilder().setCustomId('btn_descanso').setLabel('Descansar').setStyle(ButtonStyle.Success).setEmoji('💤')
+        );
+        
+        const row2 = new ActionRowBuilder().addComponents(
+             new ButtonBuilder().setCustomId('edit_obs').setLabel('Obs').setStyle(ButtonStyle.Secondary).setEmoji('📝'),
+             new ButtonBuilder().setCustomId('edit_banner').setLabel('Alterar Banner').setStyle(ButtonStyle.Secondary).setEmoji('🖼️')
+        );
+
+        const msg = await message.reply({ 
+            embeds: [montarEmbedFicha(char)], 
+            components: [getBotoes(), row2] 
+        });
+
+        const collector = msg.createMessageComponentCollector({ 
+            filter: i => i.user.id === message.author.id, 
+            time: 600000 
+        });
+
+        collector.on('collect', async interaction => {
+            if (interaction.customId === 'edit_classes') {
+                const menu1 = new StringSelectMenuBuilder().setCustomId('menu_classe_1').setPlaceholder('Classes A-G');
+                const menu2 = new StringSelectMenuBuilder().setCustomId('menu_classe_2').setPlaceholder('Classes I-V');
+
+                LISTA_CLASSES_1.forEach(cls => menu1.addOptions(new StringSelectMenuOptionBuilder().setLabel(cls).setValue(cls)));
+                LISTA_CLASSES_2.forEach(cls => menu2.addOptions(new StringSelectMenuOptionBuilder().setLabel(cls).setValue(cls)));
+
+                const r1 = new ActionRowBuilder().addComponents(menu1);
+                const r2 = new ActionRowBuilder().addComponents(menu2);
+
+                const response = await interaction.reply({ 
+                    content: "Selecione uma classe para **Adicionar** ou **Editar o Nível**:", 
+                    components: [r1, r2], 
+                    flags: MessageFlags.Ephemeral,
+                    withResponse: true
+                });
+
+                const menuCollector = response.resource.message.createMessageComponentCollector({
+                    filter: i => i.user.id === message.author.id,
+                    time: 60000
+                });
+
+                menuCollector.on('collect', async iMenu => {
+                    const classeSelecionada = iMenu.values[0];
+                    const modal = new ModalBuilder().setCustomId(`modal_nivel_${classeSelecionada}`).setTitle(`Nível de ${classeSelecionada}`);
+                    modal.addComponents(new ActionRowBuilder().addComponents(
+                        new TextInputBuilder().setCustomId('inp_nivel').setLabel('Novo nível (0 para remover)').setStyle(TextInputStyle.Short)
+                    ));
+                    await iMenu.showModal(modal);
+                });
+                return;
+            }
+
+            if (interaction.customId === 'btn_descanso') {
+                if (char.ultimo_descanso) {
+                    const agora = new Date();
+                    const ultimo = new Date(char.ultimo_descanso);
+                    const mesmoDia = agora.getDate() === ultimo.getDate();
+                    const mesmoMes = agora.getMonth() === ultimo.getMonth();
+                    const mesmoAno = agora.getFullYear() === ultimo.getFullYear();
+
+                    if (mesmoDia && mesmoMes && mesmoAno) {
+                        return interaction.reply({ content: `🚫 **${char.nome}** já descansou hoje! Tente novamente amanhã.`, flags: MessageFlags.Ephemeral });
+                    }
+                }
+
+                const { nivelTotal } = calcularDados(char);
+                const botoesDescanso = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('desc_ruim').setLabel('Ruim (Nív/2)').setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId('desc_normal').setLabel('Normal (Nív)').setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder().setCustomId('desc_conf').setLabel('Confortável (2x)').setStyle(ButtonStyle.Success),
+                    new ButtonBuilder().setCustomId('desc_lux').setLabel('Luxuoso (3x)').setStyle(ButtonStyle.Success)
+                );
+
+                const menuDescansoResponse = await interaction.reply({ 
+                    content: `🛏️ **Modo de Descanso**\nNível Total: ${nivelTotal}\nEscolha a qualidade da hospedagem:\n*(Você só pode descansar uma vez por dia)*`,
+                    components: [botoesDescanso],
+                    flags: MessageFlags.Ephemeral,
+                    withResponse: true
+                });
+
+                const descCollector = menuDescansoResponse.resource.message.createMessageComponentCollector({ time: 60000 });
+                
+                descCollector.on('collect', async iDesc => {
+                    let multiplicador = 0;
+                    let tipoDescanso = "";
+
+                    if (iDesc.customId === 'desc_ruim') { multiplicador = 0.5; tipoDescanso = "Ruim"; }
+                    if (iDesc.customId === 'desc_normal') { multiplicador = 1; tipoDescanso = "Normal"; }
+                    if (iDesc.customId === 'desc_conf') { multiplicador = 2; tipoDescanso = "Confortável"; }
+                    if (iDesc.customId === 'desc_lux') { multiplicador = 3; tipoDescanso = "Luxuoso"; }
+
+                    const rec = Math.floor(nivelTotal * multiplicador) || 1; 
+                    
+                    const novaVida = Math.min(char.vida_max, char.vida_atual + rec);
+                    const novaMana = Math.min(char.mana_max, char.mana_atual + rec);
+                    const curouVida = novaVida - char.vida_atual;
+                    const curouMana = novaMana - char.mana_atual;
+
+                    await prisma.$transaction([
+                        prisma.personagens.update({
+                            where: { id: char.id },
+                            data: { vida_atual: novaVida, mana_atual: novaMana, ultimo_descanso: new Date() }
+                        }),
+                        prisma.transacao.create({
+                            data: {
+                                personagem_id: char.id,
+                                descricao: `Descanso ${tipoDescanso}: Rec. +${curouVida} PV, +${curouMana} PM`,
+                                valor: 0,
+                                tipo: 'LOG'
+                            }
+                        })
+                    ]);
+
+                    char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
+                    await msg.edit({ embeds: [montarEmbedFicha(char)] });
+                    
+                    await iDesc.update({ content: `✅ **Descanso realizado!** (+${curouVida} PV, +${curouMana} PM)`, components: [] });
+                });
+                return;
+            }
+            
+            if (interaction.customId === 'edit_status') {
+                const modal = new ModalBuilder().setCustomId('modal_status').setTitle('Editar Status');
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_vida').setLabel('Vida Atual / Máxima').setStyle(TextInputStyle.Short).setValue(`${char.vida_atual}/${char.vida_max}`)),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_vida_temp').setLabel('Vida Temporária').setStyle(TextInputStyle.Short).setValue(String(char.vida_temp)).setRequired(false)),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_mana').setLabel('Mana Atual / Máxima').setStyle(TextInputStyle.Short).setValue(`${char.mana_atual}/${char.mana_max}`)),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_mana_temp').setLabel('Mana Temporária').setStyle(TextInputStyle.Short).setValue(String(char.mana_temp)).setRequired(false))
+                );
+                await interaction.showModal(modal);
+            }
+
+            if (interaction.customId === 'edit_fisico') {
+                const modal = new ModalBuilder().setCustomId('modal_fisico').setTitle('Editar Físicos');
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_for').setLabel('Força').setStyle(TextInputStyle.Short).setValue(String(char.forca))),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_des').setLabel('Destreza').setStyle(TextInputStyle.Short).setValue(String(char.destreza))),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_con').setLabel('Constituição').setStyle(TextInputStyle.Short).setValue(String(char.constituicao)))
+                );
+                await interaction.showModal(modal);
+            }
+
+            if (interaction.customId === 'edit_mental') {
+                const modal = new ModalBuilder().setCustomId('modal_mental').setTitle('Editar Mentais');
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_int').setLabel('Inteligência').setStyle(TextInputStyle.Short).setValue(String(char.inteligencia))),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_sab').setLabel('Sabedoria').setStyle(TextInputStyle.Short).setValue(String(char.sabedoria))),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_car').setLabel('Carisma').setStyle(TextInputStyle.Short).setValue(String(char.carisma)))
+                );
+                await interaction.showModal(modal);
+            }
+
+            if (interaction.customId === 'edit_obs') {
+                const modal = new ModalBuilder().setCustomId('modal_obs').setTitle('Editar Observações');
+                modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_obs').setLabel('Anotações').setStyle(TextInputStyle.Paragraph).setValue(char.observacoes || '').setMaxLength(1000)));
+                await interaction.showModal(modal);
+            }
+
+            if (interaction.customId === 'edit_banner') {
+                const modal = new ModalBuilder().setCustomId('modal_banner').setTitle('Link da Imagem');
+                modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_url').setLabel('URL da Imagem').setStyle(TextInputStyle.Short).setRequired(true)));
+                await interaction.showModal(modal);
+            }
+        });
+
+        const modalHandler = async (i) => {
+            if (!i.isModalSubmit() || i.user.id !== message.author.id) return;
+
+            let logDescricao = "";
+
+            if (i.customId.startsWith('modal_nivel_')) {
+                const classeNome = i.customId.replace('modal_nivel_', '');
+                const nivelInput = parseInt(i.fields.getTextInputValue('inp_nivel'));
+
+                if (isNaN(nivelInput)) return i.reply({content: "Nível inválido", flags: MessageFlags.Ephemeral});
+
+                if (nivelInput <= 0) {
+                    await prisma.personagemClasse.deleteMany({ where: { personagem_id: char.id, nome_classe: classeNome } });
+                    logDescricao = `Removeu a classe ${classeNome}`;
+                } else {
+                    const existe = await prisma.personagemClasse.findFirst({ where: { personagem_id: char.id, nome_classe: classeNome } });
+                    if (existe) {
+                        await prisma.personagemClasse.update({ where: { id: existe.id }, data: { nivel: nivelInput }});
+                        logDescricao = `Atualizou ${classeNome} para nível ${nivelInput}`;
+                    } else {
+                        await prisma.personagemClasse.create({ data: { personagem_id: char.id, nome_classe: classeNome, nivel: nivelInput }});
+                        logDescricao = `Adicionou ${classeNome} nível ${nivelInput}`;
+                    }
+                }
+                
+                await i.update({ content: `✅ **Sucesso:** ${logDescricao}`, components: [] });
+            }
+
+            if (i.customId === 'modal_status') {
+                const [vAtual, vMax] = i.fields.getTextInputValue('inp_vida').split('/').map(Number);
+                const [mAtual, mMax] = i.fields.getTextInputValue('inp_mana').split('/').map(Number);
+                const vTemp = parseInt(i.fields.getTextInputValue('inp_vida_temp')) || 0;
+                const mTemp = parseInt(i.fields.getTextInputValue('inp_mana_temp')) || 0;
+
+                logDescricao = `Editou Status: Vida ${vAtual}/${vMax}, Mana ${mAtual}/${mMax}`;
+
+                await prisma.personagens.update({
+                    where: { id: char.id },
+                    data: { 
+                        vida_atual: vAtual || 0, vida_max: vMax || vAtual || 10, vida_temp: vTemp,
+                        mana_atual: mAtual || 0, mana_max: mMax || mAtual || 0, mana_temp: mTemp
+                    }
+                });
+                await i.deferUpdate();
+            }
+
+            if (i.customId === 'modal_obs') {
+                const obs = i.fields.getTextInputValue('inp_obs');
+                logDescricao = "Editou Observações da Ficha";
+                await prisma.personagens.update({ where: { id: char.id }, data: { observacoes: obs } });
+                await i.deferUpdate();
+            }
+
+            if (i.customId === 'modal_fisico') {
+                const nFor = parseInt(i.fields.getTextInputValue('inp_for'));
+                const nDes = parseInt(i.fields.getTextInputValue('inp_des'));
+                const nCon = parseInt(i.fields.getTextInputValue('inp_con'));
+                logDescricao = `Editou Físicos: FOR ${nFor}, DES ${nDes}, CON ${nCon}`;
+                await prisma.personagens.update({ where: { id: char.id }, data: { forca: nFor || 0, destreza: nDes || 0, constituicao: nCon || 0 } });
+                await i.deferUpdate();
+            }
+
+            if (i.customId === 'modal_mental') {
+                const nInt = parseInt(i.fields.getTextInputValue('inp_int'));
+                const nSab = parseInt(i.fields.getTextInputValue('inp_sab'));
+                const nCar = parseInt(i.fields.getTextInputValue('inp_car'));
+                logDescricao = `Editou Mentais: INT ${nInt}, SAB ${nSab}, CAR ${nCar}`;
+                await prisma.personagens.update({ where: { id: char.id }, data: { inteligencia: nInt || 0, sabedoria: nSab || 0, carisma: nCar || 0 } });
+                await i.deferUpdate();
+            }
+
+            if (i.customId === 'modal_banner') {
+                const url = i.fields.getTextInputValue('inp_url');
+                if (url.startsWith('http')) {
+                    logDescricao = "Alterou Banner";
+                    await prisma.personagens.update({ where: { id: char.id }, data: { banner_url: url } });
+                }
+                await i.deferUpdate();
+            }
+
+            if (logDescricao) {
+                await prisma.transacao.create({
+                    data: { personagem_id: char.id, descricao: logDescricao, valor: 0, tipo: 'LOG' }
+                });
+            }
+
+            char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
+            await msg.edit({ embeds: [montarEmbedFicha(char)] });
+        };
+
+        client.on('interactionCreate', modalHandler);
+        setTimeout(() => { client.off('interactionCreate', modalHandler); }, 600000);
+    }
+
+    else if (command === 'resgatarforja') {
+        const char = await prisma.personagens.findFirst({
+            where: { id: (await getPersonagemAtivo(message.author.id))?.id },
+            include: { classes: true }
+        });
+
+        if (!char) return message.reply("Você não tem personagem ativo.");
+
+        if (char.ultimo_resgate_forja) {
+            const agora = new Date();
+            const ultimo = new Date(char.ultimo_resgate_forja);
+            if (agora.getDate() === ultimo.getDate() && agora.getMonth() === ultimo.getMonth() && agora.getFullYear() === ultimo.getFullYear()) {
+                return message.reply(`🚫 **${char.nome}** já pegou seus pontos de forja hoje!`);
+            }
+        }
+
+        const { patamar } = calcularNivelEPatamar(char.classes);
+        const limiteAcumulo = char.pontos_forja_diarios * (1 + patamar);
+        
+        let novoTotal = char.pontos_forja_atual + char.pontos_forja_diarios;
+        if (novoTotal > limiteAcumulo) novoTotal = limiteAcumulo;
+
+        const ganhou = novoTotal - char.pontos_forja_atual;
+
+        if (ganhou <= 0) {
+            return message.reply(`⚠️ Seu estoque de pontos está cheio (Máx: ${limiteAcumulo}). Gaste forjando algo antes de resgatar.`);
+        }
+
+        await prisma.$transaction([
+            prisma.personagens.update({
+                where: { id: char.id },
+                data: { 
+                    pontos_forja_atual: novoTotal,
+                    ultimo_resgate_forja: new Date()
+                }
+            }),
+            prisma.transacao.create({
+                data: {
+                    personagem_id: char.id,
+                    descricao: `Resgate Forja Diário (+${ganhou})`,
+                    valor: 0,
+                    tipo: 'FORJA'
+                }
+            })
+        ]);
+
+        message.reply(`🔨 **Forja:** Você recebeu **${ganhou.toFixed(1)}** pontos! (Total: ${novoTotal.toFixed(1)} / Máx: ${limiteAcumulo})`);
+    }
+
+    else if (command === 'forjar') {
+        const char = await getPersonagemAtivo(message.author.id);
+        if (!char) return message.reply("Sem personagem ativo.");
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('menu_forja_tipo')
+            .setPlaceholder('Selecione o TIPO de fabricação');
+
+        for (const [tipo, custo] of Object.entries(CUSTO_FORJA)) {
+            menu.addOptions(new StringSelectMenuOptionBuilder()
+                .setLabel(`${tipo} (Custo: ${custo})`)
+                .setValue(tipo)
+            );
+        }
+
+        const row = new ActionRowBuilder().addComponents(menu);
+        
+        const msg = await message.reply({ 
+            content: `🔨 **Oficina de Forja**\nSaldo: T$ ${formatarMoeda(char.saldo)}\nPontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\nSelecione o **TIPO** de item que deseja criar:`,
+            components: [row]
+        });
+
+        const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === message.author.id, time: 60000 });
+
+        collector.on('collect', async i => {
+            if (i.isStringSelectMenu()) {
+                const tipoSelecionado = i.values[0];
+
+                const modal = new ModalBuilder().setCustomId(`modal_forja_${tipoSelecionado}`).setTitle(`Forjar: ${tipoSelecionado}`);
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_nome').setLabel('Nome do Item').setStyle(TextInputStyle.Short).setRequired(true)),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_qtd').setLabel('Quantidade').setStyle(TextInputStyle.Short).setValue('1')),
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_ouro').setLabel('Custo TOTAL em Ouro (T$)').setStyle(TextInputStyle.Short))
+                );
+
+                await i.showModal(modal);
+
+                try {
+                    const submit = await i.awaitModalSubmit({
+                        filter: (inter) => inter.customId === `modal_forja_${tipoSelecionado}` && inter.user.id === i.user.id,
+                        time: 120000
+                    });
+
+                    const tipo = tipoSelecionado;
+                    const nomeItem = submit.fields.getTextInputValue('inp_nome');
+                    const qtd = parseInt(submit.fields.getTextInputValue('inp_qtd'));
+                    const custoOuro = parseFloat(submit.fields.getTextInputValue('inp_ouro'));
+                    const custoPontosUnit = CUSTO_FORJA[tipo];
+
+                    if (isNaN(qtd) || qtd <= 0) return submit.reply({ content: "Quantidade inválida.", ephemeral: true });
+                    if (isNaN(custoOuro) || custoOuro < 0) return submit.reply({ content: "Valor em ouro inválido.", ephemeral: true });
+
+                    const custoPontosTotal = parseFloat((custoPontosUnit * qtd).toFixed(2));
+                    const charAtual = await getPersonagemAtivo(message.author.id);
+
+                    if (charAtual.saldo < custoOuro) return submit.reply({ content: `🚫 Ouro insuficiente! Você tem T$ ${charAtual.saldo}.`, ephemeral: true });
+                    if (charAtual.pontos_forja_atual < custoPontosTotal) return submit.reply({ content: `🚫 Pontos de Forja insuficientes! Custa ${custoPontosTotal}, você tem ${charAtual.pontos_forja_atual.toFixed(1)}.`, ephemeral: true });
+
+                    await prisma.$transaction([
+                        prisma.personagens.update({
+                            where: { id: charAtual.id },
+                            data: { 
+                                saldo: { decrement: custoOuro },
+                                pontos_forja_atual: { decrement: custoPontosTotal }
+                            }
+                        }),
+                        prisma.transacao.create({
+                            data: {
+                                personagem_id: charAtual.id,
+                                descricao: `Forjou ${qtd}x ${nomeItem} (${tipo})`,
+                                valor: custoOuro,
+                                tipo: 'GASTO'
+                            }
+                        })
+                    ]);
+
+                    await submit.reply({ 
+                        content: `✅ **Item Forjado com Sucesso!**\n📦 **Item:** ${qtd}x ${nomeItem}\n📑 **Tipo:** ${tipo}\n💰 **Ouro Gasto:** T$ ${custoOuro}\n🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n*Saldo Restante: T$ ${charAtual.saldo - custoOuro} | Pts: ${(charAtual.pontos_forja_atual - custoPontosTotal).toFixed(1)}*` 
+                    });
+                    
+                    await msg.delete().catch(() => {});
+
+                } catch (err) {
+                    console.log("Tempo de modal expirado ou erro:", err);
+                }
+            }
+        });
+    }
+
+    else if (command === 'admin-setforja') {
+        /*if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) {
+            return message.reply("🚫 Você não tem permissão para usar este comando.");
+        }*/
+
+        const alvo = message.mentions.users.first();
+        const valor = parseInt(args[1]);
+
+        if (!alvo || isNaN(valor)) {
+            return message.reply("Sintaxe: `!admin-setforja @player <pontos_por_dia>`");
+        }
+
+        try {
+            const charAlvo = await getPersonagemAtivo(alvo.id);
+            if (!charAlvo) return message.reply("O usuário não tem personagem ativo.");
+
+            await prisma.personagens.update({
+                where: { id: charAlvo.id },
+                data: { pontos_forja_diarios: valor }
+            });
+
+            message.reply(`✅ Definido! **${charAlvo.nome}** agora ganha **${valor}** pontos de forja por dia.`);
+        } catch (err) { console.error(err); }
+    }
+
+    else if (command === 'help-admin') {
+        /*if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) {
+            return message.reply("🚫 Este pergaminho é selado apenas para administradores.");
+        }*/
+
+        const embed = new EmbedBuilder()
+            .setColor('#FF0000') 
+            .setTitle('🛡️ Comandos de Administrador')
+            .setDescription('Ferramentas de gestão do servidor:')
+            .setFooter({ text: 'Apenas para uso da staff.' });
+
+        adminCommands.forEach(cmd => {
+            embed.addFields({ name: `🔸 ${cmd.name}`, value: `**Uso:** \`${cmd.syntax}\`\n${cmd.description}` });
+        });
+
+        message.reply({ embeds: [embed] });
+    }
+
+    else if (command === 'punga') {
+        const { MessageFlags } = require('discord.js');
+
+        const char = await getPersonagemAtivo(message.author.id);
+        if (!char) return message.reply("Você precisa de um personagem ativo para pungar.");
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId('punga_dinheiro').setLabel('Dinheiro').setStyle(ButtonStyle.Success).setEmoji('💰'),
+            new ButtonBuilder().setCustomId('punga_item').setLabel('Item').setStyle(ButtonStyle.Primary).setEmoji('🎁')
+        );
+
+        const msg = await message.reply({ 
+            content: `🥷 **Punga - ${char.nome}**\nO que você deseja tentar roubar?`, 
+            components: [row] 
+        });
+
+        const collector = msg.createMessageComponentCollector({ 
+            filter: i => i.user.id === message.author.id, 
+            time: 60000 
+        });
+
+        collector.on('collect', async i => {
+            try {
+                const tipo = i.customId === 'punga_dinheiro' ? 'Dinheiro' : 'Item';
+                
+                const modal = new ModalBuilder().setCustomId(`modal_punga_${tipo}`).setTitle(`Punga: ${tipo}`);
+                modal.addComponents(new ActionRowBuilder().addComponents(
+                    new TextInputBuilder().setCustomId('inp_nd').setLabel('ND do Alvo (1-20)').setStyle(TextInputStyle.Short).setRequired(true)
+                ));
+
+                await i.showModal(modal);
+
+                const submit = await i.awaitModalSubmit({
+                    filter: (inter) => inter.customId === `modal_punga_${tipo}` && inter.user.id === i.user.id,
+                    time: 60000
+                }).catch(() => null);
+
+                if (!submit) return;
+
+                const nd = parseInt(submit.fields.getTextInputValue('inp_nd'));
+
+                if (isNaN(nd) || nd < 1 || nd > 20) {
+                    return submit.reply({ content: "ND inválido (1-20).", flags: MessageFlags.Ephemeral }).catch(() => {});
+                }
+
+                let resultado = "";
+
+                if (tipo === 'Dinheiro') {
+                    const valor = PungaSystem.processarDinheiro(nd);
+                    
+                    await prisma.$transaction([
+                        prisma.personagens.update({
+                            where: { id: char.id },
+                            data: { saldo: { increment: valor } }
+                        }),
+                        prisma.transacao.create({
+                            data: {
+                                personagem_id: char.id,
+                                descricao: `Punga (Alvo ND ${nd})`,
+                                valor: valor,
+                                tipo: 'GANHO'
+                            }
+                        })
+                    ]);
+
+                    const charAtualizado = await getPersonagemAtivo(message.author.id);
+                    resultado = `💰 Você pungou **T$ ${valor}**!\n✅ *Valor depositado na conta.*\n💰 **Saldo Atual:** T$ ${charAtualizado.saldo}`;
+                } 
+                else {
+                    const item = PungaSystem.processarPunga(nd);
+                    resultado = `🎁 Você pungou: **${item}**`;
+                }
+
+                await submit.update({ content: `✅ **Resultado (ND ${nd}):**\n${resultado}`, components: [] }).catch(() => {});
+
+            } catch (err) {
+                if (err.code === 10062 || err.code === 40060) return;
+                console.error("Erro no comando punga:", err);
+            }
+        });
+    }
+
+    else if (command === 'gerar') {
+        if (args.length < 1) return message.reply("Sintaxe: `!gerar <diversos|consumivel|pocao|arma|esoterico|melhoria|magico>`");
+        
+        const tipo = args[0].toLowerCase();
+        let resultado = "";
+
+        if (tipo === 'diversos') resultado = PungaSystem.diversos();
+        else if (tipo === 'consumivel') resultado = PungaSystem.consumivel();
+        else if (tipo === 'pocao') resultado = PungaSystem.pocao();
+        else if (tipo === 'arma') resultado = PungaSystem.equipamentos(1)[0];
+        else if (tipo === 'esoterico') resultado = PungaSystem.equipamentos(2)[0];
+        
+        else if (tipo === 'melhoria') {
+            const cat = args[1] === 'eso' ? 2 : 1; 
+            const qtd = parseInt(args[2]) || 1;
+            resultado = PungaSystem.melhoria(cat, qtd);
+        }
+        else if (tipo === 'magico') {
+            const cat = args[1] === 'acessorio' ? 2 : 1;
+            const tier = parseInt(args[2]) || 1;
+            resultado = PungaSystem.magico(cat, tier);
+        }
+        else {
+            return message.reply("Categoria inválida.");
+        }
+
+        message.reply(`🎲 **Gerado:** ${resultado}`);
+    }
 });
 
 const app = express();
@@ -1352,4 +2055,4 @@ app.listen(port, () => {
   console.log(`Servidor de keep-alive rodando em http://localhost:${port}`);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login("");
