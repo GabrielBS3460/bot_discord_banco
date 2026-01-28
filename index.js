@@ -1432,6 +1432,11 @@ client.on('messageCreate', async (message) => {
     else if (command === 'ficha') {
         const { MessageFlags } = require('discord.js');
 
+        const CUSTO_NIVEL = {
+            3: 4, 4: 5, 5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 10,
+            11: 10, 12: 10, 13: 10, 14: 10, 15: 10, 16: 10
+        };
+
         const LISTA_CLASSES_1 = ["Arcanista", "Alquimista", "Atleta", "Bárbaro", "Bardo", "Burguês", "Bucaneiro", "Caçador", "Cavaleiro", "Clérigo", "Duelista", "Druída", "Ermitão", "Frade", "Guerreiro"];
         const LISTA_CLASSES_2 = ["Inovador", "Inventor", "Ladino", "Lutador", "Machado de Pedra", "Magimarcialista", "Nobre", "Necromante", "Paladino", "Santo", "Seteiro", "Treinador", "Usurpador", "Vassalo", "Ventanista"];
 
@@ -1444,33 +1449,41 @@ client.on('messageCreate', async (message) => {
         });
 
         const calcularDados = (p) => {
-            const nivelTotal = p.classes.reduce((acc, c) => acc + c.nivel, 0) || 1;
+            const nivelReal = p.nivel_personagem || 3; 
             let patamar = 1;
-            if (nivelTotal >= 5) patamar = 2;
-            if (nivelTotal >= 11) patamar = 3;
-            if (nivelTotal >= 17) patamar = 4;
-            return { nivelTotal, patamar };
+            if (nivelReal >= 5) patamar = 2;
+            if (nivelReal >= 11) patamar = 3;
+            if (nivelReal >= 17) patamar = 4;
+            return { nivelReal, patamar };
         };
 
         const montarEmbedFicha = (p) => {
-            const { nivelTotal, patamar } = calcularDados(p);
-            const calcCD = (mod) => 10 + mod + Math.floor(nivelTotal / 2);
+            const { nivelReal, patamar } = calcularDados(p);
+            const calcCD = (mod) => 10 + mod + Math.floor(nivelReal / 2);
             
             const txtVida = p.vida_temp > 0 ? `${p.vida_atual}/${p.vida_max} (+${p.vida_temp})` : `${p.vida_atual}/${p.vida_max}`;
             const txtMana = p.mana_temp > 0 ? `${p.mana_atual}/${p.mana_max} (+${p.mana_temp})` : `${p.mana_atual}/${p.mana_max}`;
             const obsTexto = p.observacoes ? p.observacoes : "Nenhuma observação registrada.";
             
+            const somaClasses = p.classes.reduce((acc, c) => acc + c.nivel, 0);
+            const niveisPendentes = nivelReal - somaClasses;
+            const avisoClasse = niveisPendentes > 0 ? `\n⚠️ **Níveis pendentes:** ${niveisPendentes}` : "";
+
             const textoClasses = p.classes.length > 0 
                 ? p.classes.map(c => `${c.nome_classe} ${c.nivel}`).join(' / ')
-                : "Nenhuma classe (Nível 1)";
+                : "Sem Classe Definida";
+
+            const custoProx = CUSTO_NIVEL[nivelReal] || 'Max';
+            const barraProgresso = `${p.pontos_missao}/${custoProx}`;
 
             const embed = new EmbedBuilder()
                 .setColor('#2B2D31')
                 .setTitle(`Ficha de ${p.nome}`)
-                .setDescription(`**${textoClasses}**\nNível Total: **${nivelTotal}** (Patamar ${patamar})`)
+                .setDescription(`**${textoClasses}**${avisoClasse}\nNível de Personagem: **${nivelReal}** (Patamar ${patamar})`)
                 .addFields(
                     { name: '❤️ Vida', value: txtVida, inline: true },
                     { name: '⭐ Mana', value: txtMana, inline: true },
+                    { name: '📈 Progresso', value: `Pontos: **${barraProgresso}**`, inline: true },
                     { name: '🛠️ Forja', value: `${p.pontos_forja_atual.toFixed(1)} pts`, inline: true },
                     { name: '🏃 Deslocamento', value: `${p.deslocamento}`, inline: true },
                     { name: '\u200B', value: '**Atributos**' },
@@ -1528,7 +1541,7 @@ client.on('messageCreate', async (message) => {
                 const r2 = new ActionRowBuilder().addComponents(menu2);
 
                 const response = await interaction.reply({ 
-                    content: "Selecione uma classe para **Adicionar** ou **Editar o Nível**:", 
+                    content: `Selecione uma classe para **Adicionar** ou **Editar o Nível**.\n*(Você tem ${char.nivel_personagem - char.classes.reduce((a, b) => a + b.nivel, 0)} níveis livres)*`, 
                     components: [r1, r2], 
                     flags: MessageFlags.Ephemeral,
                     withResponse: true
@@ -1563,7 +1576,7 @@ client.on('messageCreate', async (message) => {
                     }
                 }
 
-                const { nivelTotal } = calcularDados(char);
+                const { nivelReal } = calcularDados(char);
                 const botoesDescanso = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId('desc_ruim').setLabel('Ruim (Nív/2)').setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder().setCustomId('desc_normal').setLabel('Normal (Nív)').setStyle(ButtonStyle.Primary),
@@ -1572,7 +1585,7 @@ client.on('messageCreate', async (message) => {
                 );
 
                 const menuDescansoResponse = await interaction.reply({ 
-                    content: `🛏️ **Modo de Descanso**\nNível Total: ${nivelTotal}\nEscolha a qualidade da hospedagem:\n*(Você só pode descansar uma vez por dia)*`,
+                    content: `🛏️ **Modo de Descanso**\nNível: ${nivelReal}\nEscolha a qualidade da hospedagem:\n*(Você só pode descansar uma vez por dia)*`,
                     components: [botoesDescanso],
                     flags: MessageFlags.Ephemeral,
                     withResponse: true
@@ -1589,7 +1602,7 @@ client.on('messageCreate', async (message) => {
                     if (iDesc.customId === 'desc_conf') { multiplicador = 2; tipoDescanso = "Confortável"; }
                     if (iDesc.customId === 'desc_lux') { multiplicador = 3; tipoDescanso = "Luxuoso"; }
 
-                    const rec = Math.floor(nivelTotal * multiplicador) || 1; 
+                    const rec = Math.floor(nivelReal * multiplicador) || 1; 
                     
                     const novaVida = Math.min(char.vida_max, char.vida_atual + rec);
                     const novaMana = Math.min(char.mana_max, char.mana_atual + rec);
