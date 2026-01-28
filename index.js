@@ -2055,4 +2055,4 @@ app.listen(port, () => {
   console.log(`Servidor de keep-alive rodando em http://localhost:${port}`);
 });
 
-client.login("");
+client.login(process.env.DISCORD_TOKEN);
