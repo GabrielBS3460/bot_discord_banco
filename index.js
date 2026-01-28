@@ -112,7 +112,7 @@ const commands = [
         name: '!primeiramissao',
         description: 'Resgata um bônus de 300 T$ pela primeira missão do personagem (uso único).',
         syntax: '!primeiramissao'
-    },
+    }/*,
     {
         name: '!ficha',
         description: 'Exibe e edita a ficha (Status, Atributos, Classes, Descanso).',
@@ -132,7 +132,7 @@ const commands = [
         name: '!punga',
         description: 'Realiza um saque aleatório (Dinheiro ou Item) baseado no ND do alvo.',
         syntax: '!punga'
-    }
+    }*/
 ];
 
 const adminCommands = [
