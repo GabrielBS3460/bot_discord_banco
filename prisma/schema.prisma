@@ -22,21 +22,21 @@ model Personagens {
   nome      String   @unique
   saldo     Float    @default(0)
   
-  ultimo_resgate_recompensa DateTime?
-  ultimo_resgate_manavitra  DateTime?
+  nivel_personagem Int @default(3) 
+  pontos_missao    Int @default(0) 
   
-  ultimo_descanso           DateTime?
-
-  pontos_forja_atual        Float     @default(0) 
-  pontos_forja_diarios      Int       @default(1) 
-  ultimo_resgate_forja      DateTime?
-
   vida_atual    Int     @default(10)
   vida_max      Int     @default(10)
   vida_temp     Int     @default(0)
   mana_atual    Int     @default(0)
   mana_max      Int     @default(0)
   mana_temp     Int     @default(0)
+  
+  pontos_forja_atual   Float     @default(0)
+  pontos_forja_diarios Int       @default(1)
+  ultimo_resgate_forja DateTime?
+  ultimo_descanso      DateTime?
+  
   deslocamento  String  @default("9m")
   observacoes   String?
   banner_url    String?
@@ -52,8 +52,10 @@ model Personagens {
   usuario_id String   
 
   transacoes Transacao[]
-  classes    PersonagemClasse[] 
+  classes    PersonagemClasse[]
   utilizadorAtivo Usuarios? @relation("PersonagemAtivo")
+  
+  inscricoes Inscricoes[]
 }
 
 model PersonagemClasse {
@@ -77,4 +79,25 @@ model Transacao {
 
   personagem    Personagens @relation(fields: [personagem_id], references: [id], onUpdate: Cascade)
   personagem_id Int
+}
+
+model Missoes {
+  id          String   @id @default(uuid()) 
+  nome        String   @unique
+  nd          Int
+  vagas       Int
+  status      String   @default("ABERTA") 
+  criador_id  String   
+  inscricoes  Inscricoes[]
+}
+
+model Inscricoes {
+  id            Int      @id @default(autoincrement())
+  missao        Missoes  @relation(fields: [missao_id], references: [id], onDelete: Cascade)
+  missao_id     String
+  personagem    Personagens @relation(fields: [personagem_id], references: [id], onDelete: Cascade)
+  personagem_id Int
+  selecionado   Boolean  @default(false)
+
+  @@unique([missao_id, personagem_id]) 
 }
