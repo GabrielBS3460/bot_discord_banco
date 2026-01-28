@@ -2198,8 +2198,11 @@ client.on('messageCreate', async (message) => {
         const modalHandler = async (i) => {
             if (!i.isModalSubmit() || i.customId !== 'modal_recompensa' || i.user.id !== message.author.id) return;
 
+            await i.deferUpdate(); 
+
             const ouro = parseFloat(i.fields.getTextInputValue('inp_ouro'));
-            if (isNaN(ouro)) return i.reply({ content: "Valor inválido.", flags: MessageFlags.Ephemeral });
+            
+            if (isNaN(ouro)) return i.followUp({ content: "Valor inválido.", flags: MessageFlags.Ephemeral });
 
             const participantes = await prisma.inscricoes.findMany({
                 where: { missao_id: missao.id, selecionado: true },
@@ -2244,7 +2247,7 @@ client.on('messageCreate', async (message) => {
 
             await prisma.missoes.update({ where: { id: missao.id }, data: { status: 'CONCLUIDA' } });
 
-            await i.update({ content: relatorio, embeds: [], components: [] });
+            await i.editReply({ content: relatorio, embeds: [], components: [] });
         };
 
         client.on('interactionCreate', modalHandler);

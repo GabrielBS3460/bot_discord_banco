@@ -21,6 +21,9 @@ model Personagens {
   id        Int      @id @default(autoincrement())
   nome      String   @unique
   saldo     Float    @default(0)
+
+  ultimo_resgate_recompensa DateTime?
+  ultimo_resgate_manavitra  DateTime?
   
   nivel_personagem Int @default(3) 
   pontos_missao    Int @default(0) 
