@@ -26,6 +26,7 @@ const LISTA_CLASSES_1 = [
     "Bucaneiro", "Caçador", "Cavaleiro", "Clérigo", "Duelista", "Druída", 
     "Ermitão", "Frade", "Guerreiro"
 ];
+
 const LISTA_CLASSES_2 = [
     "Inovador", "Inventor", "Ladino", "Lutador", "Machado de Pedra", 
     "Magimarcialista", "Nobre", "Necromante", "Paladino", "Santo", 
@@ -46,6 +47,44 @@ const CUSTO_FORJA = {
     "Encantamentos/Mágicos": 64,
     "Poções/Pergaminhos (1-2)": 2,
     "Poções/Pergaminhos (3-5)": 6
+};
+
+const DB_CULINARIA = {
+    INGREDIENTES: {
+        "Açúcar das fadas": 50, "Ave": 4, "Avelã de Norba": 40, "Carne": 16, "Carne de caça": 32,
+        "Cereal": 1, "Cogumelo": 5, "Especiarias": 100, "Farinha": 1, "Fruta": 3, "Gorad": 30,
+        "Legume": 1, "Leite": 1, "Molho tamuraniano": 30, "Óleo": 3, "Ovo de monstro": 50,
+        "Peixe": 7, "Porco": 8, "Queijo": 6, "Verdura": 1
+    },
+    RECEITAS: {
+        "Assado de carnes": { ing: { "Carne": 1, "Carne de caça": 1, "Porco": 1 }, cd: 25, desc: "+2 Dano corpo a corpo" },
+        "Balinhas": { ing: { "Açúcar das fadas": 1, "Fruta": 1 }, cd: 25, desc: "+2 Dano magias" },
+        "Banquete dos heróis": { ing: { "Carne de caça": 1, "Ovo de monstro": 1, "Avelã de Norba": 1 }, cd: 30, desc: "+1 Atributo" },
+        "Batata valkariana": { ing: { "Óleo": 1, "Legume": 1 }, cd: 15, desc: "+1d6 em um teste" },
+        "Bolo de cenoura": { ing: { "Farinha": 1, "Fruta": 1, "Óleo": 1 }, cd: 20, desc: "+2 Percepção" },
+        "Bolo do Panteão": { ing: { "Açúcar das fadas": 1, "Avelã de Norba": 1, "Farinha": 1, "Gorad": 1 }, cd: 30, desc: "-1 Custo PM" },
+        "Ensopado reforçado": { ing: { "Fruta": 1, "Porco": 1, "Verdura": 1 }, cd: 20, desc: "+20 PV Temp, -3m Desl." },
+        "Estrogonofe": { ing: { "Carne": 1, "Cogumelo": 1, "Leite": 1 }, cd: 20, desc: "+2 Vontade" },
+        "Futomaki": { ing: { "Cereal": 1, "Peixe": 1 }, cd: 20, desc: "+2 Diplomacia" },
+        "Gorad quente": { ing: { "Gorad": 1, "Leite": 1 }, cd: 25, desc: "+2 PM Temp" },
+        "Gorvelã": { ing: { "Gorad": 1, "Avelã de Norba": 1 }, cd: 30, desc: "+5 PM Temp" },
+        "Javali do Bosque": { ing: { "Carne de caça": 1, "Cogumelo": 1, "Farinha": 1 }, cd: 20, desc: "+2 Defesa" },
+        "Macarrão de Yuvalin": { ing: { "Farinha": 1, "Leite": 1, "Porco": 1 }, cd: 20, desc: "+5 PV Temp" },
+        "Manjar dos titãs": { ing: { "Avelã de Norba": 1, "Farinha": 1, "Ovo de monstro": 1 }, cd: 30, desc: "+1d4 Perícias Físicas" },
+        "Ovo frito": { ing: { "Ovo de monstro": 1, "Óleo": 1 }, cd: 25, desc: "+10 PV Temp" },
+        "Pão de queijo": { ing: { "Farinha": 1, "Queijo": 1 }, cd: 20, desc: "+2 Fortitude" },
+        "Pavão celestial": { ing: { "Açúcar das fadas": 1, "Carne de caça": 1, "Fruta": 1 }, cd: 30, desc: "+1d4 Perícias Mentais" },
+        "Pizza": { ing: { "Farinha": 1, "Fruta": 1, "Queijo": 1 }, cd: 20, desc: "+1 Resistências" },
+        "Porco deheoni": { ing: { "Porco": 1, "Fruta": 1, "Legume": 1 }, cd: 20, desc: "+1 Ataque corpo a corpo" },
+        "Prato do aventureiro": { ing: { "Ave": 1, "Legume": 1 }, cd: 15, desc: "+1/nível Rec. PV" },
+        "Salada de Salistick": { ing: { "Ave": 1, "Fruta": 1, "Legume": 1 }, cd: 20, desc: "+1,5m Deslocamento" },
+        "Salada élfica": { ing: { "Fruta": 1, "Legume": 1, "Verdura": 1 }, cd: 20, desc: "+1 Ataque à distância" },
+        "Salada imperial": { ing: { "Porco": 1, "Queijo": 1, "Verdura": 1 }, cd: 20, desc: "+2 Iniciativa" },
+        "Sashimi": { ing: { "Peixe": 1, "Molho tamuraniano": 1 }, cd: 25, desc: "+2 Dano à distância" },
+        "Sopa de cogumelos": { ing: { "Cogumelo": 1, "Legume": 1, "Verdura": 1 }, cd: 20, desc: "+2 Misticismo" },
+        "Sopa de peixe": { ing: { "Verdura": 1, "Peixe": 1 }, cd: 15, desc: "+1/nível Rec. PM" },
+        "Torta de maçã": { ing: { "Farinha": 1, "Fruta": 1 }, cd: 20, desc: "+5 Res. Veneno" }
+    }
 };
 
 const commands = [
@@ -2271,6 +2310,213 @@ client.on('messageCreate', async (message) => {
                 if (err.code === 10062 || err.code === 40060) return;
                 console.error("Erro no painel:", err);
             }
+        });
+    }
+
+    else if (command === 'feirinha') {
+        const { MessageFlags } = require('discord.js');
+        const char = await getPersonagemAtivo(message.author.id);
+        if (!char) return message.reply("Você não tem personagem ativo.");
+
+        const agora = new Date();
+        const ultimaGeracao = char.feira_data_geracao ? new Date(char.feira_data_geracao) : new Date(0);
+        const diffDias = (agora - ultimaGeracao) / (1000 * 60 * 60 * 24);
+
+        let itensLoja = char.feira_itens;
+
+        if (diffDias >= 7 || !itensLoja || itensLoja.length === 0) {
+            const todosIngredientes = Object.keys(DB_CULINARIA.INGREDIENTES);
+            const sorteados = [];
+            for(let i=0; i<5; i++) {
+                const nome = todosIngredientes[Math.floor(Math.random() * todosIngredientes.length)];
+                sorteados.push({ nome: nome, preco: DB_CULINARIA.INGREDIENTES[nome] });
+            }
+            itensLoja = sorteados;
+            
+            await prisma.personagens.update({
+                where: { id: char.id },
+                data: { 
+                    feira_itens: itensLoja, 
+                    feira_data_geracao: agora 
+                }
+            });
+        }
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('menu_comprar_ingrediente')
+            .setPlaceholder('🛒 Selecione um ingrediente para comprar');
+
+        itensLoja.forEach((item, index) => {
+            menu.addOptions(new StringSelectMenuOptionBuilder()
+                .setLabel(`${item.nome} - T$ ${item.preco}`)
+                .setValue(`${index}_${item.nome}_${item.preco}`)
+                .setEmoji('🥬')
+            );
+        });
+
+        const row = new ActionRowBuilder().addComponents(menu);
+        
+        const estoque = char.estoque_ingredientes || {};
+        const listaEstoque = Object.entries(estoque).map(([k, v]) => `${k}: ${v}`).join(', ') || "Vazio";
+
+        const msg = await message.reply({ 
+            content: `🥦 **Feirinha da Semana** (Reseta em: ${7 - Math.floor(diffDias)} dias)\n💰 **Seu Saldo:** T$ ${char.saldo}\n🎒 **Seu Estoque:** ${listaEstoque}\n\n*Selecione abaixo para comprar:*`,
+            components: [row]
+        });
+
+        const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === message.author.id, time: 60000 });
+
+        collector.on('collect', async i => {
+            if (!i.isStringSelectMenu()) return;
+            const [index, nome, precoStr] = i.values[0].split('_');
+            const preco = parseFloat(precoStr);
+
+            const charAtual = await getPersonagemAtivo(message.author.id);
+            if (charAtual.saldo < preco) return i.reply({ content: "Dinheiro insuficiente!", flags: MessageFlags.Ephemeral });
+
+            const novoEstoque = charAtual.estoque_ingredientes || {};
+            if (!novoEstoque[nome]) novoEstoque[nome] = 0;
+            novoEstoque[nome] += 1;
+
+            await prisma.$transaction([
+                prisma.personagens.update({
+                    where: { id: charAtual.id },
+                    data: { 
+                        saldo: { decrement: preco },
+                        estoque_ingredientes: novoEstoque
+                    }
+                }),
+                prisma.transacao.create({
+                    data: { personagem_id: charAtual.id, descricao: `Comprou ${nome}`, valor: preco, tipo: 'GASTO' }
+                })
+            ]);
+
+            await i.update({ content: `✅ Comprou **${nome}** por T$ ${preco}!\n🎒 **Estoque:** ${Object.entries(novoEstoque).map(([k,v])=>`${k}: ${v}`).join(', ')}` });
+        });
+    }
+
+    else if (command === 'aprenderculinaria') {
+        const char = await getPersonagemAtivo(message.author.id);
+        if (!char) return message.reply("Sem personagem.");
+
+        const limiteReceitas = Math.max(1, char.inteligencia);
+        const conhecidas = char.receitas_conhecidas;
+
+        if (conhecidas.length >= limiteReceitas) {
+            return message.reply(`🚫 **Limite atingido!** Você tem Inteligência ${char.inteligencia} e já conhece ${conhecidas.length} receitas.\nAumente sua Inteligência para aprender mais.`);
+        }
+
+        const todasReceitas = Object.keys(DB_CULINARIA.RECEITAS);
+        const disponiveis = todasReceitas.filter(r => !conhecidas.includes(r));
+
+        if (disponiveis.length === 0) return message.reply("Você já conhece todas as receitas!");
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('menu_aprender_receita')
+            .setPlaceholder(`Aprender Receita (${conhecidas.length}/${limiteReceitas})`);
+
+        disponiveis.slice(0, 25).forEach(nome => {
+            menu.addOptions(new StringSelectMenuOptionBuilder()
+                .setLabel(nome)
+                .setDescription(DB_CULINARIA.RECEITAS[nome].desc)
+                .setValue(nome)
+            );
+        });
+
+        const msg = await message.reply({ 
+            content: `📚 **Livro de Receitas**\nVocê pode aprender mais **${limiteReceitas - conhecidas.length}** receitas.`,
+            components: [new ActionRowBuilder().addComponents(menu)]
+        });
+
+        const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === message.author.id, time: 60000 });
+
+        collector.on('collect', async i => {
+            const receitaEscolhida = i.values[0];
+            const charUp = await getPersonagemAtivo(message.author.id);
+
+            if (charUp.receitas_conhecidas.length >= Math.max(1, charUp.inteligencia)) {
+                return i.reply({ content: "Limite atingido.", flags: require('discord.js').MessageFlags.Ephemeral });
+            }
+
+            const novasConhecidas = [...charUp.receitas_conhecidas, receitaEscolhida];
+
+            await prisma.personagens.update({
+                where: { id: charUp.id },
+                data: { receitas_conhecidas: novasConhecidas }
+            });
+
+            await i.update({ content: `✅ **Você aprendeu a fazer: ${receitaEscolhida}!**`, components: [] });
+        });
+    }
+
+    else if (command === 'cozinhar') {
+        const { MessageFlags } = require('discord.js');
+        const char = await getPersonagemAtivo(message.author.id);
+        
+        if (!char || char.receitas_conhecidas.length === 0) return message.reply("Você não conhece nenhuma receita.");
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('menu_cozinhar')
+            .setPlaceholder('🍳 O que vamos cozinhar hoje?');
+
+        char.receitas_conhecidas.forEach(nome => {
+            const r = DB_CULINARIA.RECEITAS[nome];
+            const ingDesc = Object.entries(r.ing).map(([k,v]) => `${k} x${v}`).join(', ');
+            menu.addOptions(new StringSelectMenuOptionBuilder()
+                .setLabel(nome)
+                .setDescription(`CD ${r.cd} | Ing: ${ingDesc.substring(0, 50)}...`)
+                .setValue(nome)
+            );
+        });
+
+        const msg = await message.reply({ 
+            content: `🔥 **Fogão Aceso**\nSeu Estoque: ${Object.entries(char.estoque_ingredientes || {}).map(([k,v])=>`${k}: ${v}`).join(', ')}`,
+            components: [new ActionRowBuilder().addComponents(menu)]
+        });
+
+        const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === message.author.id, time: 60000 });
+
+        collector.on('collect', async i => {
+            const receitaNome = i.values[0];
+            const receita = DB_CULINARIA.RECEITAS[receitaNome];
+            const charAtual = await getPersonagemAtivo(message.author.id);
+            const estoque = charAtual.estoque_ingredientes || {};
+
+            let temTudo = true;
+            let faltantes = [];
+
+            for (const [ingrediente, qtdNecessaria] of Object.entries(receita.ing)) {
+                if (!estoque[ingrediente] || estoque[ingrediente] < qtdNecessaria) {
+                    temTudo = false;
+                    faltantes.push(`${ingrediente} (tem ${estoque[ingrediente]||0}/${qtdNecessaria})`);
+                }
+            }
+
+            if (!temTudo) {
+                return i.reply({ 
+                    content: `🚫 **Ingredientes insuficientes!**\nFalta: ${faltantes.join(', ')}`, 
+                    flags: MessageFlags.Ephemeral 
+                });
+            }
+
+            for (const [ingrediente, qtdNecessaria] of Object.entries(receita.ing)) {
+                estoque[ingrediente] -= qtdNecessaria;
+                if (estoque[ingrediente] <= 0) delete estoque[ingrediente];
+            }
+
+            await prisma.personagens.update({
+                where: { id: charAtual.id },
+                data: { estoque_ingredientes: estoque }
+            });
+
+            await prisma.transacao.create({
+                data: { personagem_id: charAtual.id, descricao: `Cozinhou ${receitaNome}`, valor: 0, tipo: 'LOG' }
+            });
+
+            await i.update({ 
+                content: `🍲 **Prato Pronto!**\nVocê fez **${receitaNome}**.\n*Efeito:* ${receita.desc}\n\n🎒 **Estoque Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')}`, 
+                components: [] 
+            });
         });
     }
 });

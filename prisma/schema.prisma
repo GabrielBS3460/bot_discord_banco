@@ -39,6 +39,12 @@ model Personagens {
   pontos_forja_diarios Int       @default(1)
   ultimo_resgate_forja DateTime?
   ultimo_descanso      DateTime?
+
+  estoque_ingredientes  Json     @default("{}") 
+  receitas_conhecidas   String[] @default([])   
+  
+  feira_itens           Json     @default("[]")
+  feira_data_geracao    DateTime?               
   
   deslocamento  String  @default("9m")
   observacoes   String?
