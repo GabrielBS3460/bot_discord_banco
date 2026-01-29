@@ -2322,7 +2322,7 @@ client.on('messageCreate', async (message) => {
         const ultimaGeracao = char.feira_data_geracao ? new Date(char.feira_data_geracao) : new Date(0);
         const diffDias = (agora - ultimaGeracao) / (1000 * 60 * 60 * 24);
 
-        let itensLoja = char.feira_itens;
+        let itensLoja = char.feira_itens || []; 
 
         if (diffDias >= 7 || !itensLoja || itensLoja.length === 0) {
             const todosIngredientes = Object.keys(DB_CULINARIA.INGREDIENTES);
@@ -2400,7 +2400,8 @@ client.on('messageCreate', async (message) => {
         if (!char) return message.reply("Sem personagem.");
 
         const limiteReceitas = Math.max(1, char.inteligencia);
-        const conhecidas = char.receitas_conhecidas;
+        
+        const conhecidas = char.receitas_conhecidas || [];
 
         if (conhecidas.length >= limiteReceitas) {
             return message.reply(`🚫 **Limite atingido!** Você tem Inteligência ${char.inteligencia} e já conhece ${conhecidas.length} receitas.\nAumente sua Inteligência para aprender mais.`);
@@ -2432,13 +2433,15 @@ client.on('messageCreate', async (message) => {
 
         collector.on('collect', async i => {
             const receitaEscolhida = i.values[0];
-            const charUp = await getPersonagemAtivo(message.author.id);
+            const charUp = await getPersonagemAtivo(message.author.id); 
+            
+            const receitasAtuais = charUp.receitas_conhecidas || [];
 
-            if (charUp.receitas_conhecidas.length >= Math.max(1, charUp.inteligencia)) {
+            if (receitasAtuais.length >= Math.max(1, charUp.inteligencia)) {
                 return i.reply({ content: "Limite atingido.", flags: require('discord.js').MessageFlags.Ephemeral });
             }
 
-            const novasConhecidas = [...charUp.receitas_conhecidas, receitaEscolhida];
+            const novasConhecidas = [...receitasAtuais, receitaEscolhida];
 
             await prisma.personagens.update({
                 where: { id: charUp.id },
@@ -2453,13 +2456,15 @@ client.on('messageCreate', async (message) => {
         const { MessageFlags } = require('discord.js');
         const char = await getPersonagemAtivo(message.author.id);
         
-        if (!char || char.receitas_conhecidas.length === 0) return message.reply("Você não conhece nenhuma receita.");
+        const receitasConhecidas = char ? (char.receitas_conhecidas || []) : [];
+
+        if (!char || receitasConhecidas.length === 0) return message.reply("Você não conhece nenhuma receita.");
 
         const menu = new StringSelectMenuBuilder()
             .setCustomId('menu_cozinhar')
             .setPlaceholder('🍳 O que vamos cozinhar hoje?');
 
-        char.receitas_conhecidas.forEach(nome => {
+        receitasConhecidas.forEach(nome => {
             const r = DB_CULINARIA.RECEITAS[nome];
             const ingDesc = Object.entries(r.ing).map(([k,v]) => `${k} x${v}`).join(', ');
             menu.addOptions(new StringSelectMenuOptionBuilder()
@@ -2469,8 +2474,10 @@ client.on('messageCreate', async (message) => {
             );
         });
 
+        const estoqueDisplay = char.estoque_ingredientes || {};
+
         const msg = await message.reply({ 
-            content: `🔥 **Fogão Aceso**\nSeu Estoque: ${Object.entries(char.estoque_ingredientes || {}).map(([k,v])=>`${k}: ${v}`).join(', ')}`,
+            content: `🔥 **Fogão Aceso**\nSeu Estoque: ${Object.entries(estoqueDisplay).map(([k,v])=>`${k}: ${v}`).join(', ')}`,
             components: [new ActionRowBuilder().addComponents(menu)]
         });
 
@@ -2480,6 +2487,7 @@ client.on('messageCreate', async (message) => {
             const receitaNome = i.values[0];
             const receita = DB_CULINARIA.RECEITAS[receitaNome];
             const charAtual = await getPersonagemAtivo(message.author.id);
+            
             const estoque = charAtual.estoque_ingredientes || {};
 
             let temTudo = true;
