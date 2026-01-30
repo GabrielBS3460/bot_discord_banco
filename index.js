@@ -2492,71 +2492,124 @@ client.on('messageCreate', async (message) => {
 
         if (!char || receitasConhecidas.length === 0) return message.reply("Você não conhece nenhuma receita.");
 
-        const menu = new StringSelectMenuBuilder()
-            .setCustomId('menu_cozinhar')
-            .setPlaceholder('🍳 O que vamos cozinhar hoje?');
+        const montarMenuReceitas = () => {
+            const menu = new StringSelectMenuBuilder()
+                .setCustomId('menu_selecionar_receita')
+                .setPlaceholder('🍳 Escolha o prato');
 
-        receitasConhecidas.forEach(nome => {
-            const r = DB_CULINARIA.RECEITAS[nome];
-            const ingDesc = Object.entries(r.ing).map(([k,v]) => `${k} x${v}`).join(', ');
-            menu.addOptions(new StringSelectMenuOptionBuilder()
-                .setLabel(nome)
-                .setDescription(`CD ${r.cd} | Ing: ${ingDesc.substring(0, 50)}...`)
-                .setValue(nome)
-            );
-        });
-
-        const estoqueDisplay = char.estoque_ingredientes || {};
+            receitasConhecidas.forEach(nome => {
+                const r = DB_CULINARIA.RECEITAS[nome];
+                const ingDesc = Object.entries(r.ing).map(([k,v]) => `${k} x${v}`).join(', ');
+                menu.addOptions(new StringSelectMenuOptionBuilder()
+                    .setLabel(nome)
+                    .setDescription(`CD ${r.cd} | Ing: ${ingDesc.substring(0, 50)}...`)
+                    .setValue(nome)
+                );
+            });
+            return new ActionRowBuilder().addComponents(menu);
+        };
 
         const msg = await message.reply({ 
-            content: `🔥 **Fogão Aceso**\nSeu Estoque: ${Object.entries(estoqueDisplay).map(([k,v])=>`${k}: ${v}`).join(', ')}`,
-            components: [new ActionRowBuilder().addComponents(menu)]
+            content: `🔥 **Fogão Aceso**\n👤 **Cozinheiro:** ${char.nome}\n🔨 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)}\n🎒 **Estoque:** ${Object.entries(char.estoque_ingredientes || {}).map(([k,v])=>`${k}: ${v}`).join(', ')}`,
+            components: [montarMenuReceitas()]
         });
 
-        const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === message.author.id, time: 60000 });
+        const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === message.author.id, time: 120000 });
+
+        let receitaSelecionada = null;
 
         collector.on('collect', async i => {
-            const receitaNome = i.values[0];
-            const receita = DB_CULINARIA.RECEITAS[receitaNome];
             const charAtual = await getPersonagemAtivo(message.author.id);
-            
             const estoque = charAtual.estoque_ingredientes || {};
 
-            let temTudo = true;
-            let faltantes = [];
-
-            for (const [ingrediente, qtdNecessaria] of Object.entries(receita.ing)) {
-                if (!estoque[ingrediente] || estoque[ingrediente] < qtdNecessaria) {
-                    temTudo = false;
-                    faltantes.push(`${ingrediente} (tem ${estoque[ingrediente]||0}/${qtdNecessaria})`);
+            if (i.isStringSelectMenu() && i.customId === 'menu_selecionar_receita') {
+                receitaSelecionada = i.values[0];
+                const r = DB_CULINARIA.RECEITAS[receitaSelecionada];
+                
+                let temIngredientes = true;
+                let faltantes = [];
+                for (const [ing, qtd] of Object.entries(r.ing)) {
+                    if (!estoque[ing] || estoque[ing] < qtd) {
+                        temIngredientes = false;
+                        faltantes.push(`${ing} (${estoque[ing]||0}/${qtd})`);
+                    }
                 }
-            }
 
-            if (!temTudo) {
-                return i.reply({ 
-                    content: `🚫 **Ingredientes insuficientes!**\nFalta: ${faltantes.join(', ')}`, 
-                    flags: MessageFlags.Ephemeral 
+                if (!temIngredientes) {
+                    return i.reply({ content: `🚫 **Faltam ingredientes:** ${faltantes.join(', ')}`, flags: MessageFlags.Ephemeral });
+                }
+
+                if (charAtual.pontos_forja_atual < 0.5) {
+                    return i.reply({ content: `🚫 **Pontos de Forja insuficientes!** Precisa de 0.5, você tem ${charAtual.pontos_forja_atual.toFixed(1)}.`, flags: MessageFlags.Ephemeral });
+                }
+
+                const temEspeciarias = (estoque['Especiarias'] || 0) >= 1;
+
+                const botoes = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('btn_cozinhar_padrao').setLabel('Cozinhar Prato').setStyle(ButtonStyle.Success).setEmoji('🍲'),
+                    new ButtonBuilder().setCustomId('btn_cozinhar_especial').setLabel('Adicionar Especiarias').setStyle(ButtonStyle.Primary).setEmoji('✨').setDisabled(!temEspeciarias),
+                    new ButtonBuilder().setCustomId('btn_cancelar_cozinha').setLabel('Cancelar').setStyle(ButtonStyle.Secondary)
+                );
+
+                await i.update({ 
+                    content: `🥘 **Preparando: ${receitaSelecionada}**\nCusto: **0.5 Pontos de Forja**\n\nDeseja aprimorar o prato com Especiarias?`,
+                    components: [botoes] 
                 });
             }
 
-            for (const [ingrediente, qtdNecessaria] of Object.entries(receita.ing)) {
-                estoque[ingrediente] -= qtdNecessaria;
-                if (estoque[ingrediente] <= 0) delete estoque[ingrediente];
+            if (i.isButton()) {
+                if (i.customId === 'btn_cancelar_cozinha') {
+                    await i.update({ content: "❌ Culinária cancelada.", components: [montarMenuReceitas()] });
+                    return;
+                }
+
+                if (!receitaSelecionada) return i.reply({ content: "Nenhuma receita selecionada.", flags: MessageFlags.Ephemeral });
+
+                const usarEspeciarias = i.customId === 'btn_cozinhar_especial';
+                const receita = DB_CULINARIA.RECEITAS[receitaSelecionada];
+
+                if (charAtual.pontos_forja_atual < 0.5) return i.reply({ content: "Pontos de forja insuficientes.", flags: MessageFlags.Ephemeral });
+                if (usarEspeciarias && (!estoque['Especiarias'] || estoque['Especiarias'] < 1)) return i.reply({ content: "Sem especiarias.", flags: MessageFlags.Ephemeral });
+
+                for (const [ing, qtd] of Object.entries(receita.ing)) {
+                    estoque[ing] -= qtd;
+                    if (estoque[ing] <= 0) delete estoque[ing];
+                }
+                if (usarEspeciarias) {
+                    estoque['Especiarias'] -= 1;
+                    if (estoque['Especiarias'] <= 0) delete estoque['Especiarias'];
+                }
+
+                await prisma.personagens.update({
+                    where: { id: charAtual.id },
+                    data: { 
+                        estoque_ingredientes: estoque,
+                        pontos_forja_atual: { decrement: 0.5 }
+                    }
+                });
+
+                const descLog = usarEspeciarias 
+                    ? `Cozinhou ${receitaSelecionada} (Com Especiarias)` 
+                    : `Cozinhou ${receitaSelecionada}`;
+
+                await prisma.transacao.create({
+                    data: { 
+                        personagem_id: charAtual.id, 
+                        descricao: descLog, 
+                        valor: 0, 
+                        tipo: 'GASTO'
+                    }
+                });
+
+                const msgSucesso = usarEspeciarias
+                    ? `✨ **Prato Gourmet Pronto!**\nVocê fez **${receitaSelecionada}** com um toque especial.\n*Efeito:* ${receita.desc} (Aprimorado?)`
+                    : `🍲 **Prato Pronto!**\nVocê fez **${receitaSelecionada}**.\n*Efeito:* ${receita.desc}`;
+
+                await i.update({ 
+                    content: `${msgSucesso}\n\n🔨 **Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')} | Pts: ${(charAtual.pontos_forja_atual - 0.5).toFixed(1)}`,
+                    components: [montarMenuReceitas()] 
+                });
             }
-
-            await prisma.personagens.update({
-                where: { id: charAtual.id },
-                data: { estoque_ingredientes: estoque }
-            });
-
-            await prisma.transacao.create({
-                data: { personagem_id: charAtual.id, descricao: `Cozinhou ${receitaNome}`, valor: 0, tipo: 'LOG' }
-            });
-
-            await i.update({ 
-                content: `🍲 **Prato Pronto!**\nVocê fez **${receitaNome}**.\n*Efeito:* ${receita.desc}\n\n🎒 **Estoque Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')}`, 
-                components: [] 
-            });
         });
     }
 });
