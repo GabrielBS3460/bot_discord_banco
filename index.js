@@ -2880,7 +2880,7 @@ client.on('messageCreate', async (message) => {
 
         const embed = new EmbedBuilder()
             .setColor('#FFD700')
-            .setTitle('🎲 Resultado do Jogo do Bicho - Tormenta 20')
+            .setTitle('🎲 Resultado do Jogo do Bicho')
             .setDescription('O resultado da semana saiu! Confira os números:')
             .addFields(
                 { name: '1º Prêmio', value: `${resultados[0]} - **${BICHOS_T20[resultados[0].slice(-2)]}**` },
