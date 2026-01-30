@@ -207,7 +207,7 @@ function gerarRecompensa(nd) {
         if (drop.val !== undefined) {
             const valorDiv = Math.floor(drop.val / 5);
             if (valorDiv === 0) return "🗑️ **Nada encontrado.** (A poeira domina o local)";
-            return `💰 **Dinheiro:** T$ ${valorDiv} (Valor original dividido por 5)`;
+            return `💰 **Dinheiro:** T$ ${valorDiv}`;
         } 
         
         if (drop.riqueza) {
