@@ -2913,7 +2913,7 @@ client.on('messageCreate', async (message) => {
             .setColor('#9B59B6') 
             .setTitle(`🎁 Drop Gerado (ND ${ndInput})`)
             .setDescription(resultado)
-            .setFooter({ text: 'Sistema de Recompensa T20 JDA' });
+            .setFooter({ text: 'Sistema de Recompensa Herdeiros das Cinzas' });
 
         message.reply({ embeds: [embed] });
     }

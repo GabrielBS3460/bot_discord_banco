@@ -6,8 +6,6 @@ const DADOS = {
     TABELA_RARIDADE: (nd) => {
         const roll = Math.floor(Math.random() * 100) + 1;
         
-        let res = { tipo: 'DINHEIRO', detalhe: 0 };
-
         if (nd <= 2) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 80) return { tipo: 'SUPERIOR', slots: 1 };
@@ -23,7 +21,7 @@ const DADOS = {
             if (roll <= 80) return { tipo: 'SUPERIOR', slots: 3 };
             if (roll <= 95) return { tipo: 'MAGIC', poder: 1 }; 
             return { tipo: 'MAGIC', poder: 2 }; 
-        } else { 
+        } else {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 80) return { tipo: 'SUPERIOR', slots: 4 };
             if (roll <= 95) return { tipo: 'MAGIC', poder: 2 }; 
@@ -56,7 +54,7 @@ const DADOS = {
         ESOTERICOS: [
             "Cajado Arcano", "Varinha", "Medalhão Sagrado", "Orbe Cristalino", "Luva de Ferro de Guerra",
             "Cetro de Prata", "Foco de Matéria Vermelha", 
-            "Bolsa de Pó", "Cetro Elemental", "Costela de Lich", "Dedo de Ente", "Tomo Hermético" 
+            "Bolsa de Pó", "Cetro Elemental", "Costela de Lich", "Dedo de Ente", "Tomo Hermético"
         ],
         ACESSORIOS: [
             "Mochila de Carga", "Algibeira Mordedora", "Algibeira Provedora", "Cinto de Poções",
@@ -202,8 +200,7 @@ function gerarRecompensa(nd) {
     if (isNaN(ndNum)) return "ND Inválido.";
 
     const raridade = DADOS.TABELA_RARIDADE(ndNum);
-    let resultado = [];
-
+    
     if (raridade.tipo === 'DINHEIRO') {
         const drop = DADOS.DINHEIRO_POR_ND(ndNum);
         
@@ -239,24 +236,31 @@ function gerarRecompensa(nd) {
 
     if (raridade.tipo === 'SUPERIOR') {
         let slots = raridade.slots;
-        let listaMelhorias = [];
-        let listaMateriais = DADOS.MELHORIAS.MATERIAIS;
+        let listaOriginal = [];
 
-        if (cat === 'ARMAS') listaMelhorias = DADOS.MELHORIAS.ARMAS;
-        else if (cat === 'ARMADURAS') listaMelhorias = DADOS.MELHORIAS.ARMADURAS;
-        else if (cat === 'ESOTERICOS') listaMelhorias = DADOS.MELHORIAS.ESOTERICOS;
-        else {
-            listaMelhorias = ["Aprimorado", "Banhado a Ouro", "Cravejado de Joias"];
-        }
+        if (cat === 'ARMAS') listaOriginal = DADOS.MELHORIAS.ARMAS;
+        else if (cat === 'ARMADURAS') listaOriginal = DADOS.MELHORIAS.ARMADURAS;
+        else if (cat === 'ESOTERICOS') listaOriginal = DADOS.MELHORIAS.ESOTERICOS;
+        else listaOriginal = ["Aprimorado", "Banhado a Ouro", "Cravejado de Joias"];
+
+        let disponiveis = [...listaOriginal];
 
         if (['ARMAS', 'ARMADURAS', 'ESOTERICOS'].includes(cat) && Math.random() < 0.1 && slots > 0) {
+            const listaMateriais = DADOS.MELHORIAS.MATERIAIS;
             const material = pegarItemAleatorio(listaMateriais);
             detalhes.push(`Material: ${material}`);
             slots--;
         }
 
         for (let i = 0; i < slots; i++) {
-            detalhes.push(pegarItemAleatorio(listaMelhorias));
+            if (disponiveis.length === 0) break; 
+            
+            const index = Math.floor(Math.random() * disponiveis.length);
+            const escolhido = disponiveis[index];
+            
+            detalhes.push(escolhido);
+            
+            disponiveis.splice(index, 1);
         }
         
         nomeFinal = `**${itemBase} Superior** [${slots + (raridade.slots - slots)} mod]`;
@@ -264,20 +268,28 @@ function gerarRecompensa(nd) {
 
     if (raridade.tipo === 'MAGIC') {
         let slots = raridade.poder; 
-        let listaEncantos = (cat === 'ARMAS') ? DADOS.ENCANTOS.ARMAS : DADOS.ENCANTOS.ARMADURAS;
+        let listaOriginal = (cat === 'ARMAS') ? DADOS.ENCANTOS.ARMAS : DADOS.ENCANTOS.ARMADURAS;
+        let disponiveis = [...listaOriginal]; 
         
         let encantosAplicados = [];
         
-        while (slots > 0) {
-            const encanto = pegarItemAleatorio(listaEncantos);
+        while (slots > 0 && disponiveis.length > 0) {
+            const index = Math.floor(Math.random() * disponiveis.length);
+            const encanto = disponiveis[index];
+            
             const custaDois = ["Magnífica", "Lancinante", "Energética", "Guardião"].some(n => encanto.includes(n));
             
-            if (custaDois && slots >= 2) {
-                encantosAplicados.push(encanto);
-                slots -= 2;
-            } else if (!custaDois) {
+            if (custaDois) {
+                if (slots >= 2) {
+                    encantosAplicados.push(encanto);
+                    slots -= 2;
+                    disponiveis.splice(index, 1); 
+                } else {
+                }
+            } else {
                 encantosAplicados.push(encanto);
                 slots -= 1;
+                disponiveis.splice(index, 1); 
             }
         }
         
