@@ -1573,14 +1573,13 @@ client.on('messageCreate', async (message) => {
         const getBotoes = () => new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('edit_classes').setLabel('Classes/Nível').setStyle(ButtonStyle.Success).setEmoji('📚'),
             new ButtonBuilder().setCustomId('edit_status').setLabel('Status').setStyle(ButtonStyle.Primary).setEmoji('❤️'),
-            new ButtonBuilder().setCustomId('edit_fisico').setLabel('Físicos').setStyle(ButtonStyle.Secondary).setEmoji('💪'),
-            new ButtonBuilder().setCustomId('edit_mental').setLabel('Mentais').setStyle(ButtonStyle.Secondary).setEmoji('🧠'),
             new ButtonBuilder().setCustomId('btn_descanso').setLabel('Descansar').setStyle(ButtonStyle.Success).setEmoji('💤')
         );
         
         const row2 = new ActionRowBuilder().addComponents(
-             new ButtonBuilder().setCustomId('edit_obs').setLabel('Obs').setStyle(ButtonStyle.Secondary).setEmoji('📝'),
-             new ButtonBuilder().setCustomId('edit_banner').setLabel('Alterar Banner').setStyle(ButtonStyle.Secondary).setEmoji('🖼️')
+            new ButtonBuilder().setCustomId('edit_fisico').setLabel('Físicos').setStyle(ButtonStyle.Secondary).setEmoji('💪'),
+            new ButtonBuilder().setCustomId('edit_mental').setLabel('Mentais').setStyle(ButtonStyle.Secondary).setEmoji('🧠'),
+            new ButtonBuilder().setCustomId('edit_obs').setLabel('Obs').setStyle(ButtonStyle.Secondary).setEmoji('📝'),
         );
 
         const msg = await message.reply({ 
@@ -1731,65 +1730,6 @@ client.on('messageCreate', async (message) => {
                 const modal = new ModalBuilder().setCustomId('modal_obs').setTitle('Editar Observações');
                 modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_obs').setLabel('Anotações').setStyle(TextInputStyle.Paragraph).setValue(char.observacoes || '').setMaxLength(1000)));
                 await interaction.showModal(modal);
-            }
-
-            if (interaction.customId === 'edit_banner') {
-                const { MessageFlags } = require('discord.js');
-
-                const rowOpcoes = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('banner_upload').setLabel('Enviar Arquivo').setStyle(ButtonStyle.Primary).setEmoji('📤'),
-                    new ButtonBuilder().setCustomId('banner_avatar').setLabel('Usar meu Avatar').setStyle(ButtonStyle.Secondary).setEmoji('🖼️')
-                );
-
-                const msgPerg = await interaction.reply({ 
-                    content: "Como você deseja alterar a imagem do personagem?", 
-                    components: [rowOpcoes],
-                    flags: MessageFlags.Ephemeral,
-                    fetchReply: true
-                });
-
-                const btnCollector = msgPerg.createMessageComponentCollector({ time: 60000 });
-
-                btnCollector.on('collect', async iBtn => {
-                    if (iBtn.customId === 'banner_avatar') {
-                        await prisma.personagens.update({ where: { id: char.id }, data: { banner_url: null } });
-                        
-                        await prisma.transacao.create({
-                            data: { personagem_id: char.id, descricao: "Resetou imagem para Avatar", valor: 0, tipo: 'LOG' }
-                        });
-
-                        char = await prisma.personagens.findUnique({ where: { id: char.id }, include: { classes: true } });
-                        await msg.edit({ embeds: [montarEmbedFicha(char)] });
-                        
-                        await iBtn.update({ content: "✅ Imagem resetada para o seu avatar do Discord!", components: [] });
-                    }
-
-                    if (iBtn.customId === 'banner_upload') {
-                        await iBtn.update({ content: "📤 **Envie a imagem agora neste chat.**\n(Eu vou pegar a primeira imagem que você mandar e apagar sua mensagem para não poluir).", components: [] });
-
-                        const filter = m => m.author.id === message.author.id && m.attachments.size > 0;
-                        const uploadCollector = message.channel.createMessageCollector({ filter, time: 60000, max: 1 });
-
-                        uploadCollector.on('collect', async m => {
-                            const anexo = m.attachments.first();
-                            const urlImagem = anexo.url;
-
-                            try { await m.delete(); } catch (e) {}
-
-                            await prisma.personagens.update({ where: { id: char.id }, data: { banner_url: urlImagem } });
-
-                            await prisma.transacao.create({
-                                data: { personagem_id: char.id, descricao: "Alterou imagem (Upload)", valor: 0, tipo: 'LOG' }
-                            });
-
-                            char = await prisma.personagens.findUnique({ where: { id: char.id }, include: { classes: true } });
-                            await msg.edit({ embeds: [montarEmbedFicha(char)] });
-
-                            await interaction.editReply({ content: "✅ **Imagem atualizada com sucesso!**", components: [] });
-                        });
-                    }
-                });
-                return;
             }
         });
 
