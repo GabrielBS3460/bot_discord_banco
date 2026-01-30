@@ -40,6 +40,8 @@ model Personagens {
   ultimo_resgate_forja DateTime?
   ultimo_descanso      DateTime?
 
+  recompensa_resgatada Boolean  @default(false) // <--- NOVO CAMPO
+
   estoque_ingredientes  Json     @default("{}") 
   receitas_conhecidas   String[] @default([])   
   

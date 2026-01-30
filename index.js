@@ -2174,7 +2174,7 @@ client.on('messageCreate', async (message) => {
         
         const missao = await prisma.missoes.findUnique({ 
             where: { nome: nomeMissao },
-            include: { inscricoes: { include: { personagem: true } } }
+            include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } 
         });
 
         if (!missao) return message.reply("Missão não encontrada.");
@@ -2183,134 +2183,247 @@ client.on('messageCreate', async (message) => {
         }
 
         const montarPainel = (m) => {
-            const inscritos = m.inscricoes.map(i => `${i.selecionado ? '✅' : '⏳'} **${i.personagem.nome}** (Nvl ${i.personagem.nivel_personagem})`).join('\n') || "Nenhum inscrito.";
+            const selecionados = m.inscricoes.filter(i => i.selecionado);
+            const fila = m.inscricoes.filter(i => !i.selecionado);
+
+            const txtSelecionados = selecionados.map(i => `✅ **${i.personagem.nome}** (Nvl ${i.personagem.nivel_personagem})`).join('\n') || "Ninguém selecionado.";
+            const txtFila = fila.map((i, idx) => `⏳ ${idx + 1}º **${i.personagem.nome}**`).join('\n') || "Fila vazia.";
             
             const embed = new EmbedBuilder()
                 .setColor(m.status === 'CONCLUIDA' ? '#00FF00' : '#FFA500')
                 .setTitle(`🛡️ Gestão: ${m.nome}`)
                 .setDescription(`**ND:** ${m.nd} | **Vagas:** ${m.vagas}\n**Status:** ${m.status}`)
-                .addFields({ name: 'Inscritos', value: inscritos });
+                .addFields(
+                    { name: `Equipe (${selecionados.length}/${m.vagas})`, value: txtSelecionados, inline: true },
+                    { name: 'Fila de Espera', value: txtFila, inline: true }
+                );
 
             return embed;
         };
 
         const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('ms_sortear').setLabel('Sortear Jogadores').setStyle(ButtonStyle.Primary).setDisabled(missao.status !== 'ABERTA'),
-            new ButtonBuilder().setCustomId('ms_iniciar').setLabel('Iniciar Missão').setStyle(ButtonStyle.Secondary).setDisabled(missao.status !== 'ABERTA'),
-            new ButtonBuilder().setCustomId('ms_concluir').setLabel('Concluir & Recompensar').setStyle(ButtonStyle.Success).setDisabled(missao.status === 'CONCLUIDA'),
+            new ButtonBuilder().setCustomId('ms_sortear').setLabel('Sortear Equipe').setStyle(ButtonStyle.Primary).setDisabled(missao.status !== 'ABERTA'),
+            new ButtonBuilder().setCustomId('ms_gerenciar').setLabel('Substituir Jogador').setStyle(ButtonStyle.Secondary).setEmoji('👥').setDisabled(missao.status === 'CONCLUIDA'),
+            new ButtonBuilder().setCustomId('ms_iniciar').setLabel('Iniciar').setStyle(ButtonStyle.Success).setDisabled(missao.status !== 'ABERTA'),
+            new ButtonBuilder().setCustomId('ms_concluir').setLabel('Concluir Missão').setStyle(ButtonStyle.Danger).setDisabled(missao.status === 'CONCLUIDA'),
             new ButtonBuilder().setCustomId('ms_atualizar').setLabel('🔄').setStyle(ButtonStyle.Secondary)
         );
 
         const msg = await message.reply({ embeds: [montarPainel(missao)], components: [row] });
-        
         const collector = msg.createMessageComponentCollector({ time: 3600000 });
 
         collector.on('collect', async i => {
             try {
-                if (i.user.id !== message.author.id) return i.reply({ content: "Apenas o mestre pode usar.", flags: MessageFlags.Ephemeral });
+                if (i.user.id !== message.author.id) return i.reply({ content: "Apenas o mestre.", flags: MessageFlags.Ephemeral });
 
                 if (i.customId === 'ms_sortear') {
-                    const vagas = missao.vagas;
-                    const candidatos = missao.inscricoes.filter(insc => !insc.selecionado);
+                    const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: true } });
+                    const vagasRestantes = mAtual.vagas - mAtual.inscricoes.filter(i => i.selecionado).length;
                     
-                    if (candidatos.length === 0) return i.reply({ content: "Sem novos candidatos para sortear.", flags: MessageFlags.Ephemeral });
+                    if (vagasRestantes <= 0) return i.reply({ content: "Equipe já está cheia.", flags: MessageFlags.Ephemeral });
 
-                    const sorteados = candidatos.sort(() => 0.5 - Math.random()).slice(0, vagas);
-                    const idsSorteados = sorteados.map(s => s.id);
+                    const candidatos = mAtual.inscricoes.filter(insc => !insc.selecionado);
+                    if (candidatos.length === 0) return i.reply({ content: "Sem ninguém na fila para sortear.", flags: MessageFlags.Ephemeral });
 
+                    const sorteados = candidatos.sort(() => 0.5 - Math.random()).slice(0, vagasRestantes);
+                    
                     await prisma.inscricoes.updateMany({
-                        where: { id: { in: idsSorteados } },
+                        where: { id: { in: sorteados.map(s => s.id) } },
                         data: { selecionado: true }
                     });
 
-                    const mAtualizada = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
-                    await i.update({ embeds: [montarPainel(mAtualizada)] });
+                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                    await i.update({ embeds: [montarPainel(mNova)] });
+                }
+
+                if (i.customId === 'ms_gerenciar') {
+                    const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
+                    const selecionados = mAtual.inscricoes.filter(insc => insc.selecionado);
+
+                    if (selecionados.length === 0) return i.reply({ content: "Ninguém na equipe para remover.", flags: MessageFlags.Ephemeral });
+
+                    const menu = new StringSelectMenuBuilder()
+                        .setCustomId('menu_remover_jogador')
+                        .setPlaceholder('Selecione quem VAI SAIR da missão');
+
+                    selecionados.forEach(insc => {
+                        menu.addOptions(new StringSelectMenuOptionBuilder()
+                            .setLabel(insc.personagem.nome)
+                            .setValue(insc.id.toString())
+                            .setEmoji('❌')
+                        );
+                    });
+
+                    const rowMenu = new ActionRowBuilder().addComponents(menu);
+                    
+                    const menuMsg = await i.reply({ content: "Quem deve ser removido? O próximo da fila entrará automaticamente.", components: [rowMenu], flags: MessageFlags.Ephemeral, withResponse: true });
+                    
+                    const menuCollector = menuMsg.resource.message.createMessageComponentCollector({ time: 60000 });
+                    
+                    menuCollector.on('collect', async iMenu => {
+                        const idRemover = parseInt(iMenu.values[0]);
+                        
+                        await prisma.inscricoes.delete({ where: { id: idRemover } });
+
+                        const proximoFila = await prisma.inscricoes.findFirst({
+                            where: { missao_id: missao.id, selecionado: false },
+                            orderBy: { id: 'asc' }
+                        });
+
+                        let textoSub = "Jogador removido.";
+                        if (proximoFila) {
+                            await prisma.inscricoes.update({
+                                where: { id: proximoFila.id },
+                                data: { selecionado: true }
+                            });
+                            textoSub += ` O próximo da fila entrou: **(ID ${proximoFila.personagem_id})**`;
+                        }
+
+                        const mFinal = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                        await msg.edit({ embeds: [montarPainel(mFinal)] });
+                        
+                        await iMenu.update({ content: `✅ ${textoSub}`, components: [] });
+                    });
                 }
 
                 if (i.customId === 'ms_iniciar') {
                     await prisma.missoes.update({ where: { id: missao.id }, data: { status: 'EM_ANDAMENTO' } });
-                    const mAtualizada = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
-                    
-                    await i.update({ embeds: [montarPainel(mAtualizada)], components: [row] }); 
-                    await i.followUp(`⚔️ **A missão ${mAtualizada.nome} começou!** Boa sorte aos aventureiros.`);
-                }
-
-                if (i.customId === 'ms_atualizar') {
-                    const mAtualizada = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
-                    await i.update({ embeds: [montarPainel(mAtualizada)] });
+                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                    await i.update({ embeds: [montarPainel(mNova)], components: [row] });
                 }
 
                 if (i.customId === 'ms_concluir') {
-                    const modal = new ModalBuilder().setCustomId('modal_recompensa').setTitle('Distribuir Recompensas');
-                    modal.addComponents(new ActionRowBuilder().addComponents(
-                        new TextInputBuilder().setCustomId('inp_ouro').setLabel('Ouro por Jogador').setStyle(TextInputStyle.Short).setValue((missao.nd * 100).toString())
-                    ));
-                    
-                    await i.showModal(modal);
-
-                    const submit = await i.awaitModalSubmit({
-                        filter: (inter) => inter.customId === 'modal_recompensa' && inter.user.id === i.user.id,
-                        time: 300000 
-                    }).catch(() => null);
-
-                    if (!submit) return; 
-
-                    await submit.deferUpdate();
-
-                    const ouro = parseFloat(submit.fields.getTextInputValue('inp_ouro'));
-                    if (isNaN(ouro)) return submit.followUp({ content: "Valor inválido.", flags: MessageFlags.Ephemeral });
-
-                    const participantes = await prisma.inscricoes.findMany({
-                        where: { missao_id: missao.id, selecionado: true },
-                        include: { personagem: true }
-                    });
-
-                    let relatorio = `🏆 **Missão Concluída!**\n💰 Recompensa: T$ ${ouro}\n📈 Pontos de Missão: +1\n\n`;
-
-                    for (const p of participantes) {
-                        const char = p.personagem;
-                        let novosPontos = char.pontos_missao + 1;
-                        let novoNivel = char.nivel_personagem;
-                        let msgUpar = "";
-
-                        const custo = CUSTO_NIVEL[char.nivel_personagem];
-                        if (custo && novosPontos >= custo) {
-                            novoNivel++;
-                            novosPontos -= custo;
-                            msgUpar = `⏫ **SUBIU PARA NÍVEL ${novoNivel}!**`;
-                        }
-
-                        await prisma.personagens.update({
-                            where: { id: char.id },
-                            data: { 
-                                saldo: { increment: ouro },
-                                pontos_missao: novosPontos,
-                                nivel_personagem: novoNivel
-                            }
-                        });
-
-                        await prisma.transacao.create({
-                            data: {
-                                personagem_id: char.id,
-                                descricao: `Missão: ${missao.nome}`,
-                                valor: ouro,
-                                tipo: 'GANHO'
-                            }
-                        });
-
-                        relatorio += `👤 **${char.nome}:** Saldo T$ ${char.saldo + ouro} | Pontos ${novosPontos}/${CUSTO_NIVEL[novoNivel] || '?'} ${msgUpar}\n`;
-                    }
-
                     await prisma.missoes.update({ where: { id: missao.id }, data: { status: 'CONCLUIDA' } });
+                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                    
+                    await i.update({ embeds: [montarPainel(mNova)], components: [row] });
+                    await i.followUp(`🏆 **Missão Concluída!**\nJogadores, utilizem \`!resgatar\` para pegar suas recompensas.`);
+                }
 
-                    await submit.editReply({ content: relatorio, embeds: [], components: [] });
+                if (i.customId === 'ms_atualizar') {
+                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                    await i.update({ embeds: [montarPainel(mNova)] });
                 }
 
             } catch (err) {
-                if (err.code === 10062 || err.code === 40060) return;
-                console.error("Erro no painel:", err);
+                if (err.code !== 10062) console.error(err);
             }
         });
+    }
+
+    else if (command === 'resgatar') {
+        const { MessageFlags } = require('discord.js');
+        const char = await getPersonagemAtivo(message.author.id);
+        if (!char) return message.reply("Sem personagem ativo.");
+
+        const inscricoesPendentes = await prisma.inscricoes.findMany({
+            where: {
+                personagem_id: char.id,
+                selecionado: true,
+                recompensa_resgatada: false,
+                missao: { status: 'CONCLUIDA' }
+            },
+            include: { missao: true }
+        });
+
+        if (inscricoesPendentes.length === 0) {
+            return message.reply("🚫 Você não tem recompensas pendentes de missões concluídas.");
+        }
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('menu_resgate_missao')
+            .setPlaceholder('Selecione a missão para resgatar');
+
+        inscricoesPendentes.forEach(insc => {
+            menu.addOptions(new StringSelectMenuOptionBuilder()
+                .setLabel(`${insc.missao.nome} (ND ${insc.missao.nd})`)
+                .setDescription(`Recompensa estimada: T$ ${insc.missao.nd * 100}`)
+                .setValue(`${insc.id}_${insc.missao.nd}`) 
+            );
+        });
+
+        const row = new ActionRowBuilder().addComponents(menu);
+        const msg = await message.reply({ content: "💰 **Recompensas Disponíveis:**", components: [row] });
+
+        const collector = msg.createMessageComponentCollector({ filter: i => i.user.id === message.author.id, time: 60000 });
+
+        collector.on('collect', async i => {
+            if (!i.isStringSelectMenu()) return;
+
+            const [inscricaoId, ndStr] = i.values[0].split('_');
+            const inscId = parseInt(inscricaoId);
+            const nd = parseInt(ndStr);
+
+            const modal = new ModalBuilder().setCustomId(`modal_pontos_${inscId}_${nd}`).setTitle('Relatório da Missão');
+            modal.addComponents(new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('inp_pontos')
+                    .setLabel('Quantos Pontos de Missão você ganhou?')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Ex: 1')
+                    .setRequired(true)
+            ));
+
+            await i.showModal(modal);
+        });
+
+        const modalHandler = async (i) => {
+            if (!i.isModalSubmit() || !i.customId.startsWith('modal_pontos_')) return;
+            
+            const parts = i.customId.split('_'); 
+            const inscId = parseInt(parts[2]);
+            const ndMissao = parseInt(parts[3]);
+            
+            const pontosGanhos = parseInt(i.fields.getTextInputValue('inp_pontos'));
+            if (isNaN(pontosGanhos) || pontosGanhos < 0) return i.reply({ content: "Valor inválido.", flags: MessageFlags.Ephemeral });
+
+            const ouroGanho = ndMissao * 100;
+
+            const charAtual = await getPersonagemAtivo(i.user.id);
+            
+            let novosPontos = charAtual.pontos_missao + pontosGanhos;
+            let novoNivel = charAtual.nivel_personagem;
+            let msgUpar = "";
+            
+            const custoProx = CUSTO_NIVEL[novoNivel]; 
+            
+            if (custoProx && novosPontos >= custoProx) {
+                novosPontos -= custoProx;
+                novoNivel++;
+                msgUpar = `\n⏫ **LEVEL UP!** Agora você é nível **${novoNivel}**!`;
+            }
+
+            await prisma.$transaction([
+                prisma.personagens.update({
+                    where: { id: charAtual.id },
+                    data: {
+                        saldo: { increment: ouroGanho },
+                        pontos_missao: novosPontos,
+                        nivel_personagem: novoNivel
+                    }
+                }),
+                prisma.inscricoes.update({
+                    where: { id: inscId },
+                    data: { recompensa_resgatada: true }
+                }),
+                prisma.transacao.create({
+                    data: {
+                        personagem_id: charAtual.id,
+                        descricao: `Recompensa Missão (ND ${ndMissao})`,
+                        valor: ouroGanho,
+                        tipo: 'GANHO'
+                    }
+                })
+            ]);
+
+            await i.update({ 
+                content: `✅ **Recompensa Resgatada!**\n💰 **Ouro:** +T$ ${ouroGanho}\n📈 **Pontos:** +${pontosGanhos} (Total: ${novosPontos})${msgUpar}`, 
+                components: [] 
+            });
+        };
+
+        client.on('interactionCreate', modalHandler);
+        setTimeout(() => client.off('interactionCreate', modalHandler), 120000);
     }
 
     else if (command === 'feirinha') {
