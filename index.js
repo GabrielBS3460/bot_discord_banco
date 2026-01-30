@@ -1734,9 +1734,62 @@ client.on('messageCreate', async (message) => {
             }
 
             if (interaction.customId === 'edit_banner') {
-                const modal = new ModalBuilder().setCustomId('modal_banner').setTitle('Link da Imagem');
-                modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_url').setLabel('URL da Imagem').setStyle(TextInputStyle.Short).setRequired(true)));
-                await interaction.showModal(modal);
+                const { MessageFlags } = require('discord.js');
+
+                const rowOpcoes = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('banner_upload').setLabel('Enviar Arquivo').setStyle(ButtonStyle.Primary).setEmoji('📤'),
+                    new ButtonBuilder().setCustomId('banner_avatar').setLabel('Usar meu Avatar').setStyle(ButtonStyle.Secondary).setEmoji('🖼️')
+                );
+
+                const msgPerg = await interaction.reply({ 
+                    content: "Como você deseja alterar a imagem do personagem?", 
+                    components: [rowOpcoes],
+                    flags: MessageFlags.Ephemeral,
+                    fetchReply: true
+                });
+
+                const btnCollector = msgPerg.createMessageComponentCollector({ time: 60000 });
+
+                btnCollector.on('collect', async iBtn => {
+                    if (iBtn.customId === 'banner_avatar') {
+                        await prisma.personagens.update({ where: { id: char.id }, data: { banner_url: null } });
+                        
+                        await prisma.transacao.create({
+                            data: { personagem_id: char.id, descricao: "Resetou imagem para Avatar", valor: 0, tipo: 'LOG' }
+                        });
+
+                        char = await prisma.personagens.findUnique({ where: { id: char.id }, include: { classes: true } });
+                        await msg.edit({ embeds: [montarEmbedFicha(char)] });
+                        
+                        await iBtn.update({ content: "✅ Imagem resetada para o seu avatar do Discord!", components: [] });
+                    }
+
+                    if (iBtn.customId === 'banner_upload') {
+                        await iBtn.update({ content: "📤 **Envie a imagem agora neste chat.**\n(Eu vou pegar a primeira imagem que você mandar e apagar sua mensagem para não poluir).", components: [] });
+
+                        const filter = m => m.author.id === message.author.id && m.attachments.size > 0;
+                        const uploadCollector = message.channel.createMessageCollector({ filter, time: 60000, max: 1 });
+
+                        uploadCollector.on('collect', async m => {
+                            const anexo = m.attachments.first();
+                            const urlImagem = anexo.url;
+
+                            try { await m.delete(); } catch (e) {}
+
+                            await prisma.personagens.update({ where: { id: char.id }, data: { banner_url: urlImagem } });
+
+                            await prisma.transacao.create({
+                                data: { personagem_id: char.id, descricao: "Alterou imagem (Upload)", valor: 0, tipo: 'LOG' }
+                            });
+
+                            char = await prisma.personagens.findUnique({ where: { id: char.id }, include: { classes: true } });
+                            await msg.edit({ embeds: [montarEmbedFicha(char)] });
+
+                            await interaction.editReply({ content: "✅ **Imagem atualizada com sucesso!**", components: [] });
+                        });
+                    }
+                });
+                return;
             }
         });
 
@@ -1815,15 +1868,6 @@ client.on('messageCreate', async (message) => {
                 const nCar = parseInt(i.fields.getTextInputValue('inp_car'));
                 logDescricao = `Editou Mentais: INT ${nInt}, SAB ${nSab}, CAR ${nCar}`;
                 await prisma.personagens.update({ where: { id: char.id }, data: { inteligencia: nInt || 0, sabedoria: nSab || 0, carisma: nCar || 0 } });
-                await i.deferUpdate();
-            }
-
-            if (i.customId === 'modal_banner') {
-                const url = i.fields.getTextInputValue('inp_url');
-                if (url.startsWith('http')) {
-                    logDescricao = "Alterou Banner";
-                    await prisma.personagens.update({ where: { id: char.id }, data: { banner_url: url } });
-                }
                 await i.deferUpdate();
             }
 
