@@ -39,6 +39,29 @@ const CUSTO_NIVEL = {
     11: 10, 12: 10, 13: 10, 14: 10, 15: 10, 16: 10
 };
 
+const BICHOS_T20 = {
+    "00": "Guardião de Folhas Médio", "01": "Garanhão de Namalkah", "02": "Campeão Batráquio", "03": "Ganchador", "04": "Cavalo de Guerra", 
+    "05": "Elemental da Terra Médio", "06": "Igddryl", "07": "Bugbear", "08": "Corcel das Trevas", "09": "Carvarel", 
+    "10": "Gigante Leão", "11": "Paraelemental do Magma Peq.", "12": "Mantor", "13": "Águia", "14": "Esqueleto-Enxame", 
+    "15": "Paraelemental da Fumaça", "16": "Cão do Inferno", "17": "Rato", "18": "Múmia", "19": "Grifo", 
+    "20": "Limo Cinzento", "21": "Urso-das-Cavernas Esq.", "22": "Oni", "23": "Cogumelo Anão Sentinela", "24": "Bogum", 
+    "25": "Cobra-Rei", "26": "Lobo Fantasma", "27": "Fofo", "28": "Paraelemental do Gelo", "29": "Golfinho", 
+    "30": "Fogarta", "31": "Wyvern Esqueleto", "32": "Mantíco", "33": "Skum", "34": "Lívido", 
+    "35": "Canceronte", "36": "Guardião de Folhas Grande", "37": "Búfalo de Guerra", "38": "Camelo", "39": "Asa-Assassina", 
+    "40": "Dragão Azul Filhote", "41": "Tigre-de-Hynnin", "42": "Kappa", "43": "Horror Blindado", "44": "Sargento da Guarda", 
+    "45": "Gênio da Terra", "46": "Lâmia", "47": "Gárgula", "48": "Dragão Branco Filhote", "49": "Fera-Cactus", 
+    "50": "Lagarto Perseguidor", "51": "Cobra, Jiboia", "52": "Cavalo-Marinho", "53": "Urso Marrom", "54": "Ber-Beram", 
+    "55": "Bulette", "56": "Fada-Dragão", "57": "Ente", "58": "Kabuto", "59": "Sátiro", 
+    "60": "Inumano", "61": "Dragão Verde Filhote", "62": "Malafex", "63": "Pterodáctilo", "64": "Cocatriz", 
+    "65": "Glop", "66": "Vardak Abençoado", "67": "Baleote", "68": "Gorlogg", "69": "Deinonico", 
+    "70": "Barghest", "71": "Elemental do Ar Pequeno", "72": "Hobgoblin", "73": "Kobold Chefe", "74": "Carcaju", 
+    "75": "Quapocs", "76": "Elemental da Água Médio", "77": "Uktril", "78": "Grick", "79": "Hipossauro", 
+    "80": "Espada-da-Floresta", "81": "Gárgula", "82": "Grifo Dourado", "83": "Gigante Búfalo", "84": "Duplo", 
+    "85": "Kobold Herói", "86": "Tubarão-Touro", "87": "Rosa do Desespero", "88": "Elemental do Fogo Peq.", "89": "Diabrete", 
+    "90": "Draquineo", "91": "Cipó Assassino", "92": "Apiapi Zangão", "93": "Basilisco", "94": "Deinonico", 
+    "95": "Crias do Gordolembas", "96": "Cogumelo Anão Druida", "97": "Paraelemental do Magma", "98": "Armadilefante", "99": "Mastim das Sombras"
+};
+
 const CUSTO_FORJA = {
     "Alimento": 0.2,
     "Consumíveis": 1,
@@ -2724,6 +2747,157 @@ client.on('messageCreate', async (message) => {
                 });
             }
         });
+    }
+
+    else if (command === 'apostar') {
+        const char = await getPersonagemAtivo(message.author.id);
+        if (!char) return message.reply("Você não tem personagem ativo.");
+
+        const args = message.content.split(' ').slice(1);
+        if (args.length < 4) return message.reply("Use: `!apostar <valor> <dezena/centena/milhar> <numero> <1-5 ou todas>`");
+
+        const valor = parseFloat(args[0]);
+        const tipo = args[1].toUpperCase();
+        let numero = args[2];
+        const posicaoInput = args[3].toLowerCase();
+
+        if (isNaN(valor) || valor <= 0) return message.reply("Valor inválido.");
+        if (char.saldo < valor) return message.reply("Saldo insuficiente.");
+
+        if (tipo === 'DEZENA') {
+            if (numero.length > 2) return message.reply("Para Dezena use apenas 2 dígitos (00-99).");
+            numero = numero.padStart(2, '0'); 
+            if (!BICHOS_T20[numero]) return message.reply("Bicho inválido (00-99).");
+        } else if (tipo === 'CENTENA') {
+            if (numero.length > 3) return message.reply("Para Centena use até 3 dígitos.");
+            numero = numero.padStart(3, '0');
+        } else if (tipo === 'MILHAR') {
+            if (numero.length > 4) return message.reply("Para Milhar use até 4 dígitos.");
+            numero = numero.padStart(4, '0');
+        } else {
+            return message.reply("Tipo inválido. Use: DEZENA, CENTENA ou MILHAR.");
+        }
+
+        let posicaoBanco = "";
+        if (['1', '2', '3', '4', '5'].includes(posicaoInput)) posicaoBanco = posicaoInput;
+        else if (['todas', 'todos', '1-5'].includes(posicaoInput)) posicaoBanco = "TODAS";
+        else return message.reply("Posição inválida. Use um número de 1 a 5, ou 'todas'.");
+
+        await prisma.$transaction([
+            prisma.personagens.update({
+                where: { id: char.id },
+                data: { saldo: { decrement: valor } }
+            }),
+            prisma.apostasBicho.create({
+                data: {
+                    personagem_id: char.id,
+                    tipo: tipo,
+                    numero: numero,
+                    posicao: posicaoBanco,
+                    valor: valor,
+                    status: 'PENDENTE'
+                }
+            }),
+            prisma.transacao.create({
+                data: { personagem_id: char.id, descricao: `Jogo do Bicho: ${tipo} ${numero}`, valor: valor, tipo: 'GASTO' }
+            })
+        ]);
+
+        const nomeBicho = tipo === 'DEZENA' ? `(${BICHOS_T20[numero]})` : '';
+        message.reply(`🎫 **Aposta Registrada!**\n💰 Valor: T$ ${valor}\n🎲 Jogo: ${tipo} **${numero}** ${nomeBicho}\n📍 Posição: ${posicaoBanco === 'TODAS' ? '1º ao 5º' : posicaoBanco + 'º Prêmio'}`);
+    }
+
+    else if (command === 'sortearbicho') {
+        //if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) return message.reply("Apenas a banca (Admin) pode rodar a roleta.");
+
+        const ultimoSorteio = await prisma.sorteiosBicho.findFirst({ orderBy: { data: 'desc' } });
+        if (ultimoSorteio) {
+            const diffDias = (new Date() - new Date(ultimoSorteio.data)) / (1000 * 60 * 60 * 24);
+            if (diffDias < 7) return message.reply(`⏳ O sorteio é semanal! Faltam ${(7 - diffDias).toFixed(1)} dias.`);
+        }
+
+        const resultados = [];
+        for (let i = 0; i < 5; i++) {
+            const num = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            resultados.push(num);
+        }
+
+        const apostas = await prisma.apostasBicho.findMany({
+            where: { status: 'PENDENTE' },
+            include: { personagem: true }
+        });
+
+        let ganhadoresLog = [];
+        const updates = [];
+
+        for (const aposta of apostas) {
+            let ganhou = false;
+            let multiplicador = 0;
+
+            if (aposta.tipo === 'DEZENA') multiplicador = 2;
+            if (aposta.tipo === 'CENTENA') multiplicador = 5;
+            if (aposta.tipo === 'MILHAR') multiplicador = 10;
+
+            if (aposta.posicao === 'TODAS') multiplicador = multiplicador / 5;
+
+            const verificarNumero = (resultadoSorteado, apostaNum, tipo) => {
+                if (tipo === 'DEZENA') return resultadoSorteado.endsWith(apostaNum); 
+                if (tipo === 'CENTENA') return resultadoSorteado.endsWith(apostaNum);
+                if (tipo === 'MILHAR') return resultadoSorteado === apostaNum;
+                return false;
+            };
+
+            resultados.forEach((res, index) => {
+                const posicaoAtual = (index + 1).toString();
+                
+                if (aposta.posicao === posicaoAtual || aposta.posicao === 'TODAS') {
+                    if (verificarNumero(res, aposta.numero, aposta.tipo)) {
+                        ganhou = true;
+                    }
+                }
+            });
+
+            if (ganhou) {
+                const premio = aposta.valor * multiplicador;
+                ganhadoresLog.push(`🏆 **${aposta.personagem.nome}** ganhou **T$ ${premio}** (${aposta.tipo} ${aposta.numero})`);
+                
+                updates.push(prisma.personagens.update({
+                    where: { id: aposta.personagem_id },
+                    data: { saldo: { increment: premio } }
+                }));
+                updates.push(prisma.transacao.create({
+                    data: { personagem_id: aposta.personagem_id, descricao: `Prêmio Bicho (${aposta.numero})`, valor: premio, tipo: 'GANHO' }
+                }));
+                updates.push(prisma.apostasBicho.update({ where: { id: aposta.id }, data: { status: 'GANHOU' } }));
+            } else {
+                updates.push(prisma.apostasBicho.update({ where: { id: aposta.id }, data: { status: 'PERDEU' } }));
+            }
+        }
+
+        updates.push(prisma.sorteiosBicho.create({ data: { resultados: resultados } }));
+
+        await prisma.$transaction(updates);
+
+        const embed = new EmbedBuilder()
+            .setColor('#FFD700')
+            .setTitle('🎲 Resultado do Jogo do Bicho - Tormenta 20')
+            .setDescription('O resultado da semana saiu! Confira os números:')
+            .addFields(
+                { name: '1º Prêmio', value: `${resultados[0]} - **${BICHOS_T20[resultados[0].slice(-2)]}**` },
+                { name: '2º Prêmio', value: `${resultados[1]} - **${BICHOS_T20[resultados[1].slice(-2)]}**` },
+                { name: '3º Prêmio', value: `${resultados[2]} - **${BICHOS_T20[resultados[2].slice(-2)]}**` },
+                { name: '4º Prêmio', value: `${resultados[3]} - **${BICHOS_T20[resultados[3].slice(-2)]}**` },
+                { name: '5º Prêmio', value: `${resultados[4]} - **${BICHOS_T20[resultados[4].slice(-2)]}**` },
+            );
+
+        if (ganhadoresLog.length > 0) {
+            const textoGanhadores = ganhadoresLog.slice(0, 20).join('\n') + (ganhadoresLog.length > 20 ? `\n...e mais ${ganhadoresLog.length - 20}.` : '');
+            embed.addFields({ name: '🎉 Ganhadores', value: textoGanhadores });
+        } else {
+            embed.setFooter({ text: 'Nenhum ganhador nesta rodada. A banca agradece!' });
+        }
+
+        message.channel.send({ embeds: [embed] });
     }
 });
 

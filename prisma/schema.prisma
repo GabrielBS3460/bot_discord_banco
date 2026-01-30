@@ -60,6 +60,8 @@ model Personagens {
   jogador    Usuarios @relation(fields: [usuario_id], references: [discord_id])
   usuario_id String   
 
+  apostasBicho     ApostasBicho[]
+
   transacoes Transacao[]
   classes    PersonagemClasse[]
   utilizadorAtivo Usuarios? @relation("PersonagemAtivo")
@@ -111,4 +113,23 @@ model Inscricoes {
   recompensa_resgatada Boolean  @default(false)
 
   @@unique([missao_id, personagem_id]) 
+}
+
+model ApostasBicho {
+  id            String      @id @default(uuid())
+  personagem    Personagens @relation(fields: [personagem_id], references: [id], onDelete: Cascade)
+  personagem_id Int
+  
+  tipo          String   
+  numero        String   
+  posicao       String   
+  valor         Float
+  status        String   @default("PENDENTE") // PENDENTE, GANHOU, PERDEU
+  data          DateTime @default(now())
+}
+
+model SorteiosBicho {
+  id          Int      @id @default(autoincrement())
+  data        DateTime @default(now())
+  resultados  String[] 
 }
