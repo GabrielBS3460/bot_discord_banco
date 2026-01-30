@@ -186,7 +186,7 @@ function pegarItemAleatorio(lista) {
 function gerarRiqueza(tipo) {
     const lista = DADOS.RIQUEZAS[tipo];
     const item = pegarItemAleatorio(lista);
-    return { nome: item.nome, valor: item.valor };
+    return { nome: item.nome, valor: item.val };
 }
 
 // ==================================================================================
