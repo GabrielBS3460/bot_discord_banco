@@ -60,7 +60,7 @@ const DADOS = {
             "Manoplas da Força", "Anel de Proteção", "Mochila a Vapor", "Membro Mecânico"
         ],
         CONSUMIVEIS: [
-            "Poção de Cura", "Poção de Mana", "Pergaminho (Aleatório)", 
+            "Bálsamo restaurador", "Essência de Mana", "Pergaminho (Aleatório)", 
             "Bomba de Fumaça", "Granada", "Pó de Cristal", 
             "Venenos: Peçonha de Serpente", "Venenos: Essência de Sszzaas"
         ]
@@ -246,6 +246,7 @@ function gerarRecompensa(nd) {
         if (cat === 'ARMAS') listaOriginal = DADOS.MELHORIAS.ARMAS;
         else if (cat === 'ARMADURAS') listaOriginal = DADOS.MELHORIAS.ARMADURAS;
         else if (cat === 'ESOTERICOS') listaOriginal = DADOS.MELHORIAS.ESOTERICOS;
+        else if (cat === 'CONSUMIVEIS') listaOriginal = [];
         else listaOriginal = ["Aprimorado", "Banhado a Ouro", "Cravejado de Joias"];
 
         let disponiveis = [...listaOriginal];
