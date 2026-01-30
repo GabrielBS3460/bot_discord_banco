@@ -9,20 +9,18 @@ const DADOS = {
         if (nd <= 2) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 80) return { tipo: 'SUPERIOR', slots: 1 };
-            if (roll <= 95) return { tipo: 'SUPERIOR', slots: 2 };
-            return { tipo: 'SUPERIOR', slots: 3 };
+            return { tipo: 'SUPERIOR', slots: 2 };
         } else if (nd <= 6) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 80) return { tipo: 'SUPERIOR', slots: 2 };
-            if (roll <= 95) return { tipo: 'SUPERIOR', slots: 3 };
-            return { tipo: 'SUPERIOR', slots: 4 };
+            return { tipo: 'SUPERIOR', slots: 3 };
         } else if (nd <= 10) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 80) return { tipo: 'SUPERIOR', slots: 3 };
             if (roll <= 95) return { tipo: 'MAGIC', poder: 1 }; 
             return { tipo: 'MAGIC', poder: 2 }; 
         } else {
-            if (roll <= 50) return { tipo: 'DINHEIRO' };
+            if (roll <= 60) return { tipo: 'DINHEIRO' };
             if (roll <= 80) return { tipo: 'SUPERIOR', slots: 4 };
             if (roll <= 95) return { tipo: 'MAGIC', poder: 2 }; 
             return { tipo: 'MAGIC', poder: 3 }; 
@@ -205,7 +203,7 @@ function gerarRecompensa(nd) {
         const drop = DADOS.DINHEIRO_POR_ND(ndNum);
         
         if (drop.val !== undefined) {
-            const valorDiv = Math.floor(drop.val / 5);
+            const valorDiv = Math.floor(drop.val / 4);
             if (valorDiv === 0) return { mensagem: "🗑️ **Nada encontrado.** (A poeira domina o local)", valor: 0 };
             
             return { 
