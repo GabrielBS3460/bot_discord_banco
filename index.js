@@ -17,6 +17,8 @@ const prisma = require('./database.js');
 
 const PungaSystem = require('./punga_sistema.js');
 
+const { gerarRecompensa } = require('./sistema_drop');
+
 const express = require('express');
 
 const ID_CARGO_ADMIN = "1463009702807081217"; 
@@ -2898,6 +2900,22 @@ client.on('messageCreate', async (message) => {
         }
 
         message.channel.send({ embeds: [embed] });
+    }
+
+    else if (command === 'drop') {
+
+        const ndInput = args[0];
+        if (!ndInput) return message.reply("Use: `!drop <ND>`");
+
+        const resultado = gerarRecompensa(ndInput);
+
+        const embed = new EmbedBuilder()
+            .setColor('#9B59B6') 
+            .setTitle(`🎁 Drop Gerado (ND ${ndInput})`)
+            .setDescription(resultado)
+            .setFooter({ text: 'Sistema de Recompensa T20 JDA' });
+
+        message.reply({ embeds: [embed] });
     }
 });
 
