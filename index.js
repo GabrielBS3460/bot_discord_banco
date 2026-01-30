@@ -2903,7 +2903,6 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'drop') {
-        if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) return message.reply("Apenas Mestre pode gerar drops.");
 
         const ndInput = args[0];
         if (!ndInput) return message.reply("Use: `!drop <ND>`");
