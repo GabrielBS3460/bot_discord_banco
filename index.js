@@ -2903,17 +2903,46 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'drop') {
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) return message.reply("Apenas Mestre pode gerar drops.");
 
         const ndInput = args[0];
         if (!ndInput) return message.reply("Use: `!drop <ND>`");
 
         const resultado = gerarRecompensa(ndInput);
+        let footerTexto = 'Sistema de Recompensa T20 JDA';
+        let corEmbed = '#9B59B6'; 
+
+        if (resultado.valor > 0) {
+            const char = await getPersonagemAtivo(message.author.id);
+            
+            if (char) {
+                await prisma.$transaction([
+                    prisma.personagens.update({
+                        where: { id: char.id },
+                        data: { saldo: { increment: resultado.valor } }
+                    }),
+                    prisma.transacao.create({
+                        data: {
+                            personagem_id: char.id,
+                            descricao: `Drop ND ${ndInput}`,
+                            valor: resultado.valor,
+                            tipo: 'GANHO'
+                        }
+                    })
+                ]);
+                
+                footerTexto = `✅ T$ ${resultado.valor} creditados para ${char.nome}`;
+                corEmbed = '#F1C40F'; 
+            } else {
+                footerTexto = '⚠️ Nenhum personagem ativo para receber o dinheiro.';
+            }
+        }
 
         const embed = new EmbedBuilder()
-            .setColor('#9B59B6') 
+            .setColor(corEmbed)
             .setTitle(`🎁 Drop Gerado (ND ${ndInput})`)
-            .setDescription(resultado)
-            .setFooter({ text: 'Sistema de Recompensa Herdeiros das Cinzas' });
+            .setDescription(resultado.mensagem)
+            .setFooter({ text: footerTexto });
 
         message.reply({ embeds: [embed] });
     }

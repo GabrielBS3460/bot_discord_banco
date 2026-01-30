@@ -197,7 +197,7 @@ function gerarRiqueza(tipo) {
 
 function gerarRecompensa(nd) {
     const ndNum = parseFloat(nd);
-    if (isNaN(ndNum)) return "ND Inválido.";
+    if (isNaN(ndNum)) return { mensagem: "ND Inválido.", valor: 0 };
 
     const raridade = DADOS.TABELA_RARIDADE(ndNum);
     
@@ -206,8 +206,12 @@ function gerarRecompensa(nd) {
         
         if (drop.val !== undefined) {
             const valorDiv = Math.floor(drop.val / 5);
-            if (valorDiv === 0) return "🗑️ **Nada encontrado.** (A poeira domina o local)";
-            return `💰 **Dinheiro:** T$ ${valorDiv}`;
+            if (valorDiv === 0) return { mensagem: "🗑️ **Nada encontrado.** (A poeira domina o local)", valor: 0 };
+            
+            return { 
+                mensagem: `💰 **Dinheiro:** T$ ${valorDiv}`, 
+                valor: valorDiv 
+            };
         } 
         
         if (drop.riqueza) {
@@ -219,7 +223,10 @@ function gerarRecompensa(nd) {
                 riquezasTexto.push(`- ${r.nome} (Vale T$ ${valorReal})`);
                 total += valorReal;
             }
-            return `💎 **Riquezas Encontradas:**\n${riquezasTexto.join('\n')}\n*(Total T$ ${total})*`;
+            return { 
+                mensagem: `💎 **Riquezas Encontradas:**\n${riquezasTexto.join('\n')}\n*(Total T$ ${total})*`, 
+                valor: total 
+            };
         }
     }
 
@@ -253,13 +260,9 @@ function gerarRecompensa(nd) {
         }
 
         for (let i = 0; i < slots; i++) {
-            if (disponiveis.length === 0) break; 
-            
+            if (disponiveis.length === 0) break;
             const index = Math.floor(Math.random() * disponiveis.length);
-            const escolhido = disponiveis[index];
-            
-            detalhes.push(escolhido);
-            
+            detalhes.push(disponiveis[index]);
             disponiveis.splice(index, 1);
         }
         
@@ -276,20 +279,18 @@ function gerarRecompensa(nd) {
         while (slots > 0 && disponiveis.length > 0) {
             const index = Math.floor(Math.random() * disponiveis.length);
             const encanto = disponiveis[index];
-            
             const custaDois = ["Magnífica", "Lancinante", "Energética", "Guardião"].some(n => encanto.includes(n));
             
             if (custaDois) {
                 if (slots >= 2) {
                     encantosAplicados.push(encanto);
                     slots -= 2;
-                    disponiveis.splice(index, 1); 
-                } else {
+                    disponiveis.splice(index, 1);
                 }
             } else {
                 encantosAplicados.push(encanto);
                 slots -= 1;
-                disponiveis.splice(index, 1); 
+                disponiveis.splice(index, 1);
             }
         }
         
@@ -298,9 +299,14 @@ function gerarRecompensa(nd) {
         detalhes = encantosAplicados;
     }
 
-    if (detalhes.length === 0 && raridade.tipo !== 'MAGIC') return `📦 **Item:** ${itemBase} (Comum)`;
+    if (detalhes.length === 0 && raridade.tipo !== 'MAGIC') {
+        return { mensagem: `📦 **Item:** ${itemBase} (Comum)`, valor: 0 };
+    }
     
-    return `${nomeFinal}\n🔸 ${detalhes.join('\n🔸 ')}`;
+    return { 
+        mensagem: `${nomeFinal}\n🔸 ${detalhes.join('\n🔸 ')}`, 
+        valor: 0 
+    };
 }
 
 module.exports = { gerarRecompensa };
