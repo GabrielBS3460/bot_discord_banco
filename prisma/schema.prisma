@@ -1,6 +1,6 @@
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://postgres:Botguilda123@db.djmambmnusfonxvvhape.supabase.co:5432/postgres"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -39,8 +39,6 @@ model Personagens {
   pontos_forja_diarios Int       @default(1)
   ultimo_resgate_forja DateTime?
   ultimo_descanso      DateTime?
-
-  recompensa_resgatada Boolean  @default(false)
 
   estoque_ingredientes  Json     @default("{}") 
   receitas_conhecidas   String[] @default([])   
@@ -109,6 +107,8 @@ model Inscricoes {
   personagem    Personagens @relation(fields: [personagem_id], references: [id], onDelete: Cascade)
   personagem_id Int
   selecionado   Boolean  @default(false)
+
+  recompensa_resgatada Boolean  @default(false)
 
   @@unique([missao_id, personagem_id]) 
 }
