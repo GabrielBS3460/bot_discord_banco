@@ -861,7 +861,7 @@ client.on('messageCreate', async (message) => {
         if (!categoriaEscolhida || !CATEGORIAS[categoriaEscolhida]) {
             const embed = new EmbedBuilder()
                 .setColor('#2B2D31')
-                .setTitle('📘 Guilda de Mercenários - Ajuda')
+                .setTitle('📘 Herdeiros das Cinzas - Ajuda')
                 .setDescription('Digite `!help <categoria>` para ver os comandos detalhados.')
                 .setThumbnail(client.user.displayAvatarURL())
                 .addFields(
