@@ -701,24 +701,193 @@ client.on('messageCreate', async (message) => {
         }
     }
 
-    else if (command === 'help') {
-        const helpEmbed = new EmbedBuilder()
-            .setColor('#0099FF')
-            .setTitle('❓ Lista de Comandos do Bot')
-            .setDescription('Aqui estão todos os comandos disponíveis e como usá-los:');
-        
-        commands.forEach(cmd => {
-            helpEmbed.addFields({
-                name: `\`${cmd.name}\``,
-                value: `${cmd.description}\n**Sintaxe:** \`${cmd.syntax}\``
-            });
-        });
+    else if (command === 'help' || command === 'ajuda') {
+        const CATEGORIAS = {
+            'personagem': {
+                emoji: '👤',
+                titulo: 'Personagem & Economia',
+                descricao: 'Gerencie sua ficha, saldo e transações.',
+                comandos: [
+                    { 
+                        cmd: '!cadastrar', 
+                        desc: 'Cria um novo personagem (limite de 2 por jogador).', 
+                        syntax: '!cadastrar <nome_do_personagem>' 
+                    },
+                    { 
+                        cmd: '!personagem', 
+                        desc: 'Gerencia seus personagens. Subcomandos: listar, trocar, apagar.', 
+                        syntax: '!personagem <listar | trocar | apagar> [nome]' 
+                    },
+                    { 
+                        cmd: '!ficha', 
+                        desc: 'Exibe e edita a ficha (Status, Atributos, Classes, Descanso).', 
+                        syntax: '!ficha' 
+                    },
+                    { 
+                        cmd: '!saldo', 
+                        desc: 'Verifica o saldo do seu personagem ativo.', 
+                        syntax: '!saldo' 
+                    },
+                    { 
+                        cmd: '!extrato', 
+                        desc: 'Mostra as últimas transações do personagem ativo.', 
+                        syntax: '!extrato' 
+                    },
+                    { 
+                        cmd: '!tix', 
+                        desc: 'Transfere T$ do seu personagem para outro jogador.', 
+                        syntax: '!tix <@usuário> <valor>' 
+                    },
+                    { 
+                        cmd: '!gasto', 
+                        desc: 'Registra um gasto pessoal do personagem ativo.', 
+                        syntax: '!gasto <valor> <motivo>' 
+                    }
+                ]
+            },
+            'missao': {
+                emoji: '🛡️',
+                titulo: 'Sistema de Missões',
+                descricao: 'Participe de aventuras e entregue demandas.',
+                comandos: [
+                    { 
+                        cmd: '!inscrever', 
+                        desc: 'Se candidata a uma missão aberta no canal.', 
+                        syntax: '!inscrever' 
+                    },
+                    { 
+                        cmd: '!resgatar', 
+                        desc: 'Resgata recompensa de missão concluída (Ouro + Pontos).', 
+                        syntax: '!resgatar "Nome da Missão"' 
+                    },              
+                    { 
+                        cmd: '!drop', 
+                        desc: 'Gera um loot aleatório baseado no ND.', 
+                        syntax: '!drop <ND>' 
+                    }
+                ]
+            },
+            'sistemas': {
+                emoji: '⚒️',
+                titulo: 'Ofícios & Comércio',
+                descricao: 'Forja, Culinária e Vendas.',
+                comandos: [
+                    { 
+                        cmd: '!venda', 
+                        desc: 'Vende um item para outro jogador.', 
+                        syntax: '!venda <@comprador> <valor> <item> <link>' 
+                    },
+                    { 
+                        cmd: '!feirinha', 
+                        desc: 'Abre o mercado semanal de ingredientes.', 
+                        syntax: '!feirinha' 
+                    },
+                    { 
+                        cmd: '!aprenderculinaria', 
+                        desc: 'Aprende novas receitas baseado na Inteligência.', 
+                        syntax: '!aprenderculinaria' 
+                    },
+                    { 
+                        cmd: '!cozinhar', 
+                        desc: 'Prepara pratos que dão bônus (Gasta Forja).', 
+                        syntax: '!cozinhar' 
+                    },
+                    { 
+                        cmd: '!forja', 
+                        desc: 'Abre a oficina para fabricar itens.', 
+                        syntax: '!forja' 
+                    },
+                    { 
+                        cmd: '!resgatarforja', 
+                        desc: 'Resgata seus pontos de forja diários.', 
+                        syntax: '!resgatarforja' 
+                    },
+                    { 
+                        cmd: '!entregar', 
+                        desc: 'Entrega itens para um jogador.', 
+                        syntax: '!entregar <@usuario> <linkItem1>, <linkItem2>...' 
+                    },
+                    { 
+                        cmd: '!missa', 
+                        desc: 'Clérigo vende serviço de Missa (divide custo entre fiéis).', 
+                        syntax: '!missa <valor_total> <@player1> <@player2> ...' 
+                    }
+                ]
+            },
+            'atividades': {
+                emoji: '🎲',
+                titulo: 'Jogos & Interação',
+                descricao: 'Apostas, crimes e treinamento.',
+                comandos: [
+                    { 
+                        cmd: '!apostar', 
+                        desc: 'Aposta no Jogo do Bicho.', 
+                        syntax: '!apostar <valor> <dezena|centena|milhar> <numero> <posicao>' 
+                    },
+                    { 
+                        cmd: '!punga', 
+                        desc: 'Realiza um saque aleatório (Dinheiro ou Item).', 
+                        syntax: '!punga' 
+                    }
+                ]
+            },
+            'mestre': {
+                emoji: '👑',
+                titulo: 'Administração',
+                descricao: 'Comandos exclusivos para Mestres.',
+                comandos: [
+                    { 
+                        cmd: '!solicitada', 
+                        desc: 'Registra missão solicitada e paga a recompensa ao mestre.', 
+                        syntax: '!solicitada <ND> <custo_por_player> <@player1>...' 
+                    },                   
+                    { 
+                        cmd: '!criarmissao', 
+                        desc: 'Cria uma nova missão no quadro.', 
+                        syntax: '!criarmissao "Nome da Missão" <ND> <Vagas>' 
+                    },
+                    { 
+                        cmd: '!painelmissao', 
+                        desc: 'Gerencia inscritos e status da missão.', 
+                        syntax: '!painelmissao "Nome da Missão"' 
+                    }
+                ]
+            }
+        };
 
-        try {
-            await message.channel.send({ embeds: [helpEmbed] });
-        } catch (err) {
-            console.error("Erro ao enviar mensagem de ajuda:", err);
+        const args = message.content.split(' ').slice(1);
+        const categoriaEscolhida = args[0] ? args[0].toLowerCase() : null;
+
+        if (!categoriaEscolhida || !CATEGORIAS[categoriaEscolhida]) {
+            const embed = new EmbedBuilder()
+                .setColor('#2B2D31')
+                .setTitle('📘 Guilda de Mercenários - Ajuda')
+                .setDescription('Digite `!help <categoria>` para ver os comandos detalhados.')
+                .setThumbnail(client.user.displayAvatarURL())
+                .addFields(
+                    { name: '👤 Personagem', value: '`!help personagem`', inline: true },
+                    { name: '🛡️ Missões', value: '`!help missao`', inline: true },
+                    { name: '⚒️ Sistemas', value: '`!help sistemas`', inline: true },
+                    { name: '🎲 Atividades', value: '`!help atividades`', inline: true },
+                    { name: '👑 Mestre', value: '`!help mestre`', inline: true }
+                )
+                .setFooter({ text: 'Exemplo: !help personagem' });
+
+            return message.reply({ embeds: [embed] });
         }
+
+        const cat = CATEGORIAS[categoriaEscolhida];
+        
+        const listaComandos = cat.comandos.map(c => `**${c.cmd}**\n*${c.desc}*\n\`${c.syntax}\``).join('\n\n');
+
+        const embedCategoria = new EmbedBuilder()
+            .setColor('#0099FF')
+            .setTitle(`${cat.emoji} ${cat.titulo}`)
+            .setDescription(cat.descricao)
+            .addFields({ name: 'Comandos Disponíveis', value: listaComandos })
+            .setFooter({ text: 'Use !help para voltar ao menu principal.' });
+
+        return message.reply({ embeds: [embedCategoria] });
     }
 
     else if (command === 'solicitada') {
