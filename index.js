@@ -1762,6 +1762,8 @@ client.on('messageCreate', async (message) => {
         });
 
         collector.on('collect', async interaction => {
+            const uniqueID = `_${msg.id}`;
+
             if (interaction.customId === 'edit_classes') {
                 const menu1 = new StringSelectMenuBuilder().setCustomId('menu_classe_1').setPlaceholder('Classes A-G');
                 const menu2 = new StringSelectMenuBuilder().setCustomId('menu_classe_2').setPlaceholder('Classes I-V');
@@ -1786,7 +1788,7 @@ client.on('messageCreate', async (message) => {
 
                 menuCollector.on('collect', async iMenu => {
                     const classeSelecionada = iMenu.values[0];
-                    const modal = new ModalBuilder().setCustomId(`modal_nivel_${classeSelecionada}`).setTitle(`Nível de ${classeSelecionada}`);
+                    const modal = new ModalBuilder().setCustomId(`modal_nivel_${classeSelecionada}${uniqueID}`).setTitle(`Nível de ${classeSelecionada}`);
                     modal.addComponents(new ActionRowBuilder().addComponents(
                         new TextInputBuilder().setCustomId('inp_nivel').setLabel('Novo nível (0 para remover)').setStyle(TextInputStyle.Short)
                     ));
@@ -1865,7 +1867,7 @@ client.on('messageCreate', async (message) => {
             }
             
             if (interaction.customId === 'edit_status') {
-                const modal = new ModalBuilder().setCustomId('modal_status').setTitle('Editar Status');
+                const modal = new ModalBuilder().setCustomId('modal_status' + uniqueID).setTitle('Editar Status');
                 modal.addComponents(
                     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_vida').setLabel('Vida Atual / Máxima').setStyle(TextInputStyle.Short).setValue(`${char.vida_atual}/${char.vida_max}`)),
                     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_vida_temp').setLabel('Vida Temporária').setStyle(TextInputStyle.Short).setValue(String(char.vida_temp)).setRequired(false)),
@@ -1876,7 +1878,7 @@ client.on('messageCreate', async (message) => {
             }
 
             if (interaction.customId === 'edit_fisico') {
-                const modal = new ModalBuilder().setCustomId('modal_fisico').setTitle('Editar Físicos');
+                const modal = new ModalBuilder().setCustomId('modal_fisico' + uniqueID).setTitle('Editar Físicos');
                 modal.addComponents(
                     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_for').setLabel('Força').setStyle(TextInputStyle.Short).setValue(String(char.forca))),
                     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_des').setLabel('Destreza').setStyle(TextInputStyle.Short).setValue(String(char.destreza))),
@@ -1886,7 +1888,7 @@ client.on('messageCreate', async (message) => {
             }
 
             if (interaction.customId === 'edit_mental') {
-                const modal = new ModalBuilder().setCustomId('modal_mental').setTitle('Editar Mentais');
+                const modal = new ModalBuilder().setCustomId('modal_mental' + uniqueID).setTitle('Editar Mentais');
                 modal.addComponents(
                     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_int').setLabel('Inteligência').setStyle(TextInputStyle.Short).setValue(String(char.inteligencia))),
                     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_sab').setLabel('Sabedoria').setStyle(TextInputStyle.Short).setValue(String(char.sabedoria))),
@@ -1896,19 +1898,20 @@ client.on('messageCreate', async (message) => {
             }
 
             if (interaction.customId === 'edit_obs') {
-                const modal = new ModalBuilder().setCustomId('modal_obs').setTitle('Editar Observações');
+                const modal = new ModalBuilder().setCustomId('modal_obs' + uniqueID).setTitle('Editar Observações');
                 modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_obs').setLabel('Anotações').setStyle(TextInputStyle.Paragraph).setValue(char.observacoes || '').setMaxLength(1000)));
                 await interaction.showModal(modal);
             }
         });
 
         const modalHandler = async (i) => {
-            if (!i.isModalSubmit() || i.user.id !== message.author.id) return;
+            if (!i.isModalSubmit() || !i.customId.endsWith(msg.id) || i.user.id !== message.author.id) return;
 
             let logDescricao = "";
+            const uniqueID = `_${msg.id}`;
 
             if (i.customId.startsWith('modal_nivel_')) {
-                const classeNome = i.customId.replace('modal_nivel_', '');
+                const classeNome = i.customId.replace('modal_nivel_', '').replace(uniqueID, '');
                 const nivelInput = parseInt(i.fields.getTextInputValue('inp_nivel'));
 
                 if (isNaN(nivelInput)) return i.reply({content: "Nível inválido", flags: MessageFlags.Ephemeral});
@@ -1937,7 +1940,7 @@ client.on('messageCreate', async (message) => {
                 await i.update({ content: `✅ **Sucesso:** ${logDescricao}`, components: [] });
             }
 
-            if (i.customId === 'modal_status') {
+            if (i.customId === 'modal_status' + uniqueID) {
                 const [vAtual, vMax] = i.fields.getTextInputValue('inp_vida').split('/').map(Number);
                 const [mAtual, mMax] = i.fields.getTextInputValue('inp_mana').split('/').map(Number);
                 const vTemp = parseInt(i.fields.getTextInputValue('inp_vida_temp')) || 0;
@@ -1955,14 +1958,14 @@ client.on('messageCreate', async (message) => {
                 await i.deferUpdate();
             }
 
-            if (i.customId === 'modal_obs') {
+            if (i.customId === 'modal_obs' + uniqueID) {
                 const obs = i.fields.getTextInputValue('inp_obs');
                 logDescricao = "Editou Observações da Ficha";
                 await prisma.personagens.update({ where: { id: char.id }, data: { observacoes: obs } });
                 await i.deferUpdate();
             }
 
-            if (i.customId === 'modal_fisico') {
+            if (i.customId === 'modal_fisico' + uniqueID) {
                 const nFor = parseInt(i.fields.getTextInputValue('inp_for'));
                 const nDes = parseInt(i.fields.getTextInputValue('inp_des'));
                 const nCon = parseInt(i.fields.getTextInputValue('inp_con'));
@@ -1971,7 +1974,7 @@ client.on('messageCreate', async (message) => {
                 await i.deferUpdate();
             }
 
-            if (i.customId === 'modal_mental') {
+            if (i.customId === 'modal_mental' + uniqueID) {
                 const nInt = parseInt(i.fields.getTextInputValue('inp_int'));
                 const nSab = parseInt(i.fields.getTextInputValue('inp_sab'));
                 const nCar = parseInt(i.fields.getTextInputValue('inp_car'));
