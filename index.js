@@ -1742,7 +1742,7 @@ client.on('messageCreate', async (message) => {
         const getBotoes = () => new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('edit_classes').setLabel('Classes/Nível').setStyle(ButtonStyle.Success).setEmoji('📚'),
             new ButtonBuilder().setCustomId('btn_descanso').setLabel('Descansar').setStyle(ButtonStyle.Success).setEmoji('💤'),
-            new ButtonBuilder().setCustomId('edit_status').setLabel('Status').setStyle(ButtonStyle.Primary).setEmoji('❤️'),
+            new ButtonBuilder().setCustomId('edit_status').setLabel('Status').setStyle(ButtonStyle.Primary).setEmoji('❤️')
         );
         
         const row2 = new ActionRowBuilder().addComponents(
