@@ -793,9 +793,9 @@ client.on('messageCreate', async (message) => {
                         syntax: '!cozinhar' 
                     },
                     { 
-                        cmd: '!forja', 
+                        cmd: '!forjar', 
                         desc: 'Abre a oficina para fabricar itens.', 
-                        syntax: '!forja' 
+                        syntax: '!forjar' 
                     },
                     { 
                         cmd: '!resgatarforja', 
@@ -905,7 +905,7 @@ client.on('messageCreate', async (message) => {
         else if (dificuldade >= 5 && dificuldade <= 10) patamar = 2;
         else if (dificuldade >= 11 && dificuldade <= 16) patamar = 3;
         else if (dificuldade >= 17 && dificuldade <= 20) patamar = 4;
-        const recompensaNarrador = 100 * dificuldade * patamar;
+        const recompensaNarrador = 100 * dificuldade;
 
         try {
             const dadosNarradorUser = await prisma.usuarios.findUnique({
@@ -2474,11 +2474,41 @@ client.on('messageCreate', async (message) => {
                 }
 
                 if (i.customId === 'ms_concluir') {
+                    const dmChar = await getPersonagemAtivo(missao.criador_id);
+
+                    if (dmChar) {
+                        const jaInscrito = await prisma.inscricoes.findFirst({
+                            where: { 
+                                missao_id: missao.id, 
+                                personagem_id: dmChar.id 
+                            }
+                        });
+
+                        if (!jaInscrito) {
+                            await prisma.inscricoes.create({
+                                data: {
+                                    missao_id: missao.id,
+                                    personagem_id: dmChar.id,
+                                    selecionado: true, 
+                                    recompensa_resgatada: false
+                                }
+                            });
+                        } else {
+                            if (!jaInscrito.selecionado) {
+                                await prisma.inscricoes.update({
+                                    where: { id: jaInscrito.id },
+                                    data: { selecionado: true }
+                                });
+                            }
+                        }
+                    }
+
                     await prisma.missoes.update({ where: { id: missao.id }, data: { status: 'CONCLUIDA' } });
+                    
                     const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
                     
                     await i.update({ embeds: [montarPainel(mNova)], components: [row] });
-                    await i.followUp(`🏆 **Missão Concluída!**\nJogadores, utilizem \`!resgatar\` para pegar suas recompensas.`);
+                    await i.followUp(`🏆 **Missão Concluída!**\nJogadores e Mestre, utilizem \`!resgatar "${mNova.nome}"\` para pegar suas recompensas.`);
                 }
 
                 if (i.customId === 'ms_atualizar') {
@@ -2804,7 +2834,7 @@ client.on('messageCreate', async (message) => {
         };
 
         const msg = await message.reply({ 
-            content: `🔥 **Fogão Aceso**\n👤 **Cozinheiro:** ${char.nome}\n🔨 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)}\n🎒 **Estoque:** ${Object.entries(char.estoque_ingredientes || {}).map(([k,v])=>`${k}: ${v}`).join(', ')}`,
+            content: `🔥 **Fogão Aceso (Rende 5 Porções)**\n👤 **Cozinheiro:** ${char.nome}\n🔨 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)}\n🎒 **Estoque:** ${Object.entries(char.estoque_ingredientes || {}).map(([k,v])=>`${k}: ${v}`).join(', ')}`,
             components: [montarMenuReceitas()]
         });
 
@@ -2833,20 +2863,21 @@ client.on('messageCreate', async (message) => {
                     return i.reply({ content: `🚫 **Faltam ingredientes:** ${faltantes.join(', ')}`, flags: MessageFlags.Ephemeral });
                 }
 
-                if (charAtual.pontos_forja_atual < 0.5) {
-                    return i.reply({ content: `🚫 **Pontos de Forja insuficientes!** Precisa de 0.5, você tem ${charAtual.pontos_forja_atual.toFixed(1)}.`, flags: MessageFlags.Ephemeral });
+                if (charAtual.pontos_forja_atual < 1.0) {
+                    return i.reply({ content: `🚫 **Pontos de Forja insuficientes!** Custo Base: 1.0 pts. Você tem ${charAtual.pontos_forja_atual.toFixed(1)}.`, flags: MessageFlags.Ephemeral });
                 }
 
                 const temEspeciarias = (estoque['Especiarias'] || 0) >= 1;
+                const podeEspecial = temEspeciarias && charAtual.pontos_forja_atual >= 2.0;
 
                 const botoes = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('btn_cozinhar_padrao').setLabel('Cozinhar Prato').setStyle(ButtonStyle.Success).setEmoji('🍲'),
-                    new ButtonBuilder().setCustomId('btn_cozinhar_especial').setLabel('Adicionar Especiarias').setStyle(ButtonStyle.Primary).setEmoji('✨').setDisabled(!temEspeciarias),
+                    new ButtonBuilder().setCustomId('btn_cozinhar_padrao').setLabel('Cozinhar (1 Pts)').setStyle(ButtonStyle.Success).setEmoji('🍲'),
+                    new ButtonBuilder().setCustomId('btn_cozinhar_especial').setLabel('Com Especiarias (2 Pts)').setStyle(ButtonStyle.Primary).setEmoji('✨').setDisabled(!podeEspecial),
                     new ButtonBuilder().setCustomId('btn_cancelar_cozinha').setLabel('Cancelar').setStyle(ButtonStyle.Secondary)
                 );
 
                 await i.update({ 
-                    content: `🥘 **Preparando: ${receitaSelecionada}**\nCusto: **0.5 Pontos de Forja**\n\nDeseja aprimorar o prato com Especiarias?`,
+                    content: `🥘 **Preparando: ${receitaSelecionada}**\n📦 **Rendimento:** 5 Porções\n\n🔹 **Padrão:** Custa 1.0 Pts\n✨ **Especial:** Custa 2.0 Pts + 1 Especiaria`,
                     components: [botoes] 
                 });
             }
@@ -2860,15 +2891,17 @@ client.on('messageCreate', async (message) => {
                 if (!receitaSelecionada) return i.reply({ content: "Nenhuma receita selecionada.", flags: MessageFlags.Ephemeral });
 
                 const usarEspeciarias = i.customId === 'btn_cozinhar_especial';
+                const custoPts = usarEspeciarias ? 2.0 : 1.0;
                 const receita = DB_CULINARIA.RECEITAS[receitaSelecionada];
 
-                if (charAtual.pontos_forja_atual < 0.5) return i.reply({ content: "Pontos de forja insuficientes.", flags: MessageFlags.Ephemeral });
+                if (charAtual.pontos_forja_atual < custoPts) return i.reply({ content: `Pontos de forja insuficientes (Precisa de ${custoPts}).`, flags: MessageFlags.Ephemeral });
                 if (usarEspeciarias && (!estoque['Especiarias'] || estoque['Especiarias'] < 1)) return i.reply({ content: "Sem especiarias.", flags: MessageFlags.Ephemeral });
 
                 for (const [ing, qtd] of Object.entries(receita.ing)) {
                     estoque[ing] -= qtd;
                     if (estoque[ing] <= 0) delete estoque[ing];
                 }
+
                 if (usarEspeciarias) {
                     estoque['Especiarias'] -= 1;
                     if (estoque['Especiarias'] <= 0) delete estoque['Especiarias'];
@@ -2878,13 +2911,13 @@ client.on('messageCreate', async (message) => {
                     where: { id: charAtual.id },
                     data: { 
                         estoque_ingredientes: estoque,
-                        pontos_forja_atual: { decrement: 0.5 }
+                        pontos_forja_atual: { decrement: custoPts }
                     }
                 });
 
                 const descLog = usarEspeciarias 
-                    ? `Cozinhou ${receitaSelecionada} (Com Especiarias)` 
-                    : `Cozinhou ${receitaSelecionada}`;
+                    ? `Cozinhou ${receitaSelecionada} x5 (Com Especiarias) - Gasto: ${custoPts} pts` 
+                    : `Cozinhou ${receitaSelecionada} x5 - Gasto: ${custoPts} pts`;
 
                 await prisma.transacao.create({
                     data: { 
@@ -2896,11 +2929,11 @@ client.on('messageCreate', async (message) => {
                 });
 
                 const msgSucesso = usarEspeciarias
-                    ? `✨ **Prato Gourmet Pronto!**\nVocê fez **${receitaSelecionada}** com um toque especial.\n*Efeito:* ${receita.desc} (Aprimorado?)`
-                    : `🍲 **Prato Pronto!**\nVocê fez **${receitaSelecionada}**.\n*Efeito:* ${receita.desc}`;
+                    ? `✨ **Prato Gourmet Pronto! (5 Porções)**\nVocê fez **${receitaSelecionada}** com um toque especial.\n*Efeito:* ${receita.desc} (Aprimorado)`
+                    : `🍲 **Prato Pronto! (5 Porções)**\nVocê fez **${receitaSelecionada}**.\n*Efeito:* ${receita.desc}`;
 
                 await i.update({ 
-                    content: `${msgSucesso}\n\n🔨 **Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')} | Pts: ${(charAtual.pontos_forja_atual - 0.5).toFixed(1)}`,
+                    content: `${msgSucesso}\n\n🔨 **Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')} | Pts: ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}`,
                     components: [montarMenuReceitas()] 
                 });
             }
