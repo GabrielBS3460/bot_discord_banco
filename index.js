@@ -2904,9 +2904,15 @@ client.on('messageCreate', async (message) => {
         const { MessageFlags } = require('discord.js');
         const char = await getPersonagemAtivo(message.author.id);
         
-        const receitasConhecidas = char ? (char.receitas_conhecidas || []) : [];
+        if (!char) return message.reply("Você não tem um personagem ativo.");
 
-        if (!char || receitasConhecidas.length === 0) return message.reply("Você não conhece nenhuma receita.");
+        const listaPericias = char.pericias || [];
+        if (!listaPericias.includes("Ofício Cozinheiro")) {
+            return message.reply("🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!");
+        }
+
+        const receitasConhecidas = char.receitas_conhecidas || [];
+        if (receitasConhecidas.length === 0) return message.reply("Você tem a habilidade, mas não conhece nenhuma receita.");
 
         const montarMenuReceitas = () => {
             const menu = new StringSelectMenuBuilder()
@@ -2915,6 +2921,8 @@ client.on('messageCreate', async (message) => {
 
             receitasConhecidas.forEach(nome => {
                 const r = DB_CULINARIA.RECEITAS[nome];
+                if (!r) return; 
+                
                 const ingDesc = Object.entries(r.ing).map(([k,v]) => `${k} x${v}`).join(', ');
                 menu.addOptions(new StringSelectMenuOptionBuilder()
                     .setLabel(nome)
@@ -2993,7 +3001,7 @@ client.on('messageCreate', async (message) => {
                     estoque[ing] -= qtd;
                     if (estoque[ing] <= 0) delete estoque[ing];
                 }
-
+                
                 if (usarEspeciarias) {
                     estoque['Especiarias'] -= 1;
                     if (estoque['Especiarias'] <= 0) delete estoque['Especiarias'];
