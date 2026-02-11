@@ -198,11 +198,11 @@ function gerarRecompensa(nd) {
         const drop = DADOS.DINHEIRO_POR_ND(ndNum);
         
         if (drop.val !== undefined) {
-            if (valorDiv === 0) return { mensagem: "🗑️ **Nada encontrado.** (A poeira domina o local)", valor: 0 };
+            if (drop.val === 0) return { mensagem: "🗑️ **Nada encontrado.** (A poeira domina o local)", valor: 0 };
             
             return { 
                 mensagem: `💰 **Dinheiro:** T$ ${drop.val}`, 
-                valor: valorDiv 
+                valor: drop.val 
             };
         } 
         
