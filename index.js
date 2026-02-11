@@ -1732,7 +1732,7 @@ client.on('messageCreate', async (message) => {
                     { name: '⭐ Mana', value: txtMana, inline: true },
                     { name: '📈 Progresso', value: `Pontos: **${barraProgresso}**`, inline: true },
                     { name: '🛠️ Forja', value: `${p.pontos_forja_atual.toFixed(1)} pts`, inline: true },
-                    { name: '🏃 Deslocamento', value: `${p.deslocamento}`, inline: true },
+                    { name: '🏃 Deslocamento', value: `${p.deslocamento}m`, inline: true },
                     { name: '\u200B', value: '**Atributos**' },
                     { 
                         name: 'Físicos', 
@@ -1764,6 +1764,7 @@ client.on('messageCreate', async (message) => {
         const row2 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('edit_fisico').setLabel('Físicos').setStyle(ButtonStyle.Secondary).setEmoji('💪'),
             new ButtonBuilder().setCustomId('edit_mental').setLabel('Mentais').setStyle(ButtonStyle.Secondary).setEmoji('🧠'),
+            new ButtonBuilder().setCustomId('edit_deslocamento').setLabel('Deslocamento').setStyle(ButtonStyle.Secondary).setEmoji('🏃'),
             new ButtonBuilder().setCustomId('edit_obs').setLabel('Obs').setStyle(ButtonStyle.Secondary).setEmoji('📝')
         );
 
@@ -1950,6 +1951,14 @@ client.on('messageCreate', async (message) => {
                 await interaction.showModal(modal);
             }
 
+            if (interaction.customId === 'edit_deslocamento') {
+                const modal = new ModalBuilder().setCustomId('modal_deslocamento' + uniqueID).setTitle('Editar Deslocamento');
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_deslocamento').setLabel('Deslocamento (em metros)').setStyle(TextInputStyle.Short).setValue(String(char.deslocamento || 9)))
+                );
+                await interaction.showModal(modal);
+            }
+
             if (interaction.customId === 'edit_obs') {
                 const modal = new ModalBuilder().setCustomId('modal_obs' + uniqueID).setTitle('Editar Observações');
                 modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_obs').setLabel('Anotações').setStyle(TextInputStyle.Paragraph).setValue(char.observacoes || '').setMaxLength(1000)));
@@ -1965,7 +1974,7 @@ client.on('messageCreate', async (message) => {
 
             if (i.customId.startsWith('modal_descanso_')) {
                 const partes = i.customId.replace(uniqueID, '').split('_');
-                const tipoDescansoCode = partes[2]; // ruim, normal, conf, lux
+                const tipoDescansoCode = partes[2]; 
 
                 const bonusVidaInput = parseInt(i.fields.getTextInputValue('inp_bonus_vida')) || 0;
                 const bonusManaInput = parseInt(i.fields.getTextInputValue('inp_bonus_mana')) || 0;
@@ -2076,6 +2085,13 @@ client.on('messageCreate', async (message) => {
                 const nCar = parseInt(i.fields.getTextInputValue('inp_car'));
                 logDescricao = `Editou Mentais: INT ${nInt}, SAB ${nSab}, CAR ${nCar}`;
                 await prisma.personagens.update({ where: { id: char.id }, data: { inteligencia: nInt || 0, sabedoria: nSab || 0, carisma: nCar || 0 } });
+                await i.deferUpdate();
+            }
+
+            if (i.customId === 'modal_deslocamento' + uniqueID) {
+                const novoDeslocamento = parseFloat(i.fields.getTextInputValue('inp_deslocamento'));
+                logDescricao = `Editou Deslocamento para ${novoDeslocamento}m`;
+                await prisma.personagens.update({ where: { id: char.id }, data: { deslocamento: novoDeslocamento || 9 } });
                 await i.deferUpdate();
             }
 
