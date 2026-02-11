@@ -745,20 +745,20 @@ client.on('messageCreate', async (message) => {
                     }
                 ]
             },
-            'missao': {
+            'contrato': {
                 emoji: '🛡️',
-                titulo: 'Sistema de Missões',
+                titulo: 'Sistema de Contratos',
                 descricao: 'Participe de aventuras e entregue demandas.',
                 comandos: [
                     { 
                         cmd: '!inscrever', 
-                        desc: 'Se candidata a uma missão aberta no canal.', 
+                        desc: 'Se candidata a um contrato aberta no canal.', 
                         syntax: '!inscrever' 
                     },
                     { 
                         cmd: '!resgatar', 
-                        desc: 'Resgata recompensa de missão concluída (Ouro + Pontos).', 
-                        syntax: '!resgatar "Nome da Missão"' 
+                        desc: 'Resgata recompensa de contrato concluída (Ouro + Pontos).', 
+                        syntax: '!resgatar "Nome do Contrato"' 
                     },              
                     { 
                         cmd: '!drop', 
@@ -767,8 +767,8 @@ client.on('messageCreate', async (message) => {
                     },
                     {
                         cmd: '!avaliar',
-                        desc: 'Avalia um mestre em uma missão específica',
-                        syntax: '!avaliar @Mestre <link da missão>'
+                        desc: 'Avalia um mestre em um contrato específica',
+                        syntax: '!avaliar @Mestre <link do contrato>'
                     }
                 ]
             },
@@ -852,14 +852,14 @@ client.on('messageCreate', async (message) => {
                         syntax: '!solicitada <ND> <custo_por_player> <@player1>...' 
                     },                   
                     { 
-                        cmd: '!criarmissao', 
-                        desc: 'Cria uma nova missão no quadro.', 
-                        syntax: '!criarmissao "Nome da Missão" <ND> <Vagas>' 
+                        cmd: '!criarcontrato', 
+                        desc: 'Cria um novo contrato no quadro.', 
+                        syntax: '!criarcontrato "Nome do Contrato" <ND> <Vagas>' 
                     },
                     { 
-                        cmd: '!painelmissao', 
-                        desc: 'Gerencia inscritos e status da missão.', 
-                        syntax: '!painelmissao "Nome da Missão"' 
+                        cmd: '!painelcontrato', 
+                        desc: 'Gerencia inscritos e status do contrato.', 
+                        syntax: '!painelcontrato "Nome do Contrato"' 
                     }
                 ]
             }
@@ -876,7 +876,7 @@ client.on('messageCreate', async (message) => {
                 .setThumbnail(client.user.displayAvatarURL())
                 .addFields(
                     { name: '👤 Personagem', value: '`!help personagem`', inline: true },
-                    { name: '🛡️ Missões', value: '`!help missao`', inline: true },
+                    { name: '🛡️ Contrato', value: '`!help contrato`', inline: true },
                     { name: '⚒️ Sistemas', value: '`!help sistemas`', inline: true },
                     { name: '🎲 Atividades', value: '`!help atividades`', inline: true },
                     { name: '👑 Mestre', value: '`!help mestre`', inline: true }
@@ -2416,11 +2416,11 @@ client.on('messageCreate', async (message) => {
         message.reply(`🎲 **Gerado:** ${resultado}`);
     }
 
-    else if (command === 'criarmissao') {
+    else if (command === 'criarcontrato') {
         const regex = /"([^"]+)"\s+(\d+)\s+(\d+)/;
         const match = message.content.match(regex);
 
-        if (!match) return message.reply('Sintaxe incorreta. Use: `!criarmissao "Nome da Missão" <ND> <Vagas>`\nEx: `!criarmissao "Resgate na Floresta" 2 4`');
+        if (!match) return message.reply('Sintaxe incorreta. Use: `!criarcontrato "Nome do Contrato" <ND> <Vagas>`\nEx: `!criarcontrato "Resgate na Floresta" 2 4`');
 
         const nomeMissao = match[1];
         const nd = parseInt(match[2]);
@@ -2436,11 +2436,11 @@ client.on('messageCreate', async (message) => {
                     status: 'ABERTA'
                 }
             });
-            message.reply(`✅ **Missão Criada!**\n📜 **${nomeMissao}** (ND ${nd})\n👥 Vagas: ${vagas}\n\nJogadores, usem \`!inscrever "${nomeMissao}"\` para participar!`);
+            message.reply(`✅ **Contrato Criado!**\n📜 **${nomeMissao}** (ND ${nd})\n👥 Vagas: ${vagas}\n\nJogadores, usem \`!inscrever "${nomeMissao}"\` para participar!`);
         } catch (err) {
-            if (err.code === 'P2002') return message.reply("Já existe uma missão com esse nome.");
+            if (err.code === 'P2002') return message.reply("Já existe um contrato com esse nome.");
             console.error(err);
-            message.reply("Erro ao criar missão.");
+            message.reply("Erro ao criar contrato.");
         }
     }
 
@@ -2476,18 +2476,18 @@ client.on('messageCreate', async (message) => {
         }
     }
 
-    else if (command === 'painelmissao') {
+    else if (command === 'painelcontrato') {
         const { MessageFlags } = require('discord.js');
-        const nomeMissao = message.content.replace('!painelmissao', '').trim().replace(/"/g, '');
+        const nomeMissao = message.content.replace('!painelcontrato', '').trim().replace(/"/g, '');
         
         const missao = await prisma.missoes.findUnique({ 
             where: { nome: nomeMissao },
             include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } 
         });
 
-        if (!missao) return message.reply("Missão não encontrada.");
+        if (!missao) return message.reply("Contrato não encontrado.");
         if (missao.criador_id !== message.author.id && !message.member.roles.cache.has(ID_CARGO_ADMIN)) {
-            return message.reply("Apenas o Mestre criador pode gerenciar esta missão.");
+            return message.reply("Apenas o Mestre criador pode gerenciar este contrato.");
         }
 
         const montarPainel = (m) => {
@@ -2552,7 +2552,7 @@ client.on('messageCreate', async (message) => {
 
                     const menu = new StringSelectMenuBuilder()
                         .setCustomId('menu_remover_jogador')
-                        .setPlaceholder('Selecione quem VAI SAIR da missão');
+                        .setPlaceholder('Selecione quem VAI SAIR do contrato');
 
                     selecionados.forEach(insc => {
                         menu.addOptions(new StringSelectMenuOptionBuilder()
@@ -2635,7 +2635,7 @@ client.on('messageCreate', async (message) => {
                     const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
                     
                     await i.update({ embeds: [montarPainel(mNova)], components: [row] });
-                    await i.followUp(`🏆 **Missão Concluída!**\nJogadores e Mestre, utilizem \`!resgatar "${mNova.nome}"\` para pegar suas recompensas.`);
+                    await i.followUp(`🏆 **Contrato Concluído!**\nJogadores e Mestre, utilizem \`!resgatar "${mNova.nome}"\` para pegar suas recompensas.`);
                 }
 
                 if (i.customId === 'ms_atualizar') {
@@ -3461,7 +3461,7 @@ client.on('messageCreate', async (message) => {
         const linkMissao = argsLimpos.find(arg => arg.startsWith('http'));
 
         if (!mestreUser) return message.reply("⚠️ Mencione o Mestre. Ex: `!avaliar @Mestre <link>`");
-        if (!linkMissao) return message.reply("⚠️ Forneça o link da missão.");
+        if (!linkMissao) return message.reply("⚠️ Forneça o link do Contrato.");
         if (mestreUser.id === message.author.id) return message.reply("🚫 Autoavaliação não permitida.");
 
         let respostas = {
@@ -3481,7 +3481,7 @@ client.on('messageCreate', async (message) => {
         );
 
         const msgPublica = await message.reply({ 
-            content: `🔒 **Avaliação Sigilosa**\nClique no botão abaixo para abrir o formulário secreto de avaliação para **${mestreUser.username}**.\n\n📝 **Você avaliará os seguintes critérios:**\n• **Ritmo:** O andamento e a fluidez da sessão.\n• **Imersão:** O desenvolvimento da ambientação e roleplay.\n• **Preparo:** A organização e planejamento do mestre.\n• **Sistema:** O conhecimento demonstrado das regras.\n• **Geral:** Sua satisfação final com a missão.`,
+            content: `🔒 **Avaliação Sigilosa**\nClique no botão abaixo para abrir o formulário secreto de avaliação para **${mestreUser.username}**.\n\n📝 **Você avaliará os seguintes critérios:**\n• **Ritmo:** O andamento e a fluidez da sessão.\n• **Imersão:** O desenvolvimento da ambientação e roleplay.\n• **Preparo:** A organização e planejamento do mestre.\n• **Sistema:** O conhecimento demonstrado das regras.\n• **Geral:** Sua satisfação final com o Contrato.`,
             components: [btnRow]
         });
 
