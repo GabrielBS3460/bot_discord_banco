@@ -1673,6 +1673,18 @@ client.on('messageCreate', async (message) => {
         const LISTA_CLASSES_1 = ["Arcanista", "Alquimista", "Atleta", "Bárbaro", "Bardo", "Burguês", "Bucaneiro", "Caçador", "Cavaleiro", "Clérigo", "Duelista", "Druída", "Ermitão", "Frade", "Guerreiro"];
         const LISTA_CLASSES_2 = ["Inovador", "Inventor", "Ladino", "Lutador", "Machado de Pedra", "Magimarcialista", "Nobre", "Necromante", "Paladino", "Santo", "Seteiro", "Treinador", "Usurpador", "Vassalo", "Ventanista"];
 
+        const PERICIAS_LISTA_1 = [
+            "Acrobacia", "Adestramento", "Atletismo", "Atuação", "Cavalgar", "Conhecimento", "Cura", 
+            "Diplomacia", "Enganação", "Fortitude", "Furtividade", "Guerra", "Iniciativa", 
+            "Intimidação", "Intuição", "Investigação", "Jogatina", "Ladinagem", "Luta", "Misticismo"
+        ];
+        const PERICIAS_LISTA_2 = [
+            "Nobreza", "Ofício Alquimista", "Ofício Armeiro", "Ofício Artesão", "Ofício Alfaiate", 
+            "Ofício Cozinheiro", "Ofício Escriba", "Ofício Engenhoqueiro", "Ofício Tatuador", 
+            "Ofício Barbeiro", "Percepção", "Pilotagem", "Pontaria", "Reflexos", "Religião", 
+            "Sobrevivência", "Vontade"
+        ];
+
         const ativo = await getPersonagemAtivo(message.author.id);
         if (!ativo) return message.reply("Você não tem um personagem ativo.");
 
@@ -1706,6 +1718,8 @@ client.on('messageCreate', async (message) => {
                 ? p.classes.map(c => `${c.nome_classe} ${c.nivel}`).join(' / ')
                 : "Sem Classe Definida";
 
+            const listaPericias = (p.pericias && Array.isArray(p.pericias)) ? p.pericias.join(', ') : "Nenhuma";
+
             const custoProx = CUSTO_NIVEL[nivelReal] || 'Max';
             const barraProgresso = `${p.pontos_missao}/${custoProx}`;
 
@@ -1730,6 +1744,7 @@ client.on('messageCreate', async (message) => {
                         value: `**INT:** ${p.inteligencia > 0 ? '+' : ''}${p.inteligencia} (CD ${calcCD(p.inteligencia)})\n**SAB:** ${p.sabedoria > 0 ? '+' : ''}${p.sabedoria} (CD ${calcCD(p.sabedoria)})\n**CAR:** ${p.carisma > 0 ? '+' : ''}${p.carisma} (CD ${calcCD(p.carisma)})`, 
                         inline: true 
                     },
+                    { name: '🎭 Perícias Treinadas', value: listaPericias },
                     { name: '📝 Observações', value: obsTexto }
                 );
 
@@ -1740,9 +1755,10 @@ client.on('messageCreate', async (message) => {
         };
 
         const getBotoes = () => new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('edit_classes').setLabel('Classes/Nível').setStyle(ButtonStyle.Success).setEmoji('📚'),
+            new ButtonBuilder().setCustomId('edit_classes').setLabel('Classes').setStyle(ButtonStyle.Success).setEmoji('📚'),
             new ButtonBuilder().setCustomId('btn_descanso').setLabel('Descansar').setStyle(ButtonStyle.Success).setEmoji('💤'),
-            new ButtonBuilder().setCustomId('edit_status').setLabel('Status').setStyle(ButtonStyle.Primary).setEmoji('❤️')
+            new ButtonBuilder().setCustomId('edit_status').setLabel('Status').setStyle(ButtonStyle.Primary).setEmoji('❤️'),
+            new ButtonBuilder().setCustomId('edit_pericias').setLabel('Perícias').setStyle(ButtonStyle.Secondary).setEmoji('🎭')
         );
         
         const row2 = new ActionRowBuilder().addComponents(
@@ -1763,6 +1779,57 @@ client.on('messageCreate', async (message) => {
 
         collector.on('collect', async interaction => {
             const uniqueID = `_${msg.id}`;
+
+            if (interaction.customId === 'edit_pericias') {
+                const menu1 = new StringSelectMenuBuilder().setCustomId('menu_pericia_1').setPlaceholder('Perícias (A - M)');
+                const menu2 = new StringSelectMenuBuilder().setCustomId('menu_pericia_2').setPlaceholder('Perícias (N - Z)');
+
+                PERICIAS_LISTA_1.forEach(p => menu1.addOptions(new StringSelectMenuOptionBuilder().setLabel(p).setValue(p)));
+                PERICIAS_LISTA_2.forEach(p => menu2.addOptions(new StringSelectMenuOptionBuilder().setLabel(p).setValue(p)));
+
+                const r1 = new ActionRowBuilder().addComponents(menu1);
+                const r2 = new ActionRowBuilder().addComponents(menu2);
+                const r3 = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId('btn_limpar_pericias').setLabel('Limpar Todas Perícias').setStyle(ButtonStyle.Danger)
+                );
+
+                const response = await interaction.reply({
+                    content: `Selecione as perícias para **Adicionar** à sua ficha.\n*Atuais:* ${(char.pericias || []).join(', ')}`,
+                    components: [r1, r2, r3],
+                    flags: MessageFlags.Ephemeral,
+                    withResponse: true
+                });
+
+                const periciaCollector = response.resource.message.createMessageComponentCollector({
+                    filter: i => i.user.id === message.author.id,
+                    time: 60000
+                });
+
+                periciaCollector.on('collect', async iPericia => {
+                    let novasPericias = [...(char.pericias || [])]; 
+
+                    if (iPericia.customId === 'btn_limpar_pericias') {
+                        novasPericias = [];
+                        await iPericia.reply({ content: "🗑️ Todas as perícias foram removidas.", flags: MessageFlags.Ephemeral });
+                    } else {
+                        const selecionada = iPericia.values[0];
+                        if (!novasPericias.includes(selecionada)) {
+                            novasPericias.push(selecionada);
+                            novasPericias.sort(); 
+                            await iPericia.reply({ content: `✅ **${selecionada}** adicionada!`, flags: MessageFlags.Ephemeral });
+                        } else {
+                            novasPericias = novasPericias.filter(p => p !== selecionada);
+                            await iPericia.reply({ content: `❌ **${selecionada}** removida!`, flags: MessageFlags.Ephemeral });
+                        }
+                    }
+
+                    await prisma.personagens.update({ where: { id: char.id }, data: { pericias: novasPericias } });
+                    
+                    char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
+                    await msg.edit({ embeds: [montarEmbedFicha(char)] });
+                });
+                return;
+            }
 
             if (interaction.customId === 'edit_classes') {
                 const menu1 = new StringSelectMenuBuilder().setCustomId('menu_classe_1').setPlaceholder('Classes A-G');
@@ -1828,40 +1895,26 @@ client.on('messageCreate', async (message) => {
                 const descCollector = menuDescansoResponse.resource.message.createMessageComponentCollector({ time: 60000 });
                 
                 descCollector.on('collect', async iDesc => {
-                    let multiplicador = 0;
-                    let tipoDescanso = "";
+                    let tipoSelecionado = "";
+                    if (iDesc.customId === 'desc_ruim') tipoSelecionado = "ruim";
+                    if (iDesc.customId === 'desc_normal') tipoSelecionado = "normal";
+                    if (iDesc.customId === 'desc_conf') tipoSelecionado = "confortavel";
+                    if (iDesc.customId === 'desc_lux') tipoSelecionado = "luxuoso";
 
-                    if (iDesc.customId === 'desc_ruim') { multiplicador = 0.5; tipoDescanso = "Ruim"; }
-                    if (iDesc.customId === 'desc_normal') { multiplicador = 1; tipoDescanso = "Normal"; }
-                    if (iDesc.customId === 'desc_conf') { multiplicador = 2; tipoDescanso = "Confortável"; }
-                    if (iDesc.customId === 'desc_lux') { multiplicador = 3; tipoDescanso = "Luxuoso"; }
+                    const modalDescanso = new ModalBuilder()
+                        .setCustomId(`modal_descanso_${tipoSelecionado}${uniqueID}`)
+                        .setTitle('Bônus de Descanso');
 
-                    const rec = Math.floor(nivelReal * multiplicador) || 1; 
-                    
-                    const novaVida = Math.min(char.vida_max, char.vida_atual + rec);
-                    const novaMana = Math.min(char.mana_max, char.mana_atual + rec);
-                    const curouVida = novaVida - char.vida_atual;
-                    const curouMana = novaMana - char.mana_atual;
+                    modalDescanso.addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId('inp_bonus_vida').setLabel('Bônus Extra de Vida (opcional)').setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Ex: 5')
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId('inp_bonus_mana').setLabel('Bônus Extra de Mana (opcional)').setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Ex: 2')
+                        )
+                    );
 
-                    await prisma.$transaction([
-                        prisma.personagens.update({
-                            where: { id: char.id },
-                            data: { vida_atual: novaVida, mana_atual: novaMana, ultimo_descanso: new Date() }
-                        }),
-                        prisma.transacao.create({
-                            data: {
-                                personagem_id: char.id,
-                                descricao: `Descanso ${tipoDescanso}: Rec. +${curouVida} PV, +${curouMana} PM`,
-                                valor: 0,
-                                tipo: 'LOG'
-                            }
-                        })
-                    ]);
-
-                    char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
-                    await msg.edit({ embeds: [montarEmbedFicha(char)] });
-                    
-                    await iDesc.update({ content: `✅ **Descanso realizado!** (+${curouVida} PV, +${curouMana} PM)`, components: [] });
+                    await iDesc.showModal(modalDescanso);
                 });
                 return;
             }
@@ -1909,6 +1962,49 @@ client.on('messageCreate', async (message) => {
 
             let logDescricao = "";
             const uniqueID = `_${msg.id}`;
+
+            if (i.customId.startsWith('modal_descanso_')) {
+                const partes = i.customId.replace(uniqueID, '').split('_');
+                const tipoDescansoCode = partes[2]; // ruim, normal, conf, lux
+
+                const bonusVidaInput = parseInt(i.fields.getTextInputValue('inp_bonus_vida')) || 0;
+                const bonusManaInput = parseInt(i.fields.getTextInputValue('inp_bonus_mana')) || 0;
+
+                const { nivelReal } = calcularDados(char);
+                let multiplicador = 1;
+                let nomeTipo = "Normal";
+
+                if (tipoDescansoCode === 'ruim') { multiplicador = 0.5; nomeTipo = "Ruim"; }
+                if (tipoDescansoCode === 'confortavel') { multiplicador = 2; nomeTipo = "Confortável"; }
+                if (tipoDescansoCode === 'luxuoso') { multiplicador = 3; nomeTipo = "Luxuoso"; }
+
+                const recBase = Math.floor(nivelReal * multiplicador) || 1;
+                const recVidaTotal = recBase + bonusVidaInput;
+                const recManaTotal = recBase + bonusManaInput;
+
+                const novaVida = Math.min(char.vida_max, char.vida_atual + recVidaTotal);
+                const novaMana = Math.min(char.mana_max, char.mana_atual + recManaTotal);
+                const curouVida = novaVida - char.vida_atual;
+                const curouMana = novaMana - char.mana_atual;
+
+                await prisma.$transaction([
+                    prisma.personagens.update({
+                        where: { id: char.id },
+                        data: { vida_atual: novaVida, mana_atual: novaMana, ultimo_descanso: new Date() }
+                    }),
+                    prisma.transacao.create({
+                        data: {
+                            personagem_id: char.id,
+                            descricao: `Descanso ${nomeTipo} (Bônus +${bonusVidaInput}/+${bonusManaInput}): +${curouVida} PV, +${curouMana} PM`,
+                            valor: 0,
+                            tipo: 'LOG'
+                        }
+                    })
+                ]);
+                
+                logDescricao = "Realizou Descanso"; 
+                await i.reply({ content: `✅ **Descanso realizado!**\nRecuperou: +${curouVida} Vida e +${curouMana} Mana.\n(Base: ${recBase} + Bônus)`, flags: MessageFlags.Ephemeral });
+            }
 
             if (i.customId.startsWith('modal_nivel_')) {
                 const classeNome = i.customId.replace('modal_nivel_', '').replace(uniqueID, '');
@@ -1984,13 +2080,9 @@ client.on('messageCreate', async (message) => {
             }
 
             if (logDescricao) {
-                await prisma.transacao.create({
-                    data: { personagem_id: char.id, descricao: logDescricao, valor: 0, tipo: 'LOG' }
-                });
+                char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
+                await msg.edit({ embeds: [montarEmbedFicha(char)] });
             }
-
-            char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
-            await msg.edit({ embeds: [montarEmbedFicha(char)] });
         };
 
         client.on('interactionCreate', modalHandler);

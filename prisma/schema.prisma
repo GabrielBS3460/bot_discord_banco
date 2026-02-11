@@ -67,6 +67,8 @@ model Personagens {
   utilizadorAtivo Usuarios? @relation("PersonagemAtivo")
   
   inscricoes Inscricoes[]
+
+  pericias      String[] @default([])
 }
 
 model PersonagemClasse {
