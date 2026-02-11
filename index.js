@@ -792,6 +792,11 @@ client.on('messageCreate', async (message) => {
                         desc: 'Prepara pratos que dão bônus (Gasta Forja).', 
                         syntax: '!cozinhar' 
                     },
+                    {
+                        cmd: '!venda-ingredientes',
+                        desc: 'Vende ingredientes para outro jogador',
+                        syntax: '!venda-ingredientes <@Comprador>'
+                    },
                     { 
                         cmd: '!forjar', 
                         desc: 'Abre a oficina para fabricar itens.', 
