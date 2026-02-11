@@ -752,12 +752,12 @@ client.on('messageCreate', async (message) => {
                 comandos: [
                     { 
                         cmd: '!inscrever', 
-                        desc: 'Se candidata a um contrato aberta no canal.', 
+                        desc: 'Se candidata a um contrato aberto no canal.', 
                         syntax: '!inscrever' 
                     },
                     { 
                         cmd: '!resgatar', 
-                        desc: 'Resgata recompensa de contrato concluída (Ouro + Pontos).', 
+                        desc: 'Resgata recompensa de contrato concluído (Ouro + Pontos).', 
                         syntax: '!resgatar "Nome do Contrato"' 
                     },              
                     { 
@@ -767,7 +767,7 @@ client.on('messageCreate', async (message) => {
                     },
                     {
                         cmd: '!avaliar',
-                        desc: 'Avalia um mestre em um contrato específica',
+                        desc: 'Avalia um mestre em um contrato específico',
                         syntax: '!avaliar @Mestre <link do contrato>'
                     }
                 ]
