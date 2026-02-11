@@ -198,11 +198,10 @@ function gerarRecompensa(nd) {
         const drop = DADOS.DINHEIRO_POR_ND(ndNum);
         
         if (drop.val !== undefined) {
-            const valorDiv = Math.floor(drop.val / 4);
             if (valorDiv === 0) return { mensagem: "🗑️ **Nada encontrado.** (A poeira domina o local)", valor: 0 };
             
             return { 
-                mensagem: `💰 **Dinheiro:** T$ ${valorDiv}`, 
+                mensagem: `💰 **Dinheiro:** T$ ${drop.val}`, 
                 valor: valorDiv 
             };
         } 
@@ -212,8 +211,7 @@ function gerarRecompensa(nd) {
             let total = 0;
             for(let i=0; i < (drop.qtd || 1); i++) {
                 const r = gerarRiqueza(drop.riqueza);
-                const valorReal = Math.floor(r.valor / 5);
-                riquezasTexto.push(`- ${r.nome} (Vale T$ ${valorReal})`);
+                riquezasTexto.push(`- ${r.nome} (Vale T$ ${r})`);
                 total += valorReal;
             }
             return { 
