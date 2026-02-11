@@ -3361,75 +3361,82 @@ client.on('messageCreate', async (message) => {
                     });
 
                     const confirmCollector = msg.createMessageComponentCollector({
-                        filter: btn => btn.user.id === compradorUser.id || btn.user.id === message.author.id, 
-                        time: 120000
+                        filter: btn => btn.user.id === compradorUser.id || btn.user.id === message.author.id,
+                        time: 120000 
                     });
 
                     confirmCollector.on('collect', async iBtn => {
-                        if (iBtn.user.id === message.author.id && iBtn.customId === 'btn_recusar_venda') {
-                            await iBtn.update({ content: "❌ Venda cancelada pelo vendedor.", components: [] });
-                            return;
-                        }
-
-                        if (iBtn.user.id !== compradorUser.id) {
-                            return iBtn.reply({ content: "Apenas o comprador pode aceitar.", flags: MessageFlags.Ephemeral });
-                        }
-
-                        if (iBtn.customId === 'btn_recusar_venda') {
-                            await iBtn.update({ content: "❌ Venda recusada pelo comprador.", components: [] });
-                            return;
-                        }
-
-                        if (iBtn.customId === 'btn_aceitar_venda') {
-                            
-                            const vFinal = await prisma.personagens.findUnique({ where: { id: vendedorChar.id } });
-                            const cFinal = await prisma.personagens.findUnique({ where: { id: compradorChar.id } });
-
-                            const estoqueV = vFinal.estoque_ingredientes || {};
-                            if (!estoqueV[itemSelecionado] || estoqueV[itemSelecionado] < qtdVenda) {
-                                return iBtn.reply({ content: "🚫 O vendedor não tem mais esses itens em estoque.", components: [] });
-                            }
-                            if (cFinal.saldo < precoVenda) {
-                                return iBtn.reply({ content: `🚫 Saldo insuficiente. Você tem T$ ${cFinal.saldo.toFixed(2)}.`, flags: MessageFlags.Ephemeral });
+                        try {
+                            if (iBtn.user.id === message.author.id && iBtn.customId === 'btn_recusar_venda') {
+                                await iBtn.update({ content: "❌ Venda cancelada pelo vendedor.", components: [] });
+                                confirmCollector.stop();
+                                return;
                             }
 
-                            estoqueV[itemSelecionado] -= qtdVenda;
-                            if (estoqueV[itemSelecionado] <= 0) delete estoqueV[itemSelecionado];
+                            if (iBtn.user.id !== compradorUser.id) {
+                                return iBtn.reply({ content: "Apenas o comprador pode aceitar.", flags: MessageFlags.Ephemeral });
+                            }
 
-                            const estoqueC = cFinal.estoque_ingredientes || {};
-                            estoqueC[itemSelecionado] = (estoqueC[itemSelecionado] || 0) + qtdVenda;
+                            if (iBtn.customId === 'btn_recusar_venda') {
+                                await iBtn.update({ content: "❌ Venda recusada pelo comprador.", components: [] });
+                                confirmCollector.stop();
+                                return;
+                            }
 
-                            await prisma.$transaction([
-                                prisma.personagens.update({
-                                    where: { id: vFinal.id },
-                                    data: { 
-                                        estoque_ingredientes: estoqueV,
-                                        saldo: { increment: precoVenda }
-                                    }
-                                }),
-                                prisma.personagens.update({
-                                    where: { id: cFinal.id },
-                                    data: {
-                                        estoque_ingredientes: estoqueC,
-                                        saldo: { decrement: precoVenda }
-                                    }
-                                }),
-                                prisma.transacao.create({
-                                    data: { personagem_id: vFinal.id, descricao: `Vendeu ${qtdVenda}x ${itemSelecionado} para ${cFinal.nome}`, valor: precoVenda, tipo: 'GANHO' }
-                                }),
-                                prisma.transacao.create({
-                                    data: { personagem_id: cFinal.id, descricao: `Comprou ${qtdVenda}x ${itemSelecionado} de ${vFinal.nome}`, valor: -precoVenda, tipo: 'GASTO' }
-                                })
-                            ]);
+                            if (iBtn.customId === 'btn_aceitar_venda') {
+                                await iBtn.deferUpdate(); 
+                                
+                                const vFinal = await prisma.personagens.findUnique({ where: { id: vendedorChar.id } });
+                                const cFinal = await prisma.personagens.findUnique({ where: { id: compradorChar.id } });
 
-                            await iBtn.update({
-                                content: `✅ **Negócio Fechado!**\n\n📦 **${vFinal.nome}** entregou **${qtdVenda}x ${itemSelecionado}**\n💰 **${cFinal.nome}** pagou **T$ ${precoVenda}**`,
-                                components: []
-                            });
-                            confirmCollector.stop();
+                                const estoqueV = vFinal.estoque_ingredientes || {};
+                                if (!estoqueV[itemSelecionado] || estoqueV[itemSelecionado] < qtdVenda) {
+                                    return iBtn.editReply({ content: "🚫 O vendedor não tem mais esses itens em estoque.", components: [] });
+                                }
+                                if (cFinal.saldo < precoVenda) {
+                                    return iBtn.editReply({ content: `🚫 Saldo insuficiente. Você tem T$ ${cFinal.saldo.toFixed(2)}.`, components: [] }); 
+                                }
+
+                                estoqueV[itemSelecionado] -= qtdVenda;
+                                if (estoqueV[itemSelecionado] <= 0) delete estoqueV[itemSelecionado];
+
+                                const estoqueC = cFinal.estoque_ingredientes || {};
+                                estoqueC[itemSelecionado] = (estoqueC[itemSelecionado] || 0) + qtdVenda;
+
+                                await prisma.$transaction([
+                                    prisma.personagens.update({
+                                        where: { id: vFinal.id },
+                                        data: { 
+                                            estoque_ingredientes: estoqueV,
+                                            saldo: { increment: precoVenda }
+                                        }
+                                    }),
+                                    prisma.personagens.update({
+                                        where: { id: cFinal.id },
+                                        data: {
+                                            estoque_ingredientes: estoqueC,
+                                            saldo: { decrement: precoVenda }
+                                        }
+                                    }),
+                                    prisma.transacao.create({
+                                        data: { personagem_id: vFinal.id, descricao: `Vendeu ${qtdVenda}x ${itemSelecionado} para ${cFinal.nome}`, valor: precoVenda, tipo: 'GANHO' }
+                                    }),
+                                    prisma.transacao.create({
+                                        data: { personagem_id: cFinal.id, descricao: `Comprou ${qtdVenda}x ${itemSelecionado} de ${vFinal.nome}`, valor: -precoVenda, tipo: 'GASTO' }
+                                    })
+                                ]);
+
+                                await iBtn.editReply({
+                                    content: `✅ **Negócio Fechado!**\n\n📦 **${vFinal.nome}** entregou **${qtdVenda}x ${itemSelecionado}**\n💰 **${cFinal.nome}** pagou **T$ ${precoVenda}**`,
+                                    components: []
+                                });
+                                confirmCollector.stop();
+                            }
+                        } catch (err) {
+                            console.error("Erro na venda:", err);
+                            try { await iBtn.editReply({ content: "❌ Ocorreu um erro ao processar a venda.", components: [] }); } catch (e) {}
                         }
                     });
-
                 } catch (e) {
                 }
             }
