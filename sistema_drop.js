@@ -6,24 +6,24 @@ const DADOS = {
     TABELA_RARIDADE: (nd) => {
         const roll = Math.floor(Math.random() * 100) + 1;
         
-        if (nd <= 2) {
-            if (roll <= 50) return { tipo: 'DINHEIRO' };
-            if (roll <= 80) return { tipo: 'SUPERIOR', slots: 1 };
-            return { tipo: 'SUPERIOR', slots: 2 };
-        } else if (nd <= 6) {
-            if (roll <= 50) return { tipo: 'DINHEIRO' };
-            if (roll <= 80) return { tipo: 'SUPERIOR', slots: 2 };
-            return { tipo: 'SUPERIOR', slots: 3 };
+        if (nd <= 4) {
+            if (roll <= 90) return { tipo: 'DINHEIRO' };
+            return { tipo: 'SUPERIOR', slots: 1 };
         } else if (nd <= 10) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
-            if (roll <= 80) return { tipo: 'SUPERIOR', slots: 3 };
+            if (roll <= 70) return { tipo: 'SUPERIOR', slots: 1 };
+            if (roll <= 95) return { tipo: 'SUPERIOR', slots: 2 }; 
+            return { tipo: 'MAGIC', poder: 1 }; 
+        } else if (nd <= 16) {
+            if (roll <= 50) return { tipo: 'DINHEIRO' };
+            if (roll <= 85) return { tipo: 'SUPERIOR', slots: 3 };
             if (roll <= 95) return { tipo: 'MAGIC', poder: 1 }; 
             return { tipo: 'MAGIC', poder: 2 }; 
         } else {
-            if (roll <= 60) return { tipo: 'DINHEIRO' };
+            if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 80) return { tipo: 'SUPERIOR', slots: 4 };
-            if (roll <= 95) return { tipo: 'MAGIC', poder: 2 }; 
-            return { tipo: 'MAGIC', poder: 3 }; 
+            if (roll <= 95) return { tipo: 'MAGIC', poder: 1 }; 
+            return { tipo: 'MAGIC', poder: 2 }; 
         }
     },
 
@@ -117,44 +117,39 @@ const DADOS = {
             return total;
         };
 
-        if (nd <= 2) {
-            if (d100 <= 30) return { val: 0 };
+        if (nd <= 4) {
+            if (d100 <= 50) return { val: 0 };
             if (d100 <= 70) return { val: roll("1d6") * 10 }; 
-            if (d100 <= 95) return { val: roll("1d4") * 10 }; 
-            return { val: roll("1d6") * 10 };
-        }
-        else if (nd <= 6) {
-            if (d100 <= 15) return { val: 0 };
-            if (d100 <= 60) return { val: roll("2d6") * 100 };
-            if (d100 <= 90) return { val: roll("2d10") * 100 };
-            return { riqueza: 'MENOR', qtd: roll("1d3") };
+            if (d100 <= 95) return { val: roll("1d6") * 20 }; 
+            return { val: roll("2d3") * 40 };
         }
         else if (nd <= 10) {
-            if (d100 <= 10) return { val: 0 };
-            if (d100 <= 60) return { val: roll("2d8") * 100 };
-            if (d100 <= 90) return { val: roll("2d12") * 1000 }; 
-            return { riqueza: 'MEDIA', qtd: 1 };
+            if (d100 <= 20) return { val: 0 };
+            if (d100 <= 60) return { val: roll("2d6") * 10 * nd };
+            if (d100 <= 90) return { val: roll("2d6") * 20 * nd };
+            return { riqueza: 'MENOR', qtd: roll("1d3") };
         }
         else if (nd <= 16) {
             if (d100 <= 10) return { val: 0 };
-            if (d100 <= 45) return { riqueza: 'MEDIA', qtd: 1 };
-            if (d100 <= 80) return { val: roll("3d6") * 1000 };
-            return { riqueza: 'MAIOR', qtd: 1 };
+            if (d100 <= 60) return { val: roll("2d8") * 20 * nd };
+            if (d100 <= 95) return { val: roll("2d10") * 30 * nd }; 
+            return { riqueza: 'MEDIA', qtd: roll("1d3") };
         }
         else {
-            if (d100 <= 5) return { val: 0 };
-            if (d100 <= 40) return { val: roll("4d12") * 1000 };
-            return { riqueza: 'MAIOR', qtd: roll("1d3") + 1 };
+            if (d100 <= 10) return { val: 0 };
+            if (d100 <= 45) return { riqueza: 'MEDIA', qtd: roll("1d6") };
+            if (d100 <= 80) return { val: roll("3d6") * 1000 };
+            return { riqueza: 'MAIOR', qtd: 1 };
         }
     },
 
     RIQUEZAS: {
         MENOR: [
-            { val: 10, nome: "Barril de farinha ou Gaiola com galinhas" },
-            { val: 25, nome: "Quartzo rosa ou Caixa de tabaco" },
-            { val: 50, nome: "Bracelete de ouro ou Estatueta de osso" },
-            { val: 140, nome: "Ametista ou Lingote de prata" },
-            { val: 350, nome: "Alexandrita ou Espada cerimonial" }
+            { val: 100, nome: "Barril de farinha ou Gaiola com galinhas" },
+            { val: 150, nome: "Quartzo rosa ou Caixa de tabaco" },
+            { val: 300, nome: "Bracelete de ouro ou Estatueta de osso" },
+            { val: 400, nome: "Ametista ou Lingote de prata" },
+            { val: 1000, nome: "Alexandrita ou Espada cerimonial" }
         ],
         MEDIA: [
             { val: 700, nome: "Pente em forma de dragão ou Harpa de madeira exótica" },
@@ -166,7 +161,7 @@ const DADOS = {
             { val: 11000, nome: "Anel de ouro e rubi ou Conjunto de taças de ouro" },
             { val: 27000, nome: "Coroa de ouro ou Baú de mitral com diamantes" },
             { val: 55000, nome: "Arca repleta de lingotes e pedras preciosas" },
-            { val: 260000, nome: "Uma sala forrada de moedas!" }
+            { val: 130000, nome: "Uma sala forrada de moedas!" }
         ]
     }
 };
