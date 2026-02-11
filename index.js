@@ -2089,9 +2089,18 @@ client.on('messageCreate', async (message) => {
             }
 
             if (i.customId === 'modal_deslocamento' + uniqueID) {
-                const novoDeslocamento = parseFloat(i.fields.getTextInputValue('inp_deslocamento'));
-                logDescricao = `Editou Deslocamento para ${novoDeslocamento}m`;
-                await prisma.personagens.update({ where: { id: char.id }, data: { deslocamento: novoDeslocamento || 9 } });
+                const inputTexto = i.fields.getTextInputValue('inp_deslocamento');
+                
+                const valorNumerico = parseFloat(inputTexto) || 9;
+                
+                logDescricao = `Editou Deslocamento para ${valorNumerico}m`;
+                
+                await prisma.personagens.update({ 
+                    where: { id: char.id }, 
+                    data: { 
+                        deslocamento: String(valorNumerico) 
+                    } 
+                });
                 await i.deferUpdate();
             }
 
