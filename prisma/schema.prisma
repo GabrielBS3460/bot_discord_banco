@@ -1,6 +1,6 @@
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://postgres:Botguilda123@db.djmambmnusfonxvvhape.supabase.co:5432/postgres"
 }
 
 generator client {
@@ -134,4 +134,17 @@ model SorteiosBicho {
   id          Int      @id @default(autoincrement())
   data        DateTime @default(now())
   resultados  String[] 
+}
+
+model Avaliacao {
+  id              Int      @id @default(autoincrement())
+  mestre_id       String
+  avaliador_id    String
+  link_missao     String
+  nota_ritmo      Int
+  nota_imersao    Int
+  nota_preparo    Int
+  nota_conhecimento Int
+  nota_geral      Int
+  data_avaliacao  DateTime @default(now())
 }
