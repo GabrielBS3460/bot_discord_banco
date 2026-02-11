@@ -764,6 +764,11 @@ client.on('messageCreate', async (message) => {
                         cmd: '!drop', 
                         desc: 'Gera um loot aleatório baseado no ND.', 
                         syntax: '!drop <ND>' 
+                    },
+                    {
+                        cmd: '!avaliar',
+                        desc: 'Avalia um mestre em uma missão específica',
+                        syntax: '!avaliar @Mestre <link da missão>'
                     }
                 ]
             },
@@ -3606,6 +3611,81 @@ client.on('messageCreate', async (message) => {
                 });
             }
         });
+    }
+
+    else if (command === 'conferirNota' || command === 'vernota') {
+        const { EmbedBuilder } = require('discord.js');
+
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) {
+            return message.reply("🚫 **Acesso Negado:** Apenas a administração pode conferir os relatórios de desempenho.");
+        }
+
+        const targetUser = message.mentions.users.first();
+        if (!targetUser) {
+            return message.reply("⚠️ Mencione o mestre que deseja consultar. Ex: `!conferirNota @Mestre`");
+        }
+
+        try {
+            const avaliacoes = await prisma.avaliacao.findMany({
+                where: { mestre_id: targetUser.id }
+            });
+
+            if (avaliacoes.length === 0) {
+                return message.reply(`ℹ️ O mestre **${targetUser.username}** ainda não possui nenhuma avaliação registrada.`);
+            }
+
+            let totalRitmo = 0;
+            let totalImersao = 0;
+            let totalPreparo = 0;
+            let totalConhecimento = 0;
+            let totalGeral = 0;
+
+            avaliacoes.forEach(av => {
+                totalRitmo += av.nota_ritmo;
+                totalImersao += av.nota_imersao;
+                totalPreparo += av.nota_preparo;
+                totalConhecimento += av.nota_conhecimento;
+                totalGeral += av.nota_geral;
+            });
+
+            const qtd = avaliacoes.length;
+            
+            const getMedia = (total) => (total / qtd).toFixed(2);
+
+            const mediaRitmo = parseFloat(getMedia(totalRitmo));
+            const mediaImersao = parseFloat(getMedia(totalImersao));
+            const mediaPreparo = parseFloat(getMedia(totalPreparo));
+            const mediaConhecimento = parseFloat(getMedia(totalConhecimento));
+            const mediaGeral = parseFloat(getMedia(totalGeral));
+
+            const notaFinal = ((mediaRitmo + mediaImersao + mediaPreparo + mediaConhecimento + mediaGeral) / 5).toFixed(2);
+
+            let corEmbed = '#00FF00'; 
+            if (notaFinal < 4) corEmbed = '#FFA500'; 
+            if (notaFinal < 2.5) corEmbed = '#FF0000'; 
+
+            const embed = new EmbedBuilder()
+                .setTitle(`📊 Relatório de Desempenho: ${targetUser.username}`)
+                .setDescription(`Baseado em **${qtd}** sessões avaliadas.`)
+                .setColor(corEmbed)
+                .setThumbnail(targetUser.displayAvatarURL())
+                .addFields(
+                    { name: '⏱️ Ritmo', value: `⭐ ${mediaRitmo}`, inline: true },
+                    { name: '🎭 Imersão', value: `⭐ ${mediaImersao}`, inline: true },
+                    { name: '📚 Preparo', value: `⭐ ${mediaPreparo}`, inline: true },
+                    { name: '🧠 Sistema', value: `⭐ ${mediaConhecimento}`, inline: true },
+                    { name: '😊 Satisfação', value: `⭐ ${mediaGeral}`, inline: true },
+                    { name: '\u200B', value: '\u200B' }, 
+                    { name: '🏆 Média Global', value: `🌟 **${notaFinal} / 5.0**`, inline: false }
+                )
+                .setFooter({ text: `Relatório gerado em ${new Date().toLocaleDateString('pt-BR')}` });
+
+            await message.reply({ embeds: [embed] });
+
+        } catch (err) {
+            console.error(err);
+            message.reply("❌ Erro ao buscar os dados no banco.");
+        }
     }
 });
 
