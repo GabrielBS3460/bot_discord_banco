@@ -3449,132 +3449,131 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'avaliar') {
-        const { ModalBuilder, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+        const { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 
         const mestreUser = message.mentions.users.first();
-        const args = message.content.split(' ');
-        const linkMissao = args.find(arg => arg.startsWith('http'));
+        const argsLimpos = message.content.split(' ').filter(arg => !arg.startsWith('<@'));
+        const linkMissao = argsLimpos.find(arg => arg.startsWith('http'));
 
-        if (!mestreUser) return message.reply("⚠️ Mencione o Mestre que deseja avaliar. Ex: `!avaliar @Mestre <link>`");
-        if (!linkMissao) return message.reply("⚠️ Você precisa fornecer o link da missão jogada.");
-        if (mestreUser.id === message.author.id) return message.reply("🚫 Você não pode se autoavaliar.");
+        if (!mestreUser) return message.reply("⚠️ Mencione o Mestre. Ex: `!avaliar @Mestre <link>`");
+        if (!linkMissao) return message.reply("⚠️ Forneça o link da missão.");
+        if (mestreUser.id === message.author.id) return message.reply("🚫 Autoavaliação não permitida.");
 
-        const btnRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('btn_abrir_avaliacao_mestre')
-                .setLabel(`Avaliar ${mestreUser.username}`)
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('📝')
-        );
+        let respostas = {
+            ritmo: null,
+            imersao: null,
+            preparo: null,
+            conhecimento: null,
+            geral: null
+        };
 
-        const msg = await message.reply({ 
-            content: `Clique abaixo para iniciar a avaliação do mestre **${mestreUser.username}**.`, 
-            components: [btnRow] 
-        });
+        const gerarOpcoes = () => [
+            new StringSelectMenuOptionBuilder().setLabel('1 - Muito Insatisfeito').setValue('1').setEmoji('😠'),
+            new StringSelectMenuOptionBuilder().setLabel('2 - Insatisfeito').setValue('2').setEmoji('☹️'),
+            new StringSelectMenuOptionBuilder().setLabel('3 - Indiferente').setValue('3').setEmoji('😐'),
+            new StringSelectMenuOptionBuilder().setLabel('4 - Satisfeito').setValue('4').setEmoji('🙂'),
+            new StringSelectMenuOptionBuilder().setLabel('5 - Muito Satisfeito').setValue('5').setEmoji('🤩')
+        ];
+
+        const getTela1 = () => {
+            return {
+                content: `📝 **Avaliando Mestre: ${mestreUser.username}** (Parte 1/2)\n*Selecione as opções abaixo:*`,
+                components: [
+                    new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('menu_ritmo').setPlaceholder(respostas.ritmo ? `Ritmo: Nota ${respostas.ritmo}` : 'Avaliação do Ritmo').addOptions(gerarOpcoes())
+                    ),
+                    new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('menu_imersao').setPlaceholder(respostas.imersao ? `Imersão: Nota ${respostas.imersao}` : 'Avaliação de Imersão').addOptions(gerarOpcoes())
+                    ),
+                    new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('menu_preparo').setPlaceholder(respostas.preparo ? `Preparo: Nota ${respostas.preparo}` : 'Avaliação de Preparo').addOptions(gerarOpcoes())
+                    ),
+                    new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId('btn_proximo').setLabel('Próximo ➡️').setStyle(ButtonStyle.Primary).setDisabled(!respostas.ritmo || !respostas.imersao || !respostas.preparo)
+                    )
+                ]
+            };
+        };
+
+        const getTela2 = () => {
+            return {
+                content: `📝 **Avaliando Mestre: ${mestreUser.username}** (Parte 2/2)\n*Quase lá...*`,
+                components: [
+                    new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('menu_conhecimento').setPlaceholder(respostas.conhecimento ? `Sistema: Nota ${respostas.conhecimento}` : 'Conhecimento de Sistema').addOptions(gerarOpcoes())
+                    ),
+                    new ActionRowBuilder().addComponents(
+                        new StringSelectMenuBuilder().setCustomId('menu_geral').setPlaceholder(respostas.geral ? `Geral: Nota ${respostas.geral}` : 'Desempenho Geral').addOptions(gerarOpcoes())
+                    ),
+                    new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId('btn_voltar').setLabel('⬅️ Voltar').setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder().setCustomId('btn_finalizar').setLabel('✅ Enviar Avaliação').setStyle(ButtonStyle.Success).setDisabled(!respostas.conhecimento || !respostas.geral)
+                    )
+                ]
+            };
+        };
+
+        const msg = await message.reply({ ...getTela1(), flags: MessageFlags.Ephemeral });
 
         const collector = msg.createMessageComponentCollector({ 
             filter: i => i.user.id === message.author.id, 
-            time: 60000 
+            time: 300000 
         });
 
-        collector.on('collect', async iBtn => {
-            if (iBtn.customId === 'btn_abrir_avaliacao_mestre') {
+        let telaAtual = 1;
+
+        collector.on('collect', async i => {
+            if (i.isStringSelectMenu()) {
+                const valor = parseInt(i.values[0]);
+                const id = i.customId;
                 
-                const modal = new ModalBuilder()
-                    .setCustomId(`modal_avaliacao_${mestreUser.id}`)
-                    .setTitle(`Avaliação: ${mestreUser.username.slice(0, 20)}`);
+                if (id === 'menu_ritmo') respostas.ritmo = valor;
+                if (id === 'menu_imersao') respostas.imersao = valor;
+                if (id === 'menu_preparo') respostas.preparo = valor;
+                if (id === 'menu_conhecimento') respostas.conhecimento = valor;
+                if (id === 'menu_geral') respostas.geral = valor;
 
-                const gerarOpcoes = () => [
-                    new StringSelectMenuOptionBuilder().setLabel('1 - Muito Insatisfeito').setValue('1').setEmoji('😠'),
-                    new StringSelectMenuOptionBuilder().setLabel('2 - Insatisfeito').setValue('2').setEmoji('☹️'),
-                    new StringSelectMenuOptionBuilder().setLabel('3 - Indiferente').setValue('3').setEmoji('😐'),
-                    new StringSelectMenuOptionBuilder().setLabel('4 - Satisfeito').setValue('4').setEmoji('🙂'),
-                    new StringSelectMenuOptionBuilder().setLabel('5 - Muito Satisfeito').setValue('5').setEmoji('🤩')
-                ];
+                await i.update(telaAtual === 1 ? getTela1() : getTela2());
+            }
 
-                const inputRitmo = new StringSelectMenuBuilder()
-                    .setCustomId('nota_ritmo')
-                    .setPlaceholder('Como foi o Ritmo e Fluidez?')
-                    .addOptions(gerarOpcoes());
+            if (i.isButton()) {
+                if (i.customId === 'btn_proximo') {
+                    telaAtual = 2;
+                    await i.update(getTela2());
+                }
+                if (i.customId === 'btn_voltar') {
+                    telaAtual = 1;
+                    await i.update(getTela1());
+                }
+                
+                if (i.customId === 'btn_finalizar') {
+                    await i.deferUpdate(); 
 
-                const inputImersao = new StringSelectMenuBuilder()
-                    .setCustomId('nota_imersao')
-                    .setPlaceholder('Como foi a Imersão?')
-                    .addOptions(gerarOpcoes());
+                    try {
+                        await prisma.avaliacao.create({
+                            data: {
+                                mestre_id: mestreUser.id,
+                                avaliador_id: message.author.id,
+                                link_missao: linkMissao,
+                                nota_ritmo: respostas.ritmo,
+                                nota_imersao: respostas.imersao,
+                                nota_preparo: respostas.preparo,
+                                nota_conhecimento: respostas.conhecimento,
+                                nota_geral: respostas.geral
+                            }
+                        });
 
-                const inputPreparo = new StringSelectMenuBuilder()
-                    .setCustomId('nota_preparo')
-                    .setPlaceholder('Nível de Preparo/Organização?')
-                    .addOptions(gerarOpcoes());
+                        const media = Object.values(respostas).reduce((a,b) => a+b, 0) / 5;
 
-                const inputConhecimento = new StringSelectMenuBuilder()
-                    .setCustomId('nota_conhecimento')
-                    .setPlaceholder('Conhecimento do Sistema?')
-                    .addOptions(gerarOpcoes());
+                        await i.editReply({ 
+                            content: `✅ **Avaliação Enviada com Sucesso!**\nMestre: ${mestreUser.username}\nMédia: ⭐ **${media.toFixed(1)}**\n\n*Obrigado por ajudar a Guilda a melhorar!*`, 
+                            components: [] 
+                        });
+                        collector.stop();
 
-                const inputGeral = new StringSelectMenuBuilder()
-                    .setCustomId('nota_geral')
-                    .setPlaceholder('Sua Satisfação Geral?')
-                    .addOptions(gerarOpcoes());
-
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(inputRitmo),
-                    new ActionRowBuilder().addComponents(inputImersao),
-                    new ActionRowBuilder().addComponents(inputPreparo),
-                    new ActionRowBuilder().addComponents(inputConhecimento),
-                    new ActionRowBuilder().addComponents(inputGeral)
-                );
-
-                await iBtn.showModal(modal);
-
-                try {
-                    const submission = await iBtn.awaitModalSubmit({
-                        filter: i => i.user.id === message.author.id,
-                        time: 600000 
-                    });
-
-                    await submission.deferUpdate();
-
-                    const getValor = (customId) => {
-                        try {
-                            return parseInt(submission.fields.getField(customId).values[0]);
-                        } catch (e) {
-                            return 0;
-                        }
-                    };
-
-                    const nRitmo = getValor('nota_ritmo');
-                    const nImersao = getValor('nota_imersao');
-                    const nPreparo = getValor('nota_preparo');
-                    const nConhecimento = getValor('nota_conhecimento');
-                    const nGeral = getValor('nota_geral');
-
-                    const media = (nRitmo + nImersao + nPreparo + nConhecimento + nGeral) / 5;
-
-                    await prisma.avaliacao.create({
-                        data: {
-                            mestre_id: mestreUser.id,
-                            avaliador_id: message.author.id,
-                            link_missao: linkMissao,
-                            nota_ritmo: nRitmo,
-                            nota_imersao: nImersao,
-                            nota_preparo: nPreparo,
-                            nota_conhecimento: nConhecimento,
-                            nota_geral: nGeral
-                        }
-                    });
-
-                    await submission.editReply({ 
-                        content: `✅ **Avaliação Enviada com Sucesso!**\n\n👤 **Mestre:** ${mestreUser}\n📊 **Média da Sessão:** ⭐ **${media.toFixed(1)}**\n\n*Obrigado por ajudar a Guilda a melhorar!*`,
-                        components: [] 
-                    });
-                    
-                    collector.stop();
-
-                } catch (err) {
-                    console.error("Erro no modal de avaliação:", err);
-                    if (err.message && err.message.includes('components')) {
-                        await iBtn.followUp({ content: "⚠️ Parece que a biblioteca do bot ainda está bloqueando Selects dentro de Modais, apesar do Discord aceitar. Tente atualizar o `discord.js` ou avise o desenvolvedor.", flags: MessageFlags.Ephemeral });
+                    } catch (err) {
+                        console.error(err);
+                        await i.editReply({ content: "❌ Erro ao salvar avaliação no banco de dados.", components: [] });
                     }
                 }
             }
