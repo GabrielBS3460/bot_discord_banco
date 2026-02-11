@@ -3476,15 +3476,7 @@ client.on('messageCreate', async (message) => {
         );
 
         const msgPublica = await message.reply({ 
-            content: `🔒 **Avaliação Sigilosa**
-                Clique no botão abaixo para abrir o formulário secreto de avaliação para **${mestreUser.username}**.
-
-                📝 **Você avaliará os seguintes critérios:**
-                • **Ritmo:** O andamento e a fluidez da sessão.
-                • **Imersão:** O desenvolvimento da ambientação e roleplay.
-                • **Preparo:** A organização e planejamento do mestre.
-                • **Sistema:** O conhecimento demonstrado das regras.
-                • **Geral:** Sua satisfação final com a missão.`,
+            content: `🔒 **Avaliação Sigilosa**\nClique no botão abaixo para abrir o formulário secreto de avaliação para **${mestreUser.username}**.\n\n📝 **Você avaliará os seguintes critérios:**\n• **Ritmo:** O andamento e a fluidez da sessão.\n• **Imersão:** O desenvolvimento da ambientação e roleplay.\n• **Preparo:** A organização e planejamento do mestre.\n• **Sistema:** O conhecimento demonstrado das regras.\n• **Geral:** Sua satisfação final com a missão.`,
             components: [btnRow]
         });
 
