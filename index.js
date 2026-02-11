@@ -3449,7 +3449,7 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'avaliar') {
-        const { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+        const { ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } = require('discord.js');
 
         const mestreUser = message.mentions.users.first();
         const argsLimpos = message.content.split(' ').filter(arg => !arg.startsWith('<@'));
@@ -3467,115 +3467,143 @@ client.on('messageCreate', async (message) => {
             geral: null
         };
 
-        const gerarOpcoes = () => [
-            new StringSelectMenuOptionBuilder().setLabel('1 - Muito Insatisfeito').setValue('1').setEmoji('😠'),
-            new StringSelectMenuOptionBuilder().setLabel('2 - Insatisfeito').setValue('2').setEmoji('☹️'),
-            new StringSelectMenuOptionBuilder().setLabel('3 - Indiferente').setValue('3').setEmoji('😐'),
-            new StringSelectMenuOptionBuilder().setLabel('4 - Satisfeito').setValue('4').setEmoji('🙂'),
-            new StringSelectMenuOptionBuilder().setLabel('5 - Muito Satisfeito').setValue('5').setEmoji('🤩')
-        ];
+        const btnRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('btn_iniciar_avaliacao')
+                .setLabel(`Avaliar ${mestreUser.username}`)
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('📝')
+        );
 
-        const getTela1 = () => {
-            return {
-                content: `📝 **Avaliando Mestre: ${mestreUser.username}** (Parte 1/2)\n*Selecione as opções abaixo:*`,
-                components: [
-                    new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId('menu_ritmo').setPlaceholder(respostas.ritmo ? `Ritmo: Nota ${respostas.ritmo}` : 'Avaliação do Ritmo').addOptions(gerarOpcoes())
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId('menu_imersao').setPlaceholder(respostas.imersao ? `Imersão: Nota ${respostas.imersao}` : 'Avaliação de Imersão').addOptions(gerarOpcoes())
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId('menu_preparo').setPlaceholder(respostas.preparo ? `Preparo: Nota ${respostas.preparo}` : 'Avaliação de Preparo').addOptions(gerarOpcoes())
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('btn_proximo').setLabel('Próximo ➡️').setStyle(ButtonStyle.Primary).setDisabled(!respostas.ritmo || !respostas.imersao || !respostas.preparo)
-                    )
-                ]
-            };
-        };
-
-        const getTela2 = () => {
-            return {
-                content: `📝 **Avaliando Mestre: ${mestreUser.username}** (Parte 2/2)\n*Quase lá...*`,
-                components: [
-                    new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId('menu_conhecimento').setPlaceholder(respostas.conhecimento ? `Sistema: Nota ${respostas.conhecimento}` : 'Conhecimento de Sistema').addOptions(gerarOpcoes())
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new StringSelectMenuBuilder().setCustomId('menu_geral').setPlaceholder(respostas.geral ? `Geral: Nota ${respostas.geral}` : 'Desempenho Geral').addOptions(gerarOpcoes())
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('btn_voltar').setLabel('⬅️ Voltar').setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder().setCustomId('btn_finalizar').setLabel('✅ Enviar Avaliação').setStyle(ButtonStyle.Success).setDisabled(!respostas.conhecimento || !respostas.geral)
-                    )
-                ]
-            };
-        };
-
-        const msg = await message.reply({ ...getTela1(), flags: MessageFlags.Ephemeral });
-
-        const collector = msg.createMessageComponentCollector({ 
-            filter: i => i.user.id === message.author.id, 
-            time: 300000 
+        const msgPublica = await message.reply({ 
+            content: `🔒 **Avaliação Sigilosa**\nClique no botão abaixo para abrir o formulário secreto de avaliação para **${mestreUser.username}**.`,
+            components: [btnRow]
         });
 
-        let telaAtual = 1;
+        const collectorInicio = msgPublica.createMessageComponentCollector({ 
+            filter: i => i.user.id === message.author.id, 
+            time: 60000 
+        });
 
-        collector.on('collect', async i => {
-            if (i.isStringSelectMenu()) {
-                const valor = parseInt(i.values[0]);
-                const id = i.customId;
+        collectorInicio.on('collect', async iInicio => {
+            if (iInicio.customId === 'btn_iniciar_avaliacao') {
                 
-                if (id === 'menu_ritmo') respostas.ritmo = valor;
-                if (id === 'menu_imersao') respostas.imersao = valor;
-                if (id === 'menu_preparo') respostas.preparo = valor;
-                if (id === 'menu_conhecimento') respostas.conhecimento = valor;
-                if (id === 'menu_geral') respostas.geral = valor;
+                const gerarOpcoes = () => [
+                    new StringSelectMenuOptionBuilder().setLabel('1 - Muito Insatisfeito').setValue('1').setEmoji('😠'),
+                    new StringSelectMenuOptionBuilder().setLabel('2 - Insatisfeito').setValue('2').setEmoji('☹️'),
+                    new StringSelectMenuOptionBuilder().setLabel('3 - Indiferente').setValue('3').setEmoji('😐'),
+                    new StringSelectMenuOptionBuilder().setLabel('4 - Satisfeito').setValue('4').setEmoji('🙂'),
+                    new StringSelectMenuOptionBuilder().setLabel('5 - Muito Satisfeito').setValue('5').setEmoji('🤩')
+                ];
 
-                await i.update(telaAtual === 1 ? getTela1() : getTela2());
-            }
+                const getTela1 = () => {
+                    return {
+                        content: `📝 **Avaliando Mestre: ${mestreUser.username}** (Parte 1/2)\n*Essas respostas são anônimas e visíveis apenas para você.*`,
+                        components: [
+                            new ActionRowBuilder().addComponents(
+                                new StringSelectMenuBuilder().setCustomId('menu_ritmo').setPlaceholder(respostas.ritmo ? `Ritmo: Nota ${respostas.ritmo}` : 'Avaliação do Ritmo').addOptions(gerarOpcoes())
+                            ),
+                            new ActionRowBuilder().addComponents(
+                                new StringSelectMenuBuilder().setCustomId('menu_imersao').setPlaceholder(respostas.imersao ? `Imersão: Nota ${respostas.imersao}` : 'Avaliação de Imersão').addOptions(gerarOpcoes())
+                            ),
+                            new ActionRowBuilder().addComponents(
+                                new StringSelectMenuBuilder().setCustomId('menu_preparo').setPlaceholder(respostas.preparo ? `Preparo: Nota ${respostas.preparo}` : 'Avaliação de Preparo').addOptions(gerarOpcoes())
+                            ),
+                            new ActionRowBuilder().addComponents(
+                                new ButtonBuilder().setCustomId('btn_proximo').setLabel('Próximo ➡️').setStyle(ButtonStyle.Primary).setDisabled(!respostas.ritmo || !respostas.imersao || !respostas.preparo)
+                            )
+                        ],
+                        ephemeral: true 
+                    };
+                };
 
-            if (i.isButton()) {
-                if (i.customId === 'btn_proximo') {
-                    telaAtual = 2;
-                    await i.update(getTela2());
-                }
-                if (i.customId === 'btn_voltar') {
-                    telaAtual = 1;
-                    await i.update(getTela1());
-                }
-                
-                if (i.customId === 'btn_finalizar') {
-                    await i.deferUpdate(); 
+                const getTela2 = () => {
+                    return {
+                        content: `📝 **Avaliando Mestre: ${mestreUser.username}** (Parte 2/2)\n*Quase lá...*`,
+                        components: [
+                            new ActionRowBuilder().addComponents(
+                                new StringSelectMenuBuilder().setCustomId('menu_conhecimento').setPlaceholder(respostas.conhecimento ? `Sistema: Nota ${respostas.conhecimento}` : 'Conhecimento de Sistema').addOptions(gerarOpcoes())
+                            ),
+                            new ActionRowBuilder().addComponents(
+                                new StringSelectMenuBuilder().setCustomId('menu_geral').setPlaceholder(respostas.geral ? `Geral: Nota ${respostas.geral}` : 'Desempenho Geral').addOptions(gerarOpcoes())
+                            ),
+                            new ActionRowBuilder().addComponents(
+                                new ButtonBuilder().setCustomId('btn_voltar').setLabel('⬅️ Voltar').setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder().setCustomId('btn_finalizar').setLabel('✅ Enviar Avaliação').setStyle(ButtonStyle.Success).setDisabled(!respostas.conhecimento || !respostas.geral)
+                            )
+                        ],
+                        ephemeral: true
+                    };
+                };
 
-                    try {
-                        await prisma.avaliacao.create({
-                            data: {
-                                mestre_id: mestreUser.id,
-                                avaliador_id: message.author.id,
-                                link_missao: linkMissao,
-                                nota_ritmo: respostas.ritmo,
-                                nota_imersao: respostas.imersao,
-                                nota_preparo: respostas.preparo,
-                                nota_conhecimento: respostas.conhecimento,
-                                nota_geral: respostas.geral
-                            }
-                        });
+                const responseEphemeral = await iInicio.reply({
+                    ...getTela1(),
+                    fetchReply: true 
+                });
 
-                        const media = Object.values(respostas).reduce((a,b) => a+b, 0) / 5;
+                const collectorForm = responseEphemeral.createMessageComponentCollector({
+                    time: 300000 
+                });
 
-                        await i.editReply({ 
-                            content: `✅ **Avaliação Enviada com Sucesso!**\nMestre: ${mestreUser.username}\nMédia: ⭐ **${media.toFixed(1)}**\n\n*Obrigado por ajudar a Guilda a melhorar!*`, 
-                            components: [] 
-                        });
-                        collector.stop();
+                let telaAtual = 1;
 
-                    } catch (err) {
-                        console.error(err);
-                        await i.editReply({ content: "❌ Erro ao salvar avaliação no banco de dados.", components: [] });
+                collectorForm.on('collect', async iForm => {
+                    if (iForm.isStringSelectMenu()) {
+                        const valor = parseInt(iForm.values[0]);
+                        if (iForm.customId === 'menu_ritmo') respostas.ritmo = valor;
+                        if (iForm.customId === 'menu_imersao') respostas.imersao = valor;
+                        if (iForm.customId === 'menu_preparo') respostas.preparo = valor;
+                        if (iForm.customId === 'menu_conhecimento') respostas.conhecimento = valor;
+                        if (iForm.customId === 'menu_geral') respostas.geral = valor;
+
+                        await iForm.update(telaAtual === 1 ? getTela1() : getTela2());
                     }
-                }
+
+                    if (iForm.isButton()) {
+                        if (iForm.customId === 'btn_proximo') {
+                            telaAtual = 2;
+                            await iForm.update(getTela2());
+                        }
+                        else if (iForm.customId === 'btn_voltar') {
+                            telaAtual = 1;
+                            await iForm.update(getTela1());
+                        }
+                        else if (iForm.customId === 'btn_finalizar') {
+                            await iForm.deferUpdate(); 
+
+                            try {
+                                await prisma.avaliacao.create({
+                                    data: {
+                                        mestre_id: mestreUser.id,
+                                        avaliador_id: message.author.id,
+                                        link_missao: linkMissao,
+                                        nota_ritmo: respostas.ritmo,
+                                        nota_imersao: respostas.imersao,
+                                        nota_preparo: respostas.preparo,
+                                        nota_conhecimento: respostas.conhecimento,
+                                        nota_geral: respostas.geral
+                                    }
+                                });
+
+                                const media = Object.values(respostas).reduce((a,b) => a+b, 0) / 5;
+
+                                await iForm.editReply({ 
+                                    content: `✅ **Avaliação Registrada!**\nMestre: ${mestreUser.username} | Média: ⭐ **${media.toFixed(1)}**\n\n*Esta mensagem desaparecerá em breve.*`, 
+                                    components: [] 
+                                });
+                                
+                                try { await msgPublica.delete(); } catch (e) {}
+
+                                collectorForm.stop();
+                                collectorInicio.stop();
+
+                            } catch (err) {
+                                console.error(err);
+                                await iForm.editReply({ content: "❌ Erro ao salvar.", components: [] });
+                            }
+                        }
+                    }
+                });
             }
         });
     }
