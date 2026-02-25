@@ -803,6 +803,11 @@ client.on('messageCreate', async (message) => {
                         syntax: '!venda-ingredientes <@Comprador>'
                     },
                     { 
+                        cmd: '!setforja', 
+                        desc: 'Configura o seu limite e ganho de pontos de forja.', 
+                        syntax: '!setforja <poderes_de_fabricacao>' 
+                    },
+                    { 
                         cmd: '!forjar', 
                         desc: 'Abre a oficina para fabricar itens.', 
                         syntax: '!forjar' 
@@ -2197,10 +2202,19 @@ client.on('messageCreate', async (message) => {
 
         const pericias = char.pericias || [];
         
-        const oficiosTreinados = pericias.filter(p => p.startsWith('Ofício'));
+        const OFICIOS_VALIDOS = [
+            "Ofício Armeiro", 
+            "Ofício Artesão", 
+            "Ofício Alquimista", 
+            "Ofício Cozinheiro", 
+            "Ofício Alfaiate", 
+            "Ofício Escriba"
+        ];
+        
+        const oficiosTreinados = pericias.filter(p => OFICIOS_VALIDOS.includes(p));
         const quantidadeOficios = oficiosTreinados.length;
 
-        const limiteForja = poderesFabricacao * quantidadeOficios * 2;
+        const limiteForja = (poderesFabricacao + quantidadeOficios) * 2;
 
         try {
             await prisma.personagens.update({
@@ -2212,7 +2226,7 @@ client.on('messageCreate', async (message) => {
 
             const oficiosTexto = quantidadeOficios > 0 ? oficiosTreinados.join(', ') : "Nenhum";
 
-            message.reply(`⚒️ **Configuração de Forja Atualizada!**\n\n👤 **Personagem:** ${char.nome}\n⚙️ **Poderes de Fabricação:** ${poderesFabricacao}\n🛠️ **Ofícios Treinados (${quantidadeOficios}):** ${oficiosTexto}\n\n🔥 **Seu limite de Pontos de Forja agora é:** \`${limiteForja}\` pts.\n*Use \`!resgatarforja\` para encher seus pontos diariamente.*`);
+            message.reply(`⚒️ **Configuração de Forja Atualizada!**\n\n👤 **Personagem:** ${char.nome}\n⚙️ **Poderes de Fabricação:** ${poderesFabricacao}\n🛠️ **Ofícios Válidos (${quantidadeOficios}):** ${oficiosTexto}\n\n🔥 **Seu ganho base de Pontos de Forja agora é:** \`${limiteForja}\` pts.\n*Use \`!resgatarforja\` para encher seus pontos diariamente.*`);
 
         } catch (err) {
             console.error("Erro no setforja:", err);
