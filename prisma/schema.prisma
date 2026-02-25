@@ -37,6 +37,7 @@ model Personagens {
   
   pontos_forja_atual   Float     @default(0)
   pontos_forja_diarios Int       @default(1)
+  pontos_forja_max     Float     @default(0) 
   ultimo_resgate_forja DateTime?
   ultimo_descanso      DateTime?
 

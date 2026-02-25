@@ -170,7 +170,7 @@ const commands = [
     },
     {
         name: '!tix',
-        description: 'Transfere T$ do seu personagem para outro jogador.',
+        description: 'Transfere K$ do seu personagem para outro jogador.',
         syntax: '!tix <@usuário> <valor>'
     },
     {
@@ -180,7 +180,7 @@ const commands = [
     },
     {
         name: '!primeiramissao',
-        description: 'Resgata um bônus de 300 T$ pela primeira missão do personagem (uso único).',
+        description: 'Resgata um bônus de 300 K$ pela primeira missão do personagem (uso único).',
         syntax: '!primeiramissao'
     }/*,
     {
@@ -246,7 +246,7 @@ function isSameWeek(date1, date2) {
 
 function formatarMoeda(valor) {
     const numero = Number(valor) || 0;
-    return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$', 'T$');
+    return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }).replace('R$', 'K$');
 }
 
 async function verificarLimiteMestre(mestre) {
@@ -735,7 +735,7 @@ client.on('messageCreate', async (message) => {
                     },
                     { 
                         cmd: '!tix', 
-                        desc: 'Transfere T$ do seu personagem para outro jogador.', 
+                        desc: 'Transfere K$ do seu personagem para outro jogador.', 
                         syntax: '!tix <@usuário> <valor>' 
                     },
                     { 
@@ -1446,7 +1446,7 @@ client.on('messageCreate', async (message) => {
 
         const destinatarioUser = message.mentions.users.first();
         if (!destinatarioUser || destinatarioUser.bot) {
-            return message.reply("Você precisa mencionar para quem vai enviar os T$. Ex: `!tix @Amigo 500`");
+            return message.reply("Você precisa mencionar para quem vai enviar os K$. Ex: `!tix @Amigo 500`");
         }
         
         if (destinatarioUser.id === message.author.id) {
@@ -2132,6 +2132,10 @@ client.on('messageCreate', async (message) => {
 
         if (!char) return message.reply("Você não tem personagem ativo.");
 
+        if (!char.pontos_forja_max || char.pontos_forja_max <= 0) {
+            return message.reply("⚠️ Você ainda não configurou sua Forja! Use o comando `!setforja <quantidade_de_poderes>` primeiro.");
+        }
+
         if (char.ultimo_resgate_forja) {
             const agora = new Date();
             const ultimo = new Date(char.ultimo_resgate_forja);
@@ -2140,16 +2144,24 @@ client.on('messageCreate', async (message) => {
             }
         }
 
-        const { patamar } = calcularNivelEPatamar(char.classes);
-        const limiteAcumulo = char.pontos_forja_diarios * (1 + patamar);
+        const nivelReal = char.nivel_personagem || 3;
+        let patamar = 1;
+        if (nivelReal >= 5) patamar = 2;
+        if (nivelReal >= 11) patamar = 3;
+        if (nivelReal >= 17) patamar = 4;
+
+        const ganhoDiario = char.pontos_forja_max; 
         
-        let novoTotal = char.pontos_forja_atual + char.pontos_forja_diarios;
+        const limiteAcumulo = ganhoDiario * (patamar + 1);
+        
+        let novoTotal = char.pontos_forja_atual + ganhoDiario;
+        
         if (novoTotal > limiteAcumulo) novoTotal = limiteAcumulo;
 
         const ganhou = novoTotal - char.pontos_forja_atual;
 
         if (ganhou <= 0) {
-            return message.reply(`⚠️ Seu estoque de pontos está cheio (Máx: ${limiteAcumulo}). Gaste forjando algo antes de resgatar.`);
+            return message.reply(`⚠️ Seu estoque de pontos está cheio (Máx: **${limiteAcumulo}**). Gaste forjando/cozinhando algo antes de resgatar.`);
         }
 
         await prisma.$transaction([
@@ -2170,7 +2182,42 @@ client.on('messageCreate', async (message) => {
             })
         ]);
 
-        message.reply(`🔨 **Forja:** Você recebeu **${ganhou.toFixed(1)}** pontos! (Total: ${novoTotal.toFixed(1)} / Máx: ${limiteAcumulo})`);
+        message.reply(`🔨 **Forja:** Você recebeu **${ganhou.toFixed(1)}** pontos!\n📊 **Total:** ${novoTotal.toFixed(1)} / Máx: ${limiteAcumulo}\n*(Patamar: ${patamar} | Ganho Diário: ${ganhoDiario})*`);
+    }
+
+    else if (command === 'setforja' || command === 'configurarforja') {
+        const poderesFabricacao = parseInt(args[0]);
+
+        if (isNaN(poderesFabricacao) || poderesFabricacao < 0) {
+            return message.reply("⚠️ **Uso correto:** `!setforja <quantidade_de_poderes_de_fabricacao>`\nExemplo: se você tem 1 poder de fabricação, digite `!setforja 1`.");
+        }
+
+        const char = await getPersonagemAtivo(message.author.id);
+        if (!char) return message.reply("🚫 Você não tem um personagem ativo.");
+
+        const pericias = char.pericias || [];
+        
+        const oficiosTreinados = pericias.filter(p => p.startsWith('Ofício'));
+        const quantidadeOficios = oficiosTreinados.length;
+
+        const limiteForja = poderesFabricacao * quantidadeOficios * 2;
+
+        try {
+            await prisma.personagens.update({
+                where: { id: char.id },
+                data: {
+                    pontos_forja_max: limiteForja
+                }
+            });
+
+            const oficiosTexto = quantidadeOficios > 0 ? oficiosTreinados.join(', ') : "Nenhum";
+
+            message.reply(`⚒️ **Configuração de Forja Atualizada!**\n\n👤 **Personagem:** ${char.nome}\n⚙️ **Poderes de Fabricação:** ${poderesFabricacao}\n🛠️ **Ofícios Treinados (${quantidadeOficios}):** ${oficiosTexto}\n\n🔥 **Seu limite de Pontos de Forja agora é:** \`${limiteForja}\` pts.\n*Use \`!resgatarforja\` para encher seus pontos diariamente.*`);
+
+        } catch (err) {
+            console.error("Erro no setforja:", err);
+            message.reply("❌ Ocorreu um erro ao salvar seu limite de forja. Verifique com a moderação.");
+        }
     }
 
     else if (command === 'forjar') {
@@ -2191,7 +2238,7 @@ client.on('messageCreate', async (message) => {
         const row = new ActionRowBuilder().addComponents(menu);
         
         const msg = await message.reply({ 
-            content: `🔨 **Oficina de Forja**\nSaldo: T$ ${formatarMoeda(char.saldo)}\nPontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\nSelecione o **TIPO** de item que deseja criar:`,
+            content: `🔨 **Oficina de Forja**\nSaldo: K$ ${formatarMoeda(char.saldo)}\nPontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\nSelecione o **TIPO** de item que deseja criar:`,
             components: [row]
         });
 
@@ -2205,7 +2252,7 @@ client.on('messageCreate', async (message) => {
                 modal.addComponents(
                     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_nome').setLabel('Nome do Item').setStyle(TextInputStyle.Short).setRequired(true)),
                     new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_qtd').setLabel('Quantidade').setStyle(TextInputStyle.Short).setValue('1')),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_ouro').setLabel('Custo TOTAL em Ouro (T$)').setStyle(TextInputStyle.Short))
+                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_ouro').setLabel('Custo TOTAL em Kwanzas (K$)').setStyle(TextInputStyle.Short))
                 );
 
                 await i.showModal(modal);
@@ -2223,12 +2270,12 @@ client.on('messageCreate', async (message) => {
                     const custoPontosUnit = CUSTO_FORJA[tipo];
 
                     if (isNaN(qtd) || qtd <= 0) return submit.reply({ content: "Quantidade inválida.", ephemeral: true });
-                    if (isNaN(custoOuro) || custoOuro < 0) return submit.reply({ content: "Valor em ouro inválido.", ephemeral: true });
+                    if (isNaN(custoOuro) || custoOuro < 0) return submit.reply({ content: "Valor em Kwanzas inválido.", ephemeral: true });
 
                     const custoPontosTotal = parseFloat((custoPontosUnit * qtd).toFixed(2));
                     const charAtual = await getPersonagemAtivo(message.author.id);
 
-                    if (charAtual.saldo < custoOuro) return submit.reply({ content: `🚫 Ouro insuficiente! Você tem T$ ${charAtual.saldo}.`, ephemeral: true });
+                    if (charAtual.saldo < custoOuro) return submit.reply({ content: `🚫 Kwanzas insuficientes! Você tem K$ ${charAtual.saldo}.`, ephemeral: true });
                     if (charAtual.pontos_forja_atual < custoPontosTotal) return submit.reply({ content: `🚫 Pontos de Forja insuficientes! Custa ${custoPontosTotal}, você tem ${charAtual.pontos_forja_atual.toFixed(1)}.`, ephemeral: true });
 
                     await prisma.$transaction([
@@ -2250,7 +2297,7 @@ client.on('messageCreate', async (message) => {
                     ]);
 
                     await submit.reply({ 
-                        content: `✅ **Item Forjado com Sucesso!**\n📦 **Item:** ${qtd}x ${nomeItem}\n📑 **Tipo:** ${tipo}\n💰 **Ouro Gasto:** T$ ${custoOuro}\n🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n*Saldo Restante: T$ ${charAtual.saldo - custoOuro} | Pts: ${(charAtual.pontos_forja_atual - custoPontosTotal).toFixed(1)}*` 
+                        content: `✅ **Item Forjado com Sucesso!**\n📦 **Item:** ${qtd}x ${nomeItem}\n📑 **Tipo:** ${tipo}\n💰 **Kwanzas Gastos:** K$ ${custoOuro}\n🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n*Saldo Restante: K$ ${charAtual.saldo - custoOuro} | Pts: ${(charAtual.pontos_forja_atual - custoPontosTotal).toFixed(1)}*` 
                     });
                     
                     await msg.delete().catch(() => {});
@@ -2371,7 +2418,7 @@ client.on('messageCreate', async (message) => {
                     ]);
 
                     const charAtualizado = await getPersonagemAtivo(message.author.id);
-                    resultado = `💰 Você pungou **T$ ${valor}**!\n✅ *Valor depositado na conta.*\n💰 **Saldo Atual:** T$ ${charAtualizado.saldo}`;
+                    resultado = `💰 Você pungou **K$ ${valor}**!\n✅ *Valor depositado na conta.*\n💰 **Saldo Atual:** K$ ${charAtualizado.saldo}`;
                 } 
                 else {
                     const item = PungaSystem.processarPunga(nd);
@@ -2675,7 +2722,7 @@ client.on('messageCreate', async (message) => {
         inscricoesPendentes.forEach(insc => {
             menu.addOptions(new StringSelectMenuOptionBuilder()
                 .setLabel(`${insc.missao.nome} (ND ${insc.missao.nd})`)
-                .setDescription(`Recompensa estimada: T$ ${insc.missao.nd * 100}`)
+                .setDescription(`Recompensa estimada: K$ ${insc.missao.nd * 100}`)
                 .setValue(`${insc.id}_${insc.missao.nd}`) 
             );
         });
@@ -2755,7 +2802,7 @@ client.on('messageCreate', async (message) => {
             ]);
 
             await i.update({ 
-                content: `✅ **Recompensa Resgatada!**\n💰 **Ouro:** +T$ ${ouroGanho}\n📈 **Pontos:** +${pontosGanhos} (Total: ${novosPontos})${msgUpar}`, 
+                content: `✅ **Recompensa Resgatada!**\n💰 **Kwanzas:** +K$ ${ouroGanho}\n📈 **Pontos:** +${pontosGanhos} (Total: ${novosPontos})${msgUpar}`, 
                 components: [] 
             });
         };
@@ -2768,6 +2815,11 @@ client.on('messageCreate', async (message) => {
         const { MessageFlags } = require('discord.js');
         const char = await getPersonagemAtivo(message.author.id);
         if (!char) return message.reply("Você não tem personagem ativo.");
+
+        const listaPericias = char.pericias || [];
+        if (!listaPericias.includes("Ofício Cozinheiro")) {
+            return message.reply("🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para escolher os ingredientes mais frescos!");
+        }
 
         const agora = new Date();
         const ultimaGeracao = char.feira_data_geracao ? new Date(char.feira_data_geracao) : new Date(0);
@@ -2803,7 +2855,7 @@ client.on('messageCreate', async (message) => {
 
             lista.forEach((item, index) => {
                 menu.addOptions(new StringSelectMenuOptionBuilder()
-                    .setLabel(`${item.nome} - T$ ${item.preco}`)
+                    .setLabel(`${item.nome} - K$ ${item.preco}`)
                     .setValue(`${index}_${item.nome}_${item.preco}`)
                     .setEmoji('🥬')
                 );
@@ -2817,7 +2869,7 @@ client.on('messageCreate', async (message) => {
         const rowInicial = montarMenu(itensLoja);
         const componentsInicial = rowInicial ? [rowInicial] : [];
         const contentInicial = rowInicial 
-            ? `🥦 **Feirinha da Semana** (Reseta em: ${7 - Math.floor(diffDias)} dias)\n💰 **Seu Saldo:** T$ ${char.saldo}\n🎒 **Seu Estoque:** ${listaEstoque}\n\n*Selecione abaixo para comprar:*`
+            ? `🥦 **Feirinha da Semana** (Reseta em: ${7 - Math.floor(diffDias)} dias)\n💰 **Seu Saldo:** K$ ${char.saldo}\n🎒 **Seu Estoque:** ${listaEstoque}\n\n*Selecione abaixo para comprar:*`
             : `🥦 **Feirinha da Semana**\n🚫 **Estoque Esgotado!** Volte na próxima semana.`;
 
         const msg = await message.reply({ 
@@ -2868,7 +2920,7 @@ client.on('messageCreate', async (message) => {
             const novoRow = montarMenu(listaAtual);
             const novosComponents = novoRow ? [novoRow] : [];
             const novoConteudo = novoRow 
-                ? `✅ Comprou **${nome}**!\n💰 **Saldo:** T$ ${charAtual.saldo - preco}\n🎒 **Estoque:** ${Object.entries(novoEstoque).map(([k,v])=>`${k}: ${v}`).join(', ')}\n\n*Continue comprando:*`
+                ? `✅ Comprou **${nome}**!\n💰 **Saldo:** K$ ${charAtual.saldo - preco}\n🎒 **Estoque:** ${Object.entries(novoEstoque).map(([k,v])=>`${k}: ${v}`).join(', ')}\n\n*Continue comprando:*`
                 : `✅ Comprou **${nome}**!\n🚫 **Estoque da Feirinha acabou!**`;
 
             await i.update({ 
@@ -2882,7 +2934,7 @@ client.on('messageCreate', async (message) => {
         const char = await getPersonagemAtivo(message.author.id);
         if (!char) return message.reply("Sem personagem.");
 
-        const limiteReceitas = Math.max(1, char.inteligencia);
+        const limiteReceitas = Math.max(1, char.inteligencia + 1);
         
         const conhecidas = char.receitas_conhecidas || [];
 
@@ -3130,11 +3182,11 @@ client.on('messageCreate', async (message) => {
         ]);
 
         const nomeBicho = tipo === 'DEZENA' ? `(${BICHOS_T20[numero]})` : '';
-        message.reply(`🎫 **Aposta Registrada!**\n💰 Valor: T$ ${valor}\n🎲 Jogo: ${tipo} **${numero}** ${nomeBicho}\n📍 Posição: ${posicaoBanco === 'TODAS' ? '1º ao 5º' : posicaoBanco + 'º Prêmio'}`);
+        message.reply(`🎫 **Aposta Registrada!**\n💰 Valor: K$ ${valor}\n🎲 Jogo: ${tipo} **${numero}** ${nomeBicho}\n📍 Posição: ${posicaoBanco === 'TODAS' ? '1º ao 5º' : posicaoBanco + 'º Prêmio'}`);
     }
 
     else if (command === 'sortearbicho') {
-        //if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) return message.reply("Apenas a banca (Admin) pode rodar a roleta.");
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) return message.reply("Apenas a banca (Admin) pode rodar a roleta.");
 
         const ultimoSorteio = await prisma.sorteiosBicho.findFirst({ orderBy: { data: 'desc' } });
         if (ultimoSorteio) {
@@ -3185,7 +3237,7 @@ client.on('messageCreate', async (message) => {
 
             if (ganhou) {
                 const premio = aposta.valor * multiplicador;
-                ganhadoresLog.push(`🏆 **${aposta.personagem.nome}** ganhou **T$ ${premio}** (${aposta.tipo} ${aposta.numero})`);
+                ganhadoresLog.push(`🏆 **${aposta.personagem.nome}** ganhou **K$ ${premio}** (${aposta.tipo} ${aposta.numero})`);
                 
                 updates.push(prisma.personagens.update({
                     where: { id: aposta.personagem_id },
@@ -3254,7 +3306,7 @@ client.on('messageCreate', async (message) => {
                     })
                 ]);
                 
-                footerTexto = `✅ T$ ${resultado.valor} creditados para ${char.nome}`;
+                footerTexto = `✅ K$ ${resultado.valor} creditados para ${char.nome}`;
                 corEmbed = '#F1C40F'; 
             } else {
                 footerTexto = '⚠️ Nenhum personagem ativo para receber o dinheiro.';
@@ -3334,7 +3386,7 @@ client.on('messageCreate', async (message) => {
                     new ActionRowBuilder().addComponents(
                         new TextInputBuilder()
                             .setCustomId('inp_preco')
-                            .setLabel('Preço TOTAL da venda (T$)')
+                            .setLabel('Preço TOTAL da venda (K$)')
                             .setStyle(TextInputStyle.Short)
                             .setPlaceholder('Ex: 100')
                             .setRequired(true)
@@ -3361,12 +3413,12 @@ client.on('messageCreate', async (message) => {
                     }
 
                     const rowConfirm = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId('btn_aceitar_venda').setLabel(`Comprar por T$ ${precoVenda}`).setStyle(ButtonStyle.Success).setEmoji('✅'),
+                        new ButtonBuilder().setCustomId('btn_aceitar_venda').setLabel(`Comprar por K$ ${precoVenda}`).setStyle(ButtonStyle.Success).setEmoji('✅'),
                         new ButtonBuilder().setCustomId('btn_recusar_venda').setLabel('Recusar').setStyle(ButtonStyle.Danger).setEmoji('✖️')
                     );
 
                     await modalSubmit.update({
-                        content: `📣 **OFERTA DE VENDA**\n\n👤 **Vendedor:** ${vendedorChar.nome}\n👤 **Comprador:** <@${compradorUser.id}>\n\n📦 **Item:** ${qtdVenda}x ${itemSelecionado}\n💰 **Valor Total:** T$ ${precoVenda}\n\n*O comprador deve aceitar abaixo.*`,
+                        content: `📣 **OFERTA DE VENDA**\n\n👤 **Vendedor:** ${vendedorChar.nome}\n👤 **Comprador:** <@${compradorUser.id}>\n\n📦 **Item:** ${qtdVenda}x ${itemSelecionado}\n💰 **Valor Total:** K$ ${precoVenda}\n\n*O comprador deve aceitar abaixo.*`,
                         components: [rowConfirm]
                     });
 
@@ -3404,7 +3456,7 @@ client.on('messageCreate', async (message) => {
                                     return iBtn.editReply({ content: "🚫 O vendedor não tem mais esses itens em estoque.", components: [] });
                                 }
                                 if (cFinal.saldo < precoVenda) {
-                                    return iBtn.editReply({ content: `🚫 Saldo insuficiente. Você tem T$ ${cFinal.saldo.toFixed(2)}.`, components: [] }); 
+                                    return iBtn.editReply({ content: `🚫 Saldo insuficiente. Você tem K$ ${cFinal.saldo.toFixed(2)}.`, components: [] }); 
                                 }
 
                                 estoqueV[itemSelecionado] -= qtdVenda;
@@ -3437,7 +3489,7 @@ client.on('messageCreate', async (message) => {
                                 ]);
 
                                 await iBtn.editReply({
-                                    content: `✅ **Negócio Fechado!**\n\n📦 **${vFinal.nome}** entregou **${qtdVenda}x ${itemSelecionado}**\n💰 **${cFinal.nome}** pagou **T$ ${precoVenda}**`,
+                                    content: `✅ **Negócio Fechado!**\n\n📦 **${vFinal.nome}** entregou **${qtdVenda}x ${itemSelecionado}**\n💰 **${cFinal.nome}** pagou **K$ ${precoVenda}**`,
                                     components: []
                                 });
                                 confirmCollector.stop();
