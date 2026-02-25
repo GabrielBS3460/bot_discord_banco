@@ -23,6 +23,8 @@ const express = require('express');
 
 const ID_CARGO_ADMIN = "1463009702807081217"; 
 
+const ID_CARGO_MOD = '1462994696921157652';
+
 const LISTA_CLASSES_1 = [
     "Arcanista", "Alquimista", "Atleta", "Bárbaro", "Bardo", "Burguês", 
     "Bucaneiro", "Caçador", "Cavaleiro", "Clérigo", "Duelista", "Druída", 
@@ -220,6 +222,11 @@ const adminCommands = [
         name: '!admin-setforja',
         description: 'Define quantos pontos de forja um jogador ganha por dia.',
         syntax: '!admin-setforja <@player> <pontos>'
+    },
+    {
+        name: '!modificar-saldo',
+        description: 'Adiciona um valor ao personagem ativo de um player',
+        syntax: '!modificar-saldo <@player> <valor>'
     }
 ];
 
@@ -654,6 +661,9 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'modificar-saldo') {
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN) || !message.member.roles.cache.has(ID_CARGO_MOD)) {
+            return message.reply("🚫 Você não tem permissão para usar este comando.");
+        }
 
         const alvo = message.mentions.users.first();
         const valor = parseFloat(args[1]);
@@ -1388,6 +1398,10 @@ client.on('messageCreate', async (message) => {
     else if (command === 'admin-criar') {
         const alvo = message.mentions.users.first();
         const nomePersonagem = args.filter(arg => !arg.startsWith('<@')).join(' ');
+
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN) || !message.member.roles.cache.has(ID_CARGO_MOD)) {
+            return message.reply("🚫 Você não tem permissão para usar este comando.");
+        }
 
         if (!alvo || !nomePersonagem) {
             return message.reply("Sintaxe incorreta! Use: `!admin-criar <@jogador> <nome do personagem>`");
@@ -2324,9 +2338,9 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'admin-setforja') {
-        /*if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) {
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) {
             return message.reply("🚫 Você não tem permissão para usar este comando.");
-        }*/
+        }
 
         const alvo = message.mentions.users.first();
         const valor = parseInt(args[1]);
@@ -2349,9 +2363,9 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'help-admin') {
-        /*if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) {
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN)) {
             return message.reply("🚫 Este pergaminho é selado apenas para administradores.");
-        }*/
+        }
 
         const embed = new EmbedBuilder()
             .setColor('#FF0000') 
