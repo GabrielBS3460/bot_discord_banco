@@ -661,7 +661,7 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'modificar-saldo') {
-        if (!message.member.roles.cache.has(ID_CARGO_ADMIN) || !message.member.roles.cache.has(ID_CARGO_MOD)) {
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN) && !message.member.roles.cache.has(ID_CARGO_MOD)) {
             return message.reply("🚫 Você não tem permissão para usar este comando.");
         }
 
@@ -1399,7 +1399,7 @@ client.on('messageCreate', async (message) => {
         const alvo = message.mentions.users.first();
         const nomePersonagem = args.filter(arg => !arg.startsWith('<@')).join(' ');
 
-        if (!message.member.roles.cache.has(ID_CARGO_ADMIN) || !message.member.roles.cache.has(ID_CARGO_MOD)) {
+        if (!message.member.roles.cache.has(ID_CARGO_ADMIN) && !message.member.roles.cache.has(ID_CARGO_MOD)) {
             return message.reply("🚫 Você não tem permissão para usar este comando.");
         }
 
