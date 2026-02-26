@@ -2552,7 +2552,7 @@ client.on('messageCreate', async (message) => {
     }
 
     else if (command === 'painelcontrato') {
-        const { MessageFlags } = require('discord.js');
+        const { MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } = require('discord.js');
         const nomeMissao = message.content.replace('!painelcontrato', '').trim().replace(/"/g, '');
         
         const missao = await prisma.missoes.findUnique({ 
@@ -2584,24 +2584,86 @@ client.on('messageCreate', async (message) => {
             return embed;
         };
 
-        const row = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('ms_sortear').setLabel('Sortear Equipe').setStyle(ButtonStyle.Primary).setDisabled(missao.status !== 'ABERTA'),
-            new ButtonBuilder().setCustomId('ms_gerenciar').setLabel('Substituir Jogador').setStyle(ButtonStyle.Secondary).setEmoji('👥').setDisabled(missao.status === 'CONCLUIDA'),
-            new ButtonBuilder().setCustomId('ms_iniciar').setLabel('Iniciar').setStyle(ButtonStyle.Success).setDisabled(missao.status !== 'ABERTA'),
-            new ButtonBuilder().setCustomId('ms_concluir').setLabel('Concluir Missão').setStyle(ButtonStyle.Danger).setDisabled(missao.status === 'CONCLUIDA'),
-            new ButtonBuilder().setCustomId('ms_atualizar').setLabel('🔄').setStyle(ButtonStyle.Secondary)
-        );
+        const montarBotoes = (m) => {
+            const row1 = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('ms_sortear').setLabel('Sortear Equipe').setStyle(ButtonStyle.Primary).setDisabled(m.status !== 'ABERTA'),
+                new ButtonBuilder().setCustomId('ms_add_player').setLabel('Adicionar Player').setStyle(ButtonStyle.Primary).setEmoji('➕').setDisabled(m.status === 'CONCLUIDA'),
+                new ButtonBuilder().setCustomId('ms_gerenciar').setLabel('Substituir Jogador').setStyle(ButtonStyle.Secondary).setEmoji('👥').setDisabled(m.status === 'CONCLUIDA')
+            );
 
-        const msg = await message.reply({ embeds: [montarPainel(missao)], components: [row] });
+            const row2 = new ActionRowBuilder().addComponents(
+                new ButtonBuilder().setCustomId('ms_iniciar').setLabel('Iniciar').setStyle(ButtonStyle.Success).setDisabled(m.status !== 'ABERTA'),
+                new ButtonBuilder().setCustomId('ms_concluir').setLabel('Concluir Missão').setStyle(ButtonStyle.Danger).setDisabled(m.status === 'CONCLUIDA'),
+                new ButtonBuilder().setCustomId('ms_atualizar').setLabel('🔄 Atualizar').setStyle(ButtonStyle.Secondary)
+            );
+            return [row1, row2];
+        };
+
+        const msg = await message.reply({ embeds: [montarPainel(missao)], components: montarBotoes(missao) });
         const collector = msg.createMessageComponentCollector({ time: 3600000 });
 
         collector.on('collect', async i => {
             try {
-                if (i.user.id !== message.author.id) return i.reply({ content: "Apenas o mestre.", flags: MessageFlags.Ephemeral });
+                if (i.user.id !== message.author.id) return i.reply({ content: "Apenas o mestre pode usar estes botões.", flags: MessageFlags.Ephemeral });
+
+                if (i.customId === 'ms_add_player') {
+                    const modal = new ModalBuilder()
+                        .setCustomId(`modal_add_player_${msg.id}`)
+                        .setTitle('Adicionar Jogador Manualmente');
+
+                    const inputUser = new TextInputBuilder()
+                        .setCustomId('inp_mention')
+                        .setLabel('ID do Discord ou Menção (@)')
+                        .setStyle(TextInputStyle.Short)
+                        .setPlaceholder('Ex: @Fulano ou 123456789012345678')
+                        .setRequired(true);
+
+                    modal.addComponents(new ActionRowBuilder().addComponents(inputUser));
+                    await i.showModal(modal);
+
+                    try {
+                        const submission = await i.awaitModalSubmit({ filter: inter => inter.user.id === message.author.id && inter.customId === `modal_add_player_${msg.id}`, time: 60000 });
+                        await submission.deferUpdate();
+
+                        const rawInput = submission.fields.getTextInputValue('inp_mention');
+                        const targetId = rawInput.replace(/[<@!>]/g, '').trim();
+
+                        const targetChar = await getPersonagemAtivo(targetId);
+                        if (!targetChar) return submission.followUp({ content: "⚠️ Jogador não encontrado ou não possui um personagem ativo.", flags: MessageFlags.Ephemeral });
+
+                        const jaInscrito = await prisma.inscricoes.findFirst({
+                            where: { missao_id: missao.id, personagem_id: targetChar.id }
+                        });
+
+                        if (jaInscrito) {
+                            if (!jaInscrito.selecionado) {
+                                await prisma.inscricoes.update({ where: { id: jaInscrito.id }, data: { selecionado: true } });
+                            } else {
+                                return submission.followUp({ content: "⚠️ Esse jogador já está na equipe selecionada.", flags: MessageFlags.Ephemeral });
+                            }
+                        } else {
+                            await prisma.inscricoes.create({
+                                data: {
+                                    missao_id: missao.id,
+                                    personagem_id: targetChar.id,
+                                    selecionado: true,
+                                    recompensa_resgatada: false
+                                }
+                            });
+                        }
+
+                        const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                        await msg.edit({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
+                        await submission.followUp({ content: `✅ **${targetChar.nome}** foi adicionado à equipe com sucesso!`, flags: MessageFlags.Ephemeral });
+
+                    } catch (e) {
+                    }
+                    return; 
+                }
 
                 if (i.customId === 'ms_sortear') {
                     const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: true } });
-                    const vagasRestantes = mAtual.vagas - mAtual.inscricoes.filter(i => i.selecionado).length;
+                    const vagasRestantes = mAtual.vagas - mAtual.inscricoes.filter(insc => insc.selecionado).length;
                     
                     if (vagasRestantes <= 0) return i.reply({ content: "Equipe já está cheia.", flags: MessageFlags.Ephemeral });
 
@@ -2616,7 +2678,7 @@ client.on('messageCreate', async (message) => {
                     });
 
                     const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
-                    await i.update({ embeds: [montarPainel(mNova)] });
+                    await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                 }
 
                 if (i.customId === 'ms_gerenciar') {
@@ -2659,11 +2721,12 @@ client.on('messageCreate', async (message) => {
                                 where: { id: proximoFila.id },
                                 data: { selecionado: true }
                             });
-                            textoSub += ` O próximo da fila entrou: **(ID ${proximoFila.personagem_id})**`;
+                            const pessoaEntrou = await prisma.personagens.findUnique({ where: { id: proximoFila.personagem_id } });
+                            textoSub += ` O próximo da fila entrou: **${pessoaEntrou.nome}**`;
                         }
 
                         const mFinal = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
-                        await msg.edit({ embeds: [montarPainel(mFinal)] });
+                        await msg.edit({ embeds: [montarPainel(mFinal)], components: montarBotoes(mFinal) });
                         
                         await iMenu.update({ content: `✅ ${textoSub}`, components: [] });
                     });
@@ -2672,7 +2735,7 @@ client.on('messageCreate', async (message) => {
                 if (i.customId === 'ms_iniciar') {
                     await prisma.missoes.update({ where: { id: missao.id }, data: { status: 'EM_ANDAMENTO' } });
                     const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
-                    await i.update({ embeds: [montarPainel(mNova)], components: [row] });
+                    await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                 }
 
                 if (i.customId === 'ms_concluir') {
@@ -2680,10 +2743,7 @@ client.on('messageCreate', async (message) => {
 
                     if (dmChar) {
                         const jaInscrito = await prisma.inscricoes.findFirst({
-                            where: { 
-                                missao_id: missao.id, 
-                                personagem_id: dmChar.id 
-                            }
+                            where: { missao_id: missao.id, personagem_id: dmChar.id }
                         });
 
                         if (!jaInscrito) {
@@ -2695,13 +2755,11 @@ client.on('messageCreate', async (message) => {
                                     recompensa_resgatada: false
                                 }
                             });
-                        } else {
-                            if (!jaInscrito.selecionado) {
-                                await prisma.inscricoes.update({
-                                    where: { id: jaInscrito.id },
-                                    data: { selecionado: true }
-                                });
-                            }
+                        } else if (!jaInscrito.selecionado) {
+                            await prisma.inscricoes.update({
+                                where: { id: jaInscrito.id },
+                                data: { selecionado: true }
+                            });
                         }
                     }
 
@@ -2709,13 +2767,13 @@ client.on('messageCreate', async (message) => {
                     
                     const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
                     
-                    await i.update({ embeds: [montarPainel(mNova)], components: [row] });
+                    await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                     await i.followUp(`🏆 **Contrato Concluído!**\nJogadores e Mestre, utilizem \`!resgatar "${mNova.nome}"\` para pegar suas recompensas.`);
                 }
 
                 if (i.customId === 'ms_atualizar') {
                     const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
-                    await i.update({ embeds: [montarPainel(mNova)] });
+                    await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                 }
 
             } catch (err) {
