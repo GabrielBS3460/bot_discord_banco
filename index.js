@@ -2664,6 +2664,7 @@ client.on('messageCreate', async (message) => {
                 }
 
                 if (i.customId === 'ms_sortear') {
+                    await i.deferUpdate();
                     const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: true } });
                     const vagasRestantes = mAtual.vagas - mAtual.inscricoes.filter(insc => insc.selecionado).length;
                     
@@ -2680,7 +2681,7 @@ client.on('messageCreate', async (message) => {
                     });
 
                     const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
-                    await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
+                    await msg.edit({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                 }
 
                 if (i.customId === 'ms_gerenciar') {
