@@ -3000,7 +3000,7 @@ client.on('messageCreate', async (message) => {
             
             const receitasAtuais = charUp.receitas_conhecidas || [];
 
-            if (receitasAtuais.length >= Math.max(1, charUp.inteligencia)) {
+            if (receitasAtuais.length >= Math.max(1, charUp.inteligencia + 1)) {
                 return i.reply({ content: "Limite atingido.", flags: require('discord.js').MessageFlags.Ephemeral });
             }
 
