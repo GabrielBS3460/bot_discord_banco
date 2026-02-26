@@ -2607,29 +2607,31 @@ client.on('messageCreate', async (message) => {
                 if (i.user.id !== message.author.id) return i.reply({ content: "Apenas o mestre pode usar estes botões.", flags: MessageFlags.Ephemeral });
 
                 if (i.customId === 'ms_add_player') {
-                    const modal = new ModalBuilder()
-                        .setCustomId(`modal_add_player_${msg.id}`)
-                        .setTitle('Adicionar Jogador Manualmente');
+                    const { UserSelectMenuBuilder } = require('discord.js');
 
-                    const inputUser = new TextInputBuilder()
-                        .setCustomId('inp_mention')
-                        .setLabel('ID do Discord ou Menção (@)')
-                        .setStyle(TextInputStyle.Short)
-                        .setPlaceholder('Ex: @Fulano ou 123456789012345678')
-                        .setRequired(true);
+                    const userMenu = new UserSelectMenuBuilder()
+                        .setCustomId('menu_pesquisa_player')
+                        .setPlaceholder('Pesquise e selecione o jogador...')
+                        .setMinValues(1)
+                        .setMaxValues(1);
 
-                    modal.addComponents(new ActionRowBuilder().addComponents(inputUser));
-                    await i.showModal(modal);
+                    const rowUser = new ActionRowBuilder().addComponents(userMenu);
 
-                    try {
-                        const submission = await i.awaitModalSubmit({ filter: inter => inter.user.id === message.author.id && inter.customId === `modal_add_player_${msg.id}`, time: 60000 });
-                        await submission.deferUpdate();
+                    const menuMsg = await i.reply({ 
+                        content: "👥 **Selecione abaixo o jogador que deseja adicionar à missão:**", 
+                        components: [rowUser], 
+                        flags: MessageFlags.Ephemeral, 
+                        withResponse: true 
+                    });
 
-                        const rawInput = submission.fields.getTextInputValue('inp_mention');
-                        const targetId = rawInput.replace(/[<@!>]/g, '').trim();
+                    const selectCollector = menuMsg.resource.message.createMessageComponentCollector({ time: 60000 });
+
+                    selectCollector.on('collect', async iSelect => {
+                        await iSelect.deferUpdate(); 
+                        const targetId = iSelect.values[0]; 
 
                         const targetChar = await getPersonagemAtivo(targetId);
-                        if (!targetChar) return submission.followUp({ content: "⚠️ Jogador não encontrado ou não possui um personagem ativo.", flags: MessageFlags.Ephemeral });
+                        if (!targetChar) return iSelect.followUp({ content: "⚠️ O jogador selecionado não possui um personagem ativo.", flags: MessageFlags.Ephemeral });
 
                         const jaInscrito = await prisma.inscricoes.findFirst({
                             where: { missao_id: missao.id, personagem_id: targetChar.id }
@@ -2639,7 +2641,7 @@ client.on('messageCreate', async (message) => {
                             if (!jaInscrito.selecionado) {
                                 await prisma.inscricoes.update({ where: { id: jaInscrito.id }, data: { selecionado: true } });
                             } else {
-                                return submission.followUp({ content: "⚠️ Esse jogador já está na equipe selecionada.", flags: MessageFlags.Ephemeral });
+                                return iSelect.followUp({ content: "⚠️ Esse jogador já está na equipe selecionada.", flags: MessageFlags.Ephemeral });
                             }
                         } else {
                             await prisma.inscricoes.create({
@@ -2654,10 +2656,10 @@ client.on('messageCreate', async (message) => {
 
                         const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
                         await msg.edit({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
-                        await submission.followUp({ content: `✅ **${targetChar.nome}** foi adicionado à equipe com sucesso!`, flags: MessageFlags.Ephemeral });
-
-                    } catch (e) {
-                    }
+                        
+                        await iSelect.editReply({ content: `✅ **${targetChar.nome}** foi adicionado à equipe com sucesso!`, components: [] });
+                        selectCollector.stop();
+                    });
                     return; 
                 }
 
