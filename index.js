@@ -2266,7 +2266,7 @@ client.on('messageCreate', async (message) => {
         const row = new ActionRowBuilder().addComponents(menu);
         
         const msg = await message.reply({ 
-            content: `🔨 **Oficina de Forja**\nSaldo: K$ ${formatarMoeda(char.saldo)}\nPontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\nSelecione o **TIPO** de item que deseja criar:`,
+            content: `🔨 **Oficina de Forja**\nSaldo: ${formatarMoeda(char.saldo)}\nPontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\nSelecione o **TIPO** de item que deseja criar:`,
             components: [row]
         });
 
