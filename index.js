@@ -2228,7 +2228,7 @@ client.on('messageCreate', async (message) => {
         const oficiosTreinados = pericias.filter(p => OFICIOS_VALIDOS.includes(p));
         const quantidadeOficios = oficiosTreinados.length;
 
-        const limiteForja = (poderesFabricacao + quantidadeOficios) * 2;
+        const limiteForja = (poderesFabricacao + 1) * quantidadeOficios * 2;
 
         try {
             await prisma.personagens.update({
