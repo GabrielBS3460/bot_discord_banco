@@ -3164,54 +3164,103 @@ client.on('messageCreate', async (message) => {
                 }
 
                 if (i.customId === 'ms_gerenciar') {
-                    const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
+
+                    await i.deferReply({ ephemeral: true });
+
+                    const mAtual = await prisma.missoes.findUnique({
+                        where: { id: missao.id },
+                        include: { inscricoes: { include: { personagem: true } } }
+                    });
+
                     const selecionados = mAtual.inscricoes.filter(insc => insc.selecionado);
 
-                    if (selecionados.length === 0) return i.reply({ content: "Ninguém na equipe para remover.", flags: MessageFlags.Ephemeral });
+                    if (selecionados.length === 0) {
+                        return i.editReply({
+                            content: "Ninguém na equipe para remover."
+                        });
+                    }
 
                     const menu = new StringSelectMenuBuilder()
                         .setCustomId('menu_remover_jogador')
-                        .setPlaceholder('Selecione quem VAI SAIR do contrato');
+                        .setPlaceholder('Selecione quem VAI SAIR do contrato')
+                        .setMinValues(1)
+                        .setMaxValues(1);
 
                     selecionados.forEach(insc => {
-                        menu.addOptions(new StringSelectMenuOptionBuilder()
-                            .setLabel(insc.personagem.nome)
-                            .setValue(insc.id.toString())
-                            .setEmoji('❌')
+                        menu.addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(insc.personagem.nome)
+                                .setValue(insc.id.toString())
+                                .setEmoji('❌')
                         );
                     });
 
                     const rowMenu = new ActionRowBuilder().addComponents(menu);
-                    
-                    const menuMsg = await i.reply({ content: "Quem deve ser removido? O próximo da fila entrará automaticamente.", components: [rowMenu], flags: MessageFlags.Ephemeral, withResponse: true });
-                    
-                    const menuCollector = menuMsg.resource.message.createMessageComponentCollector({ time: 60000 });
-                    
-                    menuCollector.on('collect', async iMenu => {
-                        const idRemover = parseInt(iMenu.values[0]);
-                        
-                        await prisma.inscricoes.delete({ where: { id: idRemover } });
 
-                        const proximoFila = await prisma.inscricoes.findFirst({
-                            where: { missao_id: missao.id, selecionado: false },
-                            orderBy: { id: 'asc' }
+                    await i.editReply({
+                        content: "Quem deve ser removido? O próximo da fila entrará automaticamente.",
+                        components: [rowMenu]
+                    });
+
+                    const menuCollector = i.channel.createMessageComponentCollector({
+                        filter: interaction =>
+                            interaction.user.id === i.user.id &&
+                            interaction.customId === 'menu_remover_jogador',
+                        time: 60000
+                    });
+
+                    menuCollector.on('collect', async iMenu => {
+
+                        await iMenu.deferUpdate();
+
+                        const idRemover = parseInt(iMenu.values[0]);
+
+                        await prisma.$transaction(async tx => {
+
+                            await tx.inscricoes.delete({
+                                where: { id: idRemover }
+                            });
+
+                            const proximoFila = await tx.inscricoes.findFirst({
+                                where: {
+                                    missao_id: missao.id,
+                                    selecionado: false
+                                },
+                                orderBy: { id: 'asc' }
+                            });
+
+                            if (proximoFila) {
+                                await tx.inscricoes.update({
+                                    where: { id: proximoFila.id },
+                                    data: { selecionado: true }
+                                });
+                            }
                         });
 
-                        let textoSub = "Jogador removido.";
-                        if (proximoFila) {
-                            await prisma.inscricoes.update({
-                                where: { id: proximoFila.id },
-                                data: { selecionado: true }
-                            });
-                            const pessoaEntrou = await prisma.personagens.findUnique({ where: { id: proximoFila.personagem_id } });
-                            textoSub += ` O próximo da fila entrou: **${pessoaEntrou.nome}**`;
-                        }
+                        const mFinal = await prisma.missoes.findUnique({
+                            where: { id: missao.id },
+                            include: {
+                                inscricoes: {
+                                    include: { personagem: true },
+                                    orderBy: { id: 'asc' }
+                                }
+                            }
+                        });
 
-                        const mFinal = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
-                        await msg.edit({ embeds: [montarPainel(mFinal)], components: montarBotoes(mFinal) });
-                        
-                        await iMenu.update({ content: `✅ ${textoSub}`, components: [] });
+                        await msg.edit({
+                            embeds: [montarPainel(mFinal)],
+                            components: montarBotoes(mFinal)
+                        });
+
+                        await i.editReply({
+                            content: "✅ Jogador removido com sucesso. Painel atualizado.",
+                            components: []
+                        });
+
+                        menuCollector.stop();
                     });
+
+                    return;
                 }
 
                 if (i.customId === 'ms_iniciar') {
