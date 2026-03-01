@@ -830,7 +830,7 @@ client.on('messageCreate', async (message) => {
                     { 
                         cmd: '!entregar', 
                         desc: 'Entrega itens para um jogador.', 
-                        syntax: '!entregar <@usuario> <linkItem1>, <linkItem2>...' 
+                        syntax: '!entregar <@usuario>' 
                     },
                     { 
                         cmd: '!missa', 
@@ -1542,51 +1542,92 @@ client.on('messageCreate', async (message) => {
 
         const destinatarioUser = message.mentions.users.first();
         if (!destinatarioUser) {
-            return message.reply("Você precisa mencionar quem receberá os itens. Ex: `!entregar @Player Espada Longa, Poção`");
+            return message.reply("Você precisa mencionar quem receberá os itens. Ex: `!entregar @Player`");
         }
 
-        const conteudo = message.content.slice(prefix.length + command.length).trim();
-        const textoSemMencao = conteudo.replace(/<@!?\d+>/g, '').trim();
+        const charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
+        if (!charDestinatario) {
+            return message.reply(`O usuário **${destinatarioUser.username}** não tem personagem ativo.`);
+        }
 
-        if (!textoSemMencao) return message.reply("Você precisa listar pelo menos um item.");
+        const modal = new ModalBuilder()
+            .setCustomId(`modal_entregar_${message.id}`)
+            .setTitle('Entrega de Item');
 
-        const listaItens = textoSemMencao.split(',').map(item => item.trim()).filter(item => item.length > 0);
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('inp_nome_item')
+                    .setLabel('Nome do Item')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                    .setCustomId('inp_links')
+                    .setLabel('Links (separados por vírgula ou linha)')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true)
+            )
+        );
 
-        try {
-            const charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
-            if (!charDestinatario) {
-                return message.reply(`O usuário **${destinatarioUser.username}** não tem personagem ativo para receber itens.`);
-            }
+        await message.reply({ content: "📦 Preencha os dados do item:", components: [] });
+        await message.channel.send({ content: "Abrindo formulário..." });
 
-            const operacoes = listaItens.map(item => 
-                prisma.transacao.create({
+        await message.channel.awaitMessageComponent;
+
+        await message.author.send; 
+
+        await message.showModal?.(modal).catch(() => {});
+
+        const modalHandler = async (interaction) => {
+            if (!interaction.isModalSubmit()) return;
+            if (interaction.customId !== `modal_entregar_${message.id}`) return;
+            if (interaction.user.id !== message.author.id) return;
+
+            try {
+
+                const nomeItem = interaction.fields.getTextInputValue('inp_nome_item');
+                const linksTexto = interaction.fields.getTextInputValue('inp_links');
+
+                const listaLinks = linksTexto
+                    .split(/\n|,/)
+                    .map(l => l.trim())
+                    .filter(l => l.length > 0);
+
+                const linksFormatados = listaLinks.map(l => `🔗 ${l}`).join('\n');
+
+                await prisma.transacao.create({
                     data: {
                         personagem_id: charDestinatario.id,
-                        descricao: `Recebeu Item: ${item}`,
+                        descricao: `Recebeu Item: ${nomeItem}`,
                         valor: 0,
                         tipo: 'RECOMPENSA',
                         categoria: 'ITEM'
                     }
-                })
-            );
+                });
 
-            await prisma.$transaction(operacoes);
+                const embed = new EmbedBuilder()
+                    .setColor('#9B59B6')
+                    .setTitle('🎁 Item Entregue!')
+                    .setDescription(`**${message.author.username}** entregou um item para **${charDestinatario.nome}**.`)
+                    .addFields(
+                        { name: '📦 Item', value: nomeItem },
+                        { name: '🔗 Links', value: linksFormatados }
+                    )
+                    .setTimestamp();
 
-            const listaFormatada = listaItens.map(i => `📦 ${i}`).join('\n');
-            
-            const embed = new EmbedBuilder()
-                .setColor('#9B59B6') 
-                .setTitle('🎁 Itens Entregues!')
-                .setDescription(`O player **${message.author.username}** entregou itens para **${charDestinatario.nome}**.`)
-                .addFields({ name: 'Itens Recebidos', value: listaFormatada })
-                .setTimestamp();
+                await interaction.reply({ embeds: [embed] });
 
-            await message.channel.send({ embeds: [embed] });
+            } catch (err) {
+                console.error("Erro no modal entregar:", err);
+                await interaction.reply({ content: "Erro ao processar entrega.", ephemeral: true });
+            }
 
-        } catch (err) {
-            console.error("Erro no comando !entregar:", err);
-            message.reply("Ocorreu um erro ao entregar os itens.");
-        }
+            client.off('interactionCreate', modalHandler);
+        };
+
+        client.on('interactionCreate', modalHandler);
     }
 
     else if (command === 'primeiramissao') {
