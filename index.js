@@ -3209,11 +3209,11 @@ client.on('messageCreate', async (message) => {
                     : `🍲 **Prato Pronto! (5 Porções)**\nVocê fez **${receitaSelecionada}**.\n*Efeito:* ${receita.desc}`;
 
                 await i.update({ 
-                    content: `${msgSucesso}\n\n🔨 **Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')} | Pts: ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
-                    components: []
-                });
+                content: `${msgSucesso}\n\n🔨 **Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')} | Pts: ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
+                components: []
+            });
 
-                collector.stop('cozinhou');
+            collector.stop('cozinhou');
             }
         });
     }
@@ -3424,20 +3424,17 @@ client.on('messageCreate', async (message) => {
         const vendedorChar = await getPersonagemAtivo(message.author.id);
         const compradorChar = await getPersonagemAtivo(compradorUser.id);
 
-        if (!vendedorChar) return message.reply("🚫 Você não tem personagem ativo.");
-        if (!compradorChar) return message.reply(`🚫 ${compradorUser.username} não tem personagem ativo.`);
+        if (!vendedorChar) return message.reply("🚫 Você não tem um personagem ativo para vender.");
+        if (!compradorChar) return message.reply(`🚫 **${compradorUser.username}** não tem um personagem ativo para comprar.`);
 
         const estoque = vendedorChar.estoque_ingredientes || {};
         const itensDisponiveis = Object.keys(estoque).filter(k => estoque[k] > 0);
 
-        if (itensDisponiveis.length === 0)
-            return message.reply("🎒 Seu inventário está vazio.");
+        if (itensDisponiveis.length === 0) return message.reply("🎒 Seu inventário de ingredientes está vazio.");
 
         const menu = new StringSelectMenuBuilder()
             .setCustomId(`menu_venda_p2p_${message.id}`)
-            .setPlaceholder('📦 Selecione os itens para vender')
-            .setMinValues(1)
-            .setMaxValues(Math.min(itensDisponiveis.length, 25));
+            .setPlaceholder('📦 Selecione o item para ofertar');
 
         itensDisponiveis.slice(0, 25).forEach(item => {
             menu.addOptions(new StringSelectMenuOptionBuilder()
@@ -3450,174 +3447,152 @@ client.on('messageCreate', async (message) => {
         const row = new ActionRowBuilder().addComponents(menu);
 
         const msg = await message.reply({
-            content: `🤝 **Venda Múltipla Iniciada**\n👤 Vendedor: ${vendedorChar.nome}\n👤 Comprador: ${compradorChar.nome}\n\nSelecione os itens abaixo:`,
+            content: `🤝 **Nova Venda Iniciada**\n👤 **Vendedor:** ${vendedorChar.nome}\n👤 **Comprador:** ${compradorChar.nome}\n\nSelecione abaixo o item que deseja vender:`,
             components: [row]
         });
 
         const collector = msg.createMessageComponentCollector({
-            filter: i => i.user.id === message.author.id,
+            filter: i => i.user.id === message.author.id, 
             time: 60000
         });
 
         collector.on('collect', async i => {
-            if (!i.isStringSelectMenu()) return;
+            if (i.isStringSelectMenu()) {
+                const itemSelecionado = i.values[0];
+                const qtdMax = estoque[itemSelecionado];
 
-            const itensSelecionados = i.values;
+                const modal = new ModalBuilder()
+                    .setCustomId(`modal_venda_p2p_${message.id}`)
+                    .setTitle(`Vender ${itemSelecionado}`);
 
-            const modal = new ModalBuilder()
-                .setCustomId(`modal_venda_multi_${message.id}`)
-                .setTitle(`Venda de ${itensSelecionados.length} itens`);
-
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('inp_qtds')
-                        .setLabel('Quantidades (mesma ordem, separadas por vírgula)')
-                        .setStyle(TextInputStyle.Paragraph)
-                        .setPlaceholder('Ex: 5,2,1')
-                        .setRequired(true)
-                ),
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('inp_preco')
-                        .setLabel('Preço TOTAL da venda (K$)')
-                        .setStyle(TextInputStyle.Short)
-                        .setRequired(true)
-                )
-            );
-
-            await i.showModal(modal);
-
-            try {
-                const modalSubmit = await i.awaitModalSubmit({
-                    filter: m => m.customId === `modal_venda_multi_${message.id}` && m.user.id === message.author.id,
-                    time: 60000
-                });
-
-                const qtdArray = modalSubmit.fields
-                    .getTextInputValue('inp_qtds')
-                    .split(',')
-                    .map(q => parseInt(q.trim()));
-
-                const precoVenda = parseFloat(modalSubmit.fields.getTextInputValue('inp_preco'));
-
-                if (qtdArray.length !== itensSelecionados.length)
-                    return modalSubmit.reply({ content: "🚫 Quantidades não correspondem aos itens.", flags: MessageFlags.Ephemeral });
-
-                if (isNaN(precoVenda) || precoVenda < 0)
-                    return modalSubmit.reply({ content: "🚫 Preço inválido.", flags: MessageFlags.Ephemeral });
-
-                for (let x = 0; x < itensSelecionados.length; x++) {
-                    const item = itensSelecionados[x];
-                    const qtd = qtdArray[x];
-
-                    if (isNaN(qtd) || qtd <= 0 || qtd > estoque[item]) {
-                        return modalSubmit.reply({
-                            content: `🚫 Quantidade inválida para ${item}.`,
-                            flags: MessageFlags.Ephemeral
-                        });
-                    }
-                }
-
-                const descItens = itensSelecionados
-                    .map((item, i) => `${qtdArray[i]}x ${item}`)
-                    .join(', ');
-
-                const rowConfirm = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('btn_aceitar_venda_multi').setLabel(`Comprar por K$ ${precoVenda}`).setStyle(ButtonStyle.Success),
-                    new ButtonBuilder().setCustomId('btn_recusar_venda_multi').setLabel('Recusar').setStyle(ButtonStyle.Danger)
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('inp_qtd')
+                            .setLabel(`Quantidade (Máx: ${qtdMax})`)
+                            .setStyle(TextInputStyle.Short)
+                            .setPlaceholder('Ex: 5')
+                            .setRequired(true)
+                    ),
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId('inp_preco')
+                            .setLabel('Preço TOTAL da venda (K$)')
+                            .setStyle(TextInputStyle.Short)
+                            .setPlaceholder('Ex: 100')
+                            .setRequired(true)
+                    )
                 );
+                
+                await i.showModal(modal);
 
-                await modalSubmit.update({
-                    content: `📣 **OFERTA DE VENDA**\n\n📦 Itens: ${descItens}\n💰 Valor Total: K$ ${precoVenda}\n\nComprador deve aceitar abaixo.`,
-                    components: [rowConfirm]
-                });
+                const filterModal = (mInteraction) => 
+                    mInteraction.customId === `modal_venda_p2p_${message.id}` && 
+                    mInteraction.user.id === message.author.id;
 
-                collector.stop();
+                try {
+                    const modalSubmit = await i.awaitModalSubmit({ filter: filterModal, time: 60000 });
+                    
+                    const qtdVenda = parseInt(modalSubmit.fields.getTextInputValue('inp_qtd'));
+                    const precoVenda = parseFloat(modalSubmit.fields.getTextInputValue('inp_preco'));
 
-                const confirmCollector = msg.createMessageComponentCollector({
-                    filter: btn => btn.user.id === compradorUser.id || btn.user.id === message.author.id,
-                    time: 120000
-                });
-
-                confirmCollector.on('collect', async iBtn => {
-                    if (iBtn.customId === 'btn_recusar_venda_multi') {
-                        await iBtn.update({ content: "❌ Venda cancelada.", components: [] });
-                        confirmCollector.stop();
-                        return;
+                    if (isNaN(qtdVenda) || qtdVenda <= 0 || qtdVenda > qtdMax) {
+                        return modalSubmit.reply({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
+                    }
+                    if (isNaN(precoVenda) || precoVenda < 0) {
+                        return modalSubmit.reply({ content: "🚫 Preço inválido.", flags: MessageFlags.Ephemeral });
                     }
 
-                    if (iBtn.user.id !== compradorUser.id)
-                        return iBtn.reply({ content: "Apenas o comprador pode aceitar.", flags: MessageFlags.Ephemeral });
+                    const rowConfirm = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId('btn_aceitar_venda').setLabel(`Comprar por K$ ${precoVenda}`).setStyle(ButtonStyle.Success).setEmoji('✅'),
+                        new ButtonBuilder().setCustomId('btn_recusar_venda').setLabel('Recusar').setStyle(ButtonStyle.Danger).setEmoji('✖️')
+                    );
 
-                    await iBtn.deferUpdate();
-
-                    const vFinal = await prisma.personagens.findUnique({ where: { id: vendedorChar.id } });
-                    const cFinal = await prisma.personagens.findUnique({ where: { id: compradorChar.id } });
-
-                    if (cFinal.saldo < precoVenda)
-                        return iBtn.editReply({ content: "🚫 Saldo insuficiente.", components: [] });
-
-                    const estoqueV = vFinal.estoque_ingredientes || {};
-                    const estoqueC = cFinal.estoque_ingredientes || {};
-
-                    for (let i = 0; i < itensSelecionados.length; i++) {
-                        const item = itensSelecionados[i];
-                        const qtd = qtdArray[i];
-
-                        estoqueV[item] -= qtd;
-                        if (estoqueV[item] <= 0) delete estoqueV[item];
-
-                        estoqueC[item] = (estoqueC[item] || 0) + qtd;
-                    }
-
-                    await prisma.$transaction([
-                        prisma.personagens.update({
-                            where: { id: vFinal.id },
-                            data: {
-                                estoque_ingredientes: estoqueV,
-                                saldo: { increment: precoVenda }
-                            }
-                        }),
-                        prisma.personagens.update({
-                            where: { id: cFinal.id },
-                            data: {
-                                estoque_ingredientes: estoqueC,
-                                saldo: { decrement: precoVenda }
-                            }
-                        }),
-                        prisma.transacao.create({
-                            data: {
-                                personagem_id: vFinal.id,
-                                descricao: `Venda para ${cFinal.nome}: ${descItens}`,
-                                valor: precoVenda,
-                                tipo: 'GANHO'
-                            }
-                        }),
-                        prisma.transacao.create({
-                            data: {
-                                personagem_id: cFinal.id,
-                                descricao: `Compra de ${vFinal.nome}: ${descItens}`,
-                                valor: -precoVenda,
-                                tipo: 'GASTO'
-                            }
-                        })
-                    ]);
-
-                    await iBtn.editReply({
-                        content: `✅ **Negócio Fechado!**\n\n📦 ${descItens}\n💰 Total: K$ ${precoVenda}`,
-                        components: []
+                    await modalSubmit.update({
+                        content: `📣 **OFERTA DE VENDA**\n\n👤 **Vendedor:** ${vendedorChar.nome}\n👤 **Comprador:** <@${compradorUser.id}>\n\n📦 **Item:** ${qtdVenda}x ${itemSelecionado}\n💰 **Valor Total:** K$ ${precoVenda}\n\n*O comprador deve aceitar abaixo.*`,
+                        components: [rowConfirm]
                     });
 
-                    confirmCollector.stop();
-                });
+                    const confirmCollector = msg.createMessageComponentCollector({
+                        filter: btn => btn.user.id === compradorUser.id || btn.user.id === message.author.id,
+                        time: 120000 
+                    });
 
-            } catch (err) {}
-        });
+                    confirmCollector.on('collect', async iBtn => {
+                        try {
+                            if (iBtn.user.id === message.author.id && iBtn.customId === 'btn_recusar_venda') {
+                                await iBtn.update({ content: "❌ Venda cancelada pelo vendedor.", components: [] });
+                                confirmCollector.stop();
+                                return;
+                            }
 
-        collector.on('end', async (_, reason) => {
-            if (reason !== 'messageDelete')
-                await msg.edit({ content: "⏳ Venda encerrada por inatividade.", components: [] }).catch(() => {});
+                            if (iBtn.user.id !== compradorUser.id) {
+                                return iBtn.reply({ content: "Apenas o comprador pode aceitar.", flags: MessageFlags.Ephemeral });
+                            }
+
+                            if (iBtn.customId === 'btn_recusar_venda') {
+                                await iBtn.update({ content: "❌ Venda recusada pelo comprador.", components: [] });
+                                confirmCollector.stop();
+                                return;
+                            }
+
+                            if (iBtn.customId === 'btn_aceitar_venda') {
+                                await iBtn.deferUpdate(); 
+                                
+                                const vFinal = await prisma.personagens.findUnique({ where: { id: vendedorChar.id } });
+                                const cFinal = await prisma.personagens.findUnique({ where: { id: compradorChar.id } });
+
+                                const estoqueV = vFinal.estoque_ingredientes || {};
+                                if (!estoqueV[itemSelecionado] || estoqueV[itemSelecionado] < qtdVenda) {
+                                    return iBtn.editReply({ content: "🚫 O vendedor não tem mais esses itens em estoque.", components: [] });
+                                }
+                                if (cFinal.saldo < precoVenda) {
+                                    return iBtn.editReply({ content: `🚫 Saldo insuficiente. Você tem K$ ${cFinal.saldo.toFixed(2)}.`, components: [] }); 
+                                }
+
+                                estoqueV[itemSelecionado] -= qtdVenda;
+                                if (estoqueV[itemSelecionado] <= 0) delete estoqueV[itemSelecionado];
+
+                                const estoqueC = cFinal.estoque_ingredientes || {};
+                                estoqueC[itemSelecionado] = (estoqueC[itemSelecionado] || 0) + qtdVenda;
+
+                                await prisma.$transaction([
+                                    prisma.personagens.update({
+                                        where: { id: vFinal.id },
+                                        data: { 
+                                            estoque_ingredientes: estoqueV,
+                                            saldo: { increment: precoVenda }
+                                        }
+                                    }),
+                                    prisma.personagens.update({
+                                        where: { id: cFinal.id },
+                                        data: {
+                                            estoque_ingredientes: estoqueC,
+                                            saldo: { decrement: precoVenda }
+                                        }
+                                    }),
+                                    prisma.transacao.create({
+                                        data: { personagem_id: vFinal.id, descricao: `Vendeu ${qtdVenda}x ${itemSelecionado} para ${cFinal.nome}`, valor: precoVenda, tipo: 'GANHO' }
+                                    }),
+                                    prisma.transacao.create({
+                                        data: { personagem_id: cFinal.id, descricao: `Comprou ${qtdVenda}x ${itemSelecionado} de ${vFinal.nome}`, valor: -precoVenda, tipo: 'GASTO' }
+                                    })
+                                ]);
+
+                                await iBtn.editReply({
+                                    content: `✅ **Negócio Fechado!**\n\n📦 **${vFinal.nome}** entregou **${qtdVenda}x ${itemSelecionado}**\n💰 **${cFinal.nome}** pagou **K$ ${precoVenda}**`,
+                                    components: []
+                                });
+                                confirmCollector.stop();
+                            }
+                        } catch (err) {
+                            console.error("Erro na venda:", err);
+                            try { await iBtn.editReply({ content: "❌ Ocorreu um erro ao processar a venda.", components: [] }); } catch (e) {}
+                        }
+                    });
+                } catch (e) {
+                }
+            }
         });
     }
 
