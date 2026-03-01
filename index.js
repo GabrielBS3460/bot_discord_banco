@@ -1542,92 +1542,98 @@ client.on('messageCreate', async (message) => {
 
         const destinatarioUser = message.mentions.users.first();
         if (!destinatarioUser) {
-            return message.reply("Você precisa mencionar quem receberá os itens. Ex: `!entregar @Player`");
+            return message.reply("Você precisa mencionar quem receberá o item.");
         }
 
         const charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
         if (!charDestinatario) {
-            return message.reply(`O usuário **${destinatarioUser.username}** não tem personagem ativo.`);
+            return message.reply(`O usuário não tem personagem ativo.`);
         }
 
-        const modal = new ModalBuilder()
-            .setCustomId(`modal_entregar_${message.id}`)
-            .setTitle('Entrega de Item');
-
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('inp_nome_item')
-                    .setLabel('Nome do Item')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true)
-            ),
-            new ActionRowBuilder().addComponents(
-                new TextInputBuilder()
-                    .setCustomId('inp_links')
-                    .setLabel('Links (separados por vírgula ou linha)')
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setRequired(true)
-            )
+        const botao = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId(`btn_entregar_${message.id}`)
+                .setLabel('Preencher Dados do Item')
+                .setStyle(ButtonStyle.Primary)
         );
 
-        await message.reply({ content: "📦 Preencha os dados do item:", components: [] });
-        await message.channel.send({ content: "Abrindo formulário..." });
+        const msg = await message.reply({
+            content: "📦 Clique abaixo para informar os dados do item:",
+            components: [botao]
+        });
 
-        await message.channel.awaitMessageComponent;
+        const collector = msg.createMessageComponentCollector({
+            filter: i => i.user.id === message.author.id,
+            time: 60000
+        });
 
-        await message.author.send; 
+        collector.on('collect', async interaction => {
 
-        await message.showModal?.(modal).catch(() => {});
+            const modal = new ModalBuilder()
+                .setCustomId(`modal_entregar_${message.id}`)
+                .setTitle('Entrega de Item');
 
-        const modalHandler = async (interaction) => {
-            if (!interaction.isModalSubmit()) return;
-            if (interaction.customId !== `modal_entregar_${message.id}`) return;
-            if (interaction.user.id !== message.author.id) return;
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId('inp_nome_item')
+                        .setLabel('Nome do Item')
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(true)
+                ),
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId('inp_links')
+                        .setLabel('Links (um por linha)')
+                        .setStyle(TextInputStyle.Paragraph)
+                        .setRequired(true)
+                )
+            );
 
-            try {
+            await interaction.showModal(modal);
 
-                const nomeItem = interaction.fields.getTextInputValue('inp_nome_item');
-                const linksTexto = interaction.fields.getTextInputValue('inp_links');
+            const modalSubmit = await interaction.awaitModalSubmit({
+                filter: i => i.user.id === message.author.id,
+                time: 120000
+            });
 
-                const listaLinks = linksTexto
-                    .split(/\n|,/)
-                    .map(l => l.trim())
-                    .filter(l => l.length > 0);
+            await modalSubmit.deferReply();
 
-                const linksFormatados = listaLinks.map(l => `🔗 ${l}`).join('\n');
+            const nomeItem = modalSubmit.fields.getTextInputValue('inp_nome_item');
+            const linksTexto = modalSubmit.fields.getTextInputValue('inp_links');
 
-                await prisma.transacao.create({
-                    data: {
-                        personagem_id: charDestinatario.id,
-                        descricao: `Recebeu Item: ${nomeItem}`,
-                        valor: 0,
-                        tipo: 'RECOMPENSA',
-                        categoria: 'ITEM'
-                    }
-                });
+            const listaLinks = linksTexto
+                .split(/\n|,/)
+                .map(l => l.trim())
+                .filter(l => l.length > 0);
 
-                const embed = new EmbedBuilder()
-                    .setColor('#9B59B6')
-                    .setTitle('🎁 Item Entregue!')
-                    .setDescription(`**${message.author.username}** entregou um item para **${charDestinatario.nome}**.`)
-                    .addFields(
-                        { name: '📦 Item', value: nomeItem },
-                        { name: '🔗 Links', value: linksFormatados }
-                    )
-                    .setTimestamp();
+            const linksFormatados = listaLinks.map(l => `🔗 ${l}`).join('\n');
 
-                await interaction.reply({ embeds: [embed] });
+            await prisma.transacao.create({
+                data: {
+                    personagem_id: charDestinatario.id,
+                    descricao: `Recebeu Item: ${nomeItem}`,
+                    valor: 0,
+                    tipo: 'RECOMPENSA',
+                    categoria: 'ITEM'
+                }
+            });
 
-            } catch (err) {
-                console.error("Erro no modal entregar:", err);
-                await interaction.reply({ content: "Erro ao processar entrega.", ephemeral: true });
-            }
+            const embed = new EmbedBuilder()
+                .setColor('#9B59B6')
+                .setTitle('🎁 Item Entregue!')
+                .setDescription(`**${message.author.username}** entregou um item para **${charDestinatario.nome}**.`)
+                .addFields(
+                    { name: '📦 Item', value: nomeItem },
+                    { name: '🔗 Links', value: linksFormatados }
+                )
+                .setTimestamp();
 
-            client.off('interactionCreate', modalHandler);
-        };
+            await modalSubmit.editReply({ embeds: [embed] });
 
-        client.on('interactionCreate', modalHandler);
+            collector.stop();
+            await msg.edit({ components: [] });
+        });
     }
 
     else if (command === 'primeiramissao') {
