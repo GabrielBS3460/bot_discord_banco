@@ -3209,9 +3209,11 @@ client.on('messageCreate', async (message) => {
                     : `🍲 **Prato Pronto! (5 Porções)**\nVocê fez **${receitaSelecionada}**.\n*Efeito:* ${receita.desc}`;
 
                 await i.update({ 
-                    content: `${msgSucesso}\n\n🔨 **Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')} | Pts: ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}`,
-                    components: [montarMenuReceitas()] 
+                    content: `${msgSucesso}\n\n🔨 **Restante:** ${Object.entries(estoque).map(([k,v])=>`${k}: ${v}`).join(', ')} | Pts: ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
+                    components: []
                 });
+
+                collector.stop('cozinhou');
             }
         });
     }
