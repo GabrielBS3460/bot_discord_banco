@@ -2071,7 +2071,10 @@ client.on('messageCreate', async (message) => {
                     }
                 }
                 
-                await i.update({ content: `✅ **Sucesso:** ${logDescricao}`, components: [] });
+                await i.reply({
+                    content: `✅ **Sucesso:** ${logDescricao}`,
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
             if (i.customId === 'modal_status' + uniqueID) {
