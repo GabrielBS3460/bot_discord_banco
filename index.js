@@ -1858,103 +1858,302 @@ client.on('messageCreate', async (message) => {
             const uniqueID = `_${msg.id}`;
 
             if (interaction.customId === 'edit_pericias') {
-                const menu1 = new StringSelectMenuBuilder().setCustomId('menu_pericia_1').setPlaceholder('Perícias (A - M)');
-                const menu2 = new StringSelectMenuBuilder().setCustomId('menu_pericia_2').setPlaceholder('Perícias (N - Z)');
 
-                PERICIAS_LISTA_1.forEach(p => menu1.addOptions(new StringSelectMenuOptionBuilder().setLabel(p).setValue(p)));
-                PERICIAS_LISTA_2.forEach(p => menu2.addOptions(new StringSelectMenuOptionBuilder().setLabel(p).setValue(p)));
+                const menu1 = new StringSelectMenuBuilder()
+                    .setCustomId('menu_pericia_1')
+                    .setPlaceholder('Perícias (A - M)');
+
+                const menu2 = new StringSelectMenuBuilder()
+                    .setCustomId('menu_pericia_2')
+                    .setPlaceholder('Perícias (N - Z)');
+
+                PERICIAS_LISTA_1.forEach(p =>
+                    menu1.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(p)
+                            .setValue(p)
+                    )
+                );
+
+                PERICIAS_LISTA_2.forEach(p =>
+                    menu2.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(p)
+                            .setValue(p)
+                    )
+                );
 
                 const r1 = new ActionRowBuilder().addComponents(menu1);
                 const r2 = new ActionRowBuilder().addComponents(menu2);
                 const r3 = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId('btn_limpar_pericias').setLabel('Limpar Todas Perícias').setStyle(ButtonStyle.Danger)
+                    new ButtonBuilder()
+                        .setCustomId('btn_limpar_pericias')
+                        .setLabel('Limpar Todas')
+                        .setStyle(ButtonStyle.Danger)
                 );
 
                 const response = await interaction.reply({
-                    content: `Selecione as perícias para **Adicionar** à sua ficha.\n*Atuais:* ${(char.pericias || []).join(', ')}`,
+                    content: `Selecione para adicionar/remover perícias.\nAtuais: ${(char.pericias || []).join(', ') || 'Nenhuma'}`,
                     components: [r1, r2, r3],
                     flags: MessageFlags.Ephemeral,
                     withResponse: true
                 });
 
                 const periciaCollector = response.resource.message.createMessageComponentCollector({
-                    filter: i => i.user.id === message.author.id,
+                    filter: i => i.user.id === interaction.user.id,
                     time: 60000
                 });
 
                 periciaCollector.on('collect', async iPericia => {
-                    let novasPericias = [...(char.pericias || [])]; 
+
+                    await iPericia.deferUpdate();
+
+                    const charAtual = await prisma.personagens.findUnique({
+                        where: { id: char.id },
+                        include: { classes: true }
+                    });
+
+                    let novasPericias = [...(charAtual.pericias || [])];
 
                     if (iPericia.customId === 'btn_limpar_pericias') {
+
                         novasPericias = [];
-                        await iPericia.reply({ content: "🗑️ Todas as perícias foram removidas.", flags: MessageFlags.Ephemeral });
+
+                        const atualizado = await prisma.personagens.update({
+                            where: { id: char.id },
+                            data: { pericias: novasPericias },
+                            include: { classes: true }
+                        });
+
+                        await iPericia.followUp({
+                            content: "🗑️ Todas as perícias removidas.",
+                            ephemeral: true
+                        });
+
+                        char = atualizado;
+
                     } else {
+
                         const selecionada = iPericia.values[0];
+
                         if (!novasPericias.includes(selecionada)) {
                             novasPericias.push(selecionada);
-                            novasPericias.sort(); 
-                            await iPericia.reply({ content: `✅ **${selecionada}** adicionada!`, flags: MessageFlags.Ephemeral });
+                            novasPericias.sort();
+
+                            await iPericia.followUp({
+                                content: `✅ ${selecionada} adicionada.`,
+                                ephemeral: true
+                            });
+
                         } else {
                             novasPericias = novasPericias.filter(p => p !== selecionada);
-                            await iPericia.reply({ content: `❌ **${selecionada}** removida!`, flags: MessageFlags.Ephemeral });
+
+                            await iPericia.followUp({
+                                content: `❌ ${selecionada} removida.`,
+                                ephemeral: true
+                            });
                         }
+
+                        const atualizado = await prisma.personagens.update({
+                            where: { id: char.id },
+                            data: { pericias: novasPericias },
+                            include: { classes: true }
+                        });
+
+                        char = atualizado;
                     }
 
-                    await prisma.personagens.update({ where: { id: char.id }, data: { pericias: novasPericias } });
-                    
-                    char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
-                    await msg.edit({ embeds: [montarEmbedFicha(char)] });
+                    await msg.edit({
+                        embeds: [montarEmbedFicha(char)]
+                    });
                 });
+
                 return;
             }
 
             if (interaction.customId === 'edit_classes') {
-                const menu1 = new StringSelectMenuBuilder().setCustomId('menu_classe_1').setPlaceholder('Classes A-G');
-                const menu2 = new StringSelectMenuBuilder().setCustomId('menu_classe_2').setPlaceholder('Classes I-V');
 
-                LISTA_CLASSES_1.forEach(cls => menu1.addOptions(new StringSelectMenuOptionBuilder().setLabel(cls).setValue(cls)));
-                LISTA_CLASSES_2.forEach(cls => menu2.addOptions(new StringSelectMenuOptionBuilder().setLabel(cls).setValue(cls)));
+                const menu1 = new StringSelectMenuBuilder()
+                    .setCustomId('menu_classe_1')
+                    .setPlaceholder('Classes A-G');
+
+                const menu2 = new StringSelectMenuBuilder()
+                    .setCustomId('menu_classe_2')
+                    .setPlaceholder('Classes I-V');
+
+                LISTA_CLASSES_1.forEach(cls =>
+                    menu1.addOptions(
+                        new StringSelectMenuOptionBuilder().setLabel(cls).setValue(cls)
+                    )
+                );
+
+                LISTA_CLASSES_2.forEach(cls =>
+                    menu2.addOptions(
+                        new StringSelectMenuOptionBuilder().setLabel(cls).setValue(cls)
+                    )
+                );
 
                 const r1 = new ActionRowBuilder().addComponents(menu1);
                 const r2 = new ActionRowBuilder().addComponents(menu2);
 
-                const response = await interaction.reply({ 
-                    content: `Selecione uma classe para **Adicionar** ou **Editar o Nível**.\n*(Você tem ${char.nivel_personagem - char.classes.reduce((a, b) => a + b.nivel, 0)} níveis livres)*`, 
-                    components: [r1, r2], 
+                const response = await interaction.reply({
+                    content: `Selecione uma classe para **Adicionar** ou **Editar o Nível**.\n*(Você tem ${char.nivel_personagem - char.classes.reduce((a, b) => a + b.nivel, 0)} níveis livres)*`,
+                    components: [r1, r2],
                     flags: MessageFlags.Ephemeral,
                     withResponse: true
                 });
 
                 const menuCollector = response.resource.message.createMessageComponentCollector({
-                    filter: i => i.user.id === message.author.id,
+                    filter: i => i.user.id === interaction.user.id,
                     time: 60000
                 });
 
                 menuCollector.on('collect', async iMenu => {
+
                     const classeSelecionada = iMenu.values[0];
-                    const modal = new ModalBuilder().setCustomId(`modal_nivel_${classeSelecionada}${uniqueID}`).setTitle(`Nível de ${classeSelecionada}`);
-                    modal.addComponents(new ActionRowBuilder().addComponents(
-                        new TextInputBuilder().setCustomId('inp_nivel').setLabel('Novo nível (0 para remover)').setStyle(TextInputStyle.Short)
-                    ));
+
+                    const modalCustomId = `modal_nivel_${classeSelecionada}${uniqueID}`;
+
+                    const modal = new ModalBuilder()
+                        .setCustomId(modalCustomId)
+                        .setTitle(`Nível de ${classeSelecionada}`)
+                        .addComponents(
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('inp_nivel')
+                                    .setLabel('Novo nível (0 remove)')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setRequired(true)
+                            )
+                        );
+
                     await iMenu.showModal(modal);
+
+                    try {
+                        const modalSubmit = await iMenu.awaitModalSubmit({
+                            filter: i =>
+                                i.customId === modalCustomId &&
+                                i.user.id === interaction.user.id,
+                            time: 60000
+                        });
+
+                        await modalSubmit.deferUpdate();
+
+                        const nivelInput = parseInt(
+                            modalSubmit.fields.getTextInputValue('inp_nivel')
+                        );
+
+                        if (isNaN(nivelInput)) {
+                            return modalSubmit.followUp({
+                                content: "Nível inválido.",
+                                ephemeral: true
+                            });
+                        }
+
+                        // 🔥 SEMPRE buscar estado atualizado antes de validar
+                        const charAtual = await prisma.personagens.findUnique({
+                            where: { id: char.id },
+                            include: { classes: true }
+                        });
+
+                        if (nivelInput > 0) {
+                            const somaAtual = charAtual.classes.reduce(
+                                (acc, c) =>
+                                    acc + (c.nome_classe === classeSelecionada ? 0 : c.nivel),
+                                0
+                            );
+
+                            if (somaAtual + nivelInput > charAtual.nivel_personagem) {
+                                return modalSubmit.followUp({
+                                    content: `🚫 Você não pode exceder o nível total (${charAtual.nivel_personagem}).`,
+                                    ephemeral: true
+                                });
+                            }
+                        }
+
+                        // 🔥 Aplicar mudança
+                        if (nivelInput <= 0) {
+                            await prisma.personagemClasse.deleteMany({
+                                where: {
+                                    personagem_id: char.id,
+                                    nome_classe: classeSelecionada
+                                }
+                            });
+                        } else {
+
+                            const existe = await prisma.personagemClasse.findFirst({
+                                where: {
+                                    personagem_id: char.id,
+                                    nome_classe: classeSelecionada
+                                }
+                            });
+
+                            if (existe) {
+                                await prisma.personagemClasse.update({
+                                    where: { id: existe.id },
+                                    data: { nivel: nivelInput }
+                                });
+                            } else {
+                                await prisma.personagemClasse.create({
+                                    data: {
+                                        personagem_id: char.id,
+                                        nome_classe: classeSelecionada,
+                                        nivel: nivelInput
+                                    }
+                                });
+                            }
+                        }
+
+                        // 🔥 Buscar estado final atualizado
+                        const personagemAtualizado = await prisma.personagens.findUnique({
+                            where: { id: char.id },
+                            include: { classes: true }
+                        });
+
+                        char = personagemAtualizado;
+
+                        await msg.edit({
+                            embeds: [montarEmbedFicha(char)]
+                        });
+
+                        await msg.edit({
+                            embeds: [montarEmbedFicha(char)]
+                        });
+
+                    } catch (err) {
+                        // modal expirou ou foi fechado
+                    }
                 });
+
                 return;
             }
 
             if (interaction.customId === 'btn_descanso') {
-                if (char.ultimo_descanso) {
+
+                const charAtualInicial = await prisma.personagens.findUnique({
+                    where: { id: char.id },
+                    include: { classes: true }
+                });
+
+                if (charAtualInicial.ultimo_descanso) {
                     const agora = new Date();
                     const ultimo = new Date(char.ultimo_descanso);
-                    const mesmoDia = agora.getDate() === ultimo.getDate();
-                    const mesmoMes = agora.getMonth() === ultimo.getMonth();
-                    const mesmoAno = agora.getFullYear() === ultimo.getFullYear();
 
-                    if (mesmoDia && mesmoMes && mesmoAno) {
-                        return interaction.reply({ content: `🚫 **${char.nome}** já descansou hoje! Tente novamente amanhã.`, flags: MessageFlags.Ephemeral });
+                    const mesmoDia =
+                        agora.getDate() === ultimo.getDate() &&
+                        agora.getMonth() === ultimo.getMonth() &&
+                        agora.getFullYear() === ultimo.getFullYear();
+
+                    if (mesmoDia) {
+                        return interaction.reply({
+                            content: `🚫 **${char.nome}** já descansou hoje!`,
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
                 }
 
                 const { nivelReal } = calcularDados(char);
+
                 const botoesDescanso = new ActionRowBuilder().addComponents(
                     new ButtonBuilder().setCustomId('desc_ruim').setLabel('Ruim (Nív/2)').setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder().setCustomId('desc_normal').setLabel('Normal (Nív)').setStyle(ButtonStyle.Primary),
@@ -1962,235 +2161,465 @@ client.on('messageCreate', async (message) => {
                     new ButtonBuilder().setCustomId('desc_lux').setLabel('Luxuoso (3x)').setStyle(ButtonStyle.Success)
                 );
 
-                const menuDescansoResponse = await interaction.reply({ 
-                    content: `🛏️ **Modo de Descanso**\nNível: ${nivelReal}\nEscolha a qualidade da hospedagem:\n*(Você só pode descansar uma vez por dia)*`,
+                const response = await interaction.reply({
+                    content: `🛏️ **Modo de Descanso**\nNível: ${nivelReal}\nEscolha a qualidade da hospedagem:`,
                     components: [botoesDescanso],
                     flags: MessageFlags.Ephemeral,
                     withResponse: true
                 });
 
-                const descCollector = menuDescansoResponse.resource.message.createMessageComponentCollector({ time: 60000 });
-                
-                descCollector.on('collect', async iDesc => {
-                    let tipoSelecionado = "";
-                    if (iDesc.customId === 'desc_ruim') tipoSelecionado = "ruim";
-                    if (iDesc.customId === 'desc_normal') tipoSelecionado = "normal";
-                    if (iDesc.customId === 'desc_conf') tipoSelecionado = "confortavel";
-                    if (iDesc.customId === 'desc_lux') tipoSelecionado = "luxuoso";
-
-                    const modalDescanso = new ModalBuilder()
-                        .setCustomId(`modal_descanso_${tipoSelecionado}${uniqueID}`)
-                        .setTitle('Bônus de Descanso');
-
-                    modalDescanso.addComponents(
-                        new ActionRowBuilder().addComponents(
-                            new TextInputBuilder().setCustomId('inp_bonus_vida').setLabel('Bônus Extra de Vida (opcional)').setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Ex: 5')
-                        ),
-                        new ActionRowBuilder().addComponents(
-                            new TextInputBuilder().setCustomId('inp_bonus_mana').setLabel('Bônus Extra de Mana (opcional)').setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('Ex: 2')
-                        )
-                    );
-
-                    await iDesc.showModal(modalDescanso);
+                const descCollector = response.resource.message.createMessageComponentCollector({
+                    filter: i => i.user.id === interaction.user.id,
+                    time: 60000
                 });
+
+                descCollector.on('collect', async iDesc => {
+
+                    let multiplicador = 1;
+                    let nomeTipo = "Normal";
+
+                    if (iDesc.customId === 'desc_ruim') {
+                        multiplicador = 0.5;
+                        nomeTipo = "Ruim";
+                    }
+                    if (iDesc.customId === 'desc_conf') {
+                        multiplicador = 2;
+                        nomeTipo = "Confortável";
+                    }
+                    if (iDesc.customId === 'desc_lux') {
+                        multiplicador = 3;
+                        nomeTipo = "Luxuoso";
+                    }
+
+                    const modalCustomId = `modal_descanso_${nomeTipo}_${msg.id}`;
+
+                    const modal = new ModalBuilder()
+                        .setCustomId(modalCustomId)
+                        .setTitle(`Descanso ${nomeTipo}`)
+                        .addComponents(
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('inp_bonus_vida')
+                                    .setLabel('Bônus Vida (opcional)')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setRequired(false)
+                            ),
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('inp_bonus_mana')
+                                    .setLabel('Bônus Mana (opcional)')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setRequired(false)
+                            )
+                        );
+
+                    await iDesc.showModal(modal);
+
+                    try {
+                        const modalSubmit = await iDesc.awaitModalSubmit({
+                            filter: i =>
+                                i.customId === modalCustomId &&
+                                i.user.id === interaction.user.id,
+                            time: 60000
+                        });
+
+                        await modalSubmit.deferUpdate();
+
+                        const charAtual = await prisma.personagens.findUnique({
+                            where: { id: char.id },
+                            include: { classes: true }
+                        });
+
+                        const { nivelReal: nivelAtual } = calcularDados(charAtual);
+
+                        const bonusVida = parseInt(modalSubmit.fields.getTextInputValue('inp_bonus_vida')) || 0;
+                        const bonusMana = parseInt(modalSubmit.fields.getTextInputValue('inp_bonus_mana')) || 0;
+
+                        const recBase = Math.floor(nivelAtual * multiplicador) || 1;
+
+                        const novaVida = Math.min(
+                            charAtual.vida_max,
+                            charAtual.vida_atual + recBase + bonusVida
+                        );
+
+                        const novaMana = Math.min(
+                            charAtual.mana_max,
+                            charAtual.mana_atual + recBase + bonusMana
+                        );
+
+                        const curouVida = novaVida - char.vida_atual;
+                        const curouMana = novaMana - char.mana_atual;
+
+                        await prisma.$transaction([
+                            prisma.personagens.update({
+                                where: { id: char.id },
+                                data: {
+                                    vida_atual: novaVida,
+                                    mana_atual: novaMana,
+                                    ultimo_descanso: new Date()
+                                }
+                            }),
+                            prisma.transacao.create({
+                                data: {
+                                    personagem_id: char.id,
+                                    descricao: `Descanso ${nomeTipo}: +${curouVida} PV, +${curouMana} PM`,
+                                    valor: 0,
+                                    tipo: 'LOG'
+                                }
+                            })
+                        ]);
+
+                        const personagemAtualizado = await prisma.personagens.findUnique({
+                            where: { id: char.id },
+                            include: { classes: true }
+                        });
+
+                        char = personagemAtualizado;
+
+                        await msg.edit({
+                            embeds: [montarEmbedFicha(char)]
+                        });
+
+                        await modalSubmit.followUp({
+                            content: `✅ Descanso realizado!\n+${curouVida} Vida | +${curouMana} Mana`,
+                            ephemeral: true
+                        });
+
+                    } catch (err) {
+                        // Modal expirou ou fechado
+                    }
+                });
+
                 return;
             }
             
             if (interaction.customId === 'edit_status') {
-                const modal = new ModalBuilder().setCustomId('modal_status' + uniqueID).setTitle('Editar Status');
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_vida').setLabel('Vida Atual / Máxima').setStyle(TextInputStyle.Short).setValue(`${char.vida_atual}/${char.vida_max}`)),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_vida_temp').setLabel('Vida Temporária').setStyle(TextInputStyle.Short).setValue(String(char.vida_temp)).setRequired(false)),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_mana').setLabel('Mana Atual / Máxima').setStyle(TextInputStyle.Short).setValue(`${char.mana_atual}/${char.mana_max}`)),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_mana_temp').setLabel('Mana Temporária').setStyle(TextInputStyle.Short).setValue(String(char.mana_temp)).setRequired(false))
-                );
+
+                const modalCustomId = `modal_status_${msg.id}`;
+
+                const modal = new ModalBuilder()
+                    .setCustomId(modalCustomId)
+                    .setTitle('Editar Status')
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('inp_vida')
+                                .setLabel('Vida Atual / Máxima')
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                                .setValue(`${char.vida_atual}/${char.vida_max}`)
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('inp_vida_temp')
+                                .setLabel('Vida Temporária')
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(false)
+                                .setValue(String(char.vida_temp || 0))
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('inp_mana')
+                                .setLabel('Mana Atual / Máxima')
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                                .setValue(`${char.mana_atual}/${char.mana_max}`)
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('inp_mana_temp')
+                                .setLabel('Mana Temporária')
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(false)
+                                .setValue(String(char.mana_temp || 0))
+                        )
+                    );
+
                 await interaction.showModal(modal);
+
+                try {
+                    const modalSubmit = await interaction.awaitModalSubmit({
+                        filter: i =>
+                            i.customId === modalCustomId &&
+                            i.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    await modalSubmit.deferUpdate();
+
+                    const [vidaAtual, vidaMax] = modalSubmit.fields
+                        .getTextInputValue('inp_vida')
+                        .split('/')
+                        .map(v => parseInt(v.trim()));
+
+                    const [manaAtual, manaMax] = modalSubmit.fields
+                        .getTextInputValue('inp_mana')
+                        .split('/')
+                        .map(v => parseInt(v.trim()));
+
+                    const vidaTemp = parseInt(
+                        modalSubmit.fields.getTextInputValue('inp_vida_temp')
+                    ) || 0;
+
+                    const manaTemp = parseInt(
+                        modalSubmit.fields.getTextInputValue('inp_mana_temp')
+                    ) || 0;
+
+                    if (
+                        isNaN(vidaAtual) || isNaN(vidaMax) ||
+                        isNaN(manaAtual) || isNaN(manaMax)
+                    ) {
+                        return modalSubmit.followUp({
+                            content: "Formato inválido. Use exemplo: 12/20",
+                            ephemeral: true
+                        });
+                    }
+
+                    await prisma.personagens.update({
+                        where: { id: char.id },
+                        data: {
+                            vida_atual: vidaAtual,
+                            vida_max: vidaMax,
+                            vida_temp: vidaTemp,
+                            mana_atual: manaAtual,
+                            mana_max: manaMax,
+                            mana_temp: manaTemp
+                        }
+                    });
+
+                    // 🔥 sempre buscar estado atualizado
+                    char = await prisma.personagens.findUnique({
+                        where: { id: char.id },
+                        include: { classes: true }
+                    });
+
+                    await msg.edit({
+                        embeds: [montarEmbedFicha(char)]
+                    });
+
+                    await modalSubmit.followUp({
+                        content: "✅ Status atualizado com sucesso.",
+                        ephemeral: true
+                    });
+
+                } catch (err) {
+                    // Modal expirou ou foi fechado
+                }
+
+                return;
             }
 
             if (interaction.customId === 'edit_fisico') {
-                const modal = new ModalBuilder().setCustomId('modal_fisico' + uniqueID).setTitle('Editar Físicos');
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_for').setLabel('Força').setStyle(TextInputStyle.Short).setValue(String(char.forca))),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_des').setLabel('Destreza').setStyle(TextInputStyle.Short).setValue(String(char.destreza))),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_con').setLabel('Constituição').setStyle(TextInputStyle.Short).setValue(String(char.constituicao)))
-                );
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_fisico' + uniqueID)
+                    .setTitle('Editar Físicos')
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId('inp_for').setLabel('Força').setStyle(TextInputStyle.Short).setValue(String(char.forca))
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId('inp_des').setLabel('Destreza').setStyle(TextInputStyle.Short).setValue(String(char.destreza))
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId('inp_con').setLabel('Constituição').setStyle(TextInputStyle.Short).setValue(String(char.constituicao))
+                        )
+                    );
+
                 await interaction.showModal(modal);
+
+                try {
+                    const modalSubmit = await interaction.awaitModalSubmit({
+                        filter: i => i.customId === 'modal_fisico' + uniqueID && i.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    await modalSubmit.deferUpdate();
+
+                    await prisma.personagens.update({
+                        where: { id: char.id },
+                        data: {
+                            forca: parseInt(modalSubmit.fields.getTextInputValue('inp_for')) || 0,
+                            destreza: parseInt(modalSubmit.fields.getTextInputValue('inp_des')) || 0,
+                            constituicao: parseInt(modalSubmit.fields.getTextInputValue('inp_con')) || 0
+                        }
+                    });
+
+                    char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
+                    await msg.edit({ embeds: [montarEmbedFicha(char)] });
+
+                } catch {}
             }
 
             if (interaction.customId === 'edit_mental') {
-                const modal = new ModalBuilder().setCustomId('modal_mental' + uniqueID).setTitle('Editar Mentais');
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_int').setLabel('Inteligência').setStyle(TextInputStyle.Short).setValue(String(char.inteligencia))),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_sab').setLabel('Sabedoria').setStyle(TextInputStyle.Short).setValue(String(char.sabedoria))),
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_car').setLabel('Carisma').setStyle(TextInputStyle.Short).setValue(String(char.carisma)))
-                );
+
+                const modal = new ModalBuilder()
+                    .setCustomId('modal_mental' + uniqueID)
+                    .setTitle('Editar Mentais')
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId('inp_int').setLabel('Inteligência').setStyle(TextInputStyle.Short).setValue(String(char.inteligencia))
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId('inp_sab').setLabel('Sabedoria').setStyle(TextInputStyle.Short).setValue(String(char.sabedoria))
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId('inp_car').setLabel('Carisma').setStyle(TextInputStyle.Short).setValue(String(char.carisma))
+                        )
+                    );
+
                 await interaction.showModal(modal);
+
+                try {
+                    const modalSubmit = await interaction.awaitModalSubmit({
+                        filter: i => i.customId === 'modal_mental' + uniqueID && i.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    await modalSubmit.deferUpdate();
+
+                    await prisma.personagens.update({
+                        where: { id: char.id },
+                        data: {
+                            inteligencia: parseInt(modalSubmit.fields.getTextInputValue('inp_int')) || 0,
+                            sabedoria: parseInt(modalSubmit.fields.getTextInputValue('inp_sab')) || 0,
+                            carisma: parseInt(modalSubmit.fields.getTextInputValue('inp_car')) || 0
+                        }
+                    });
+
+                    char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
+                    await msg.edit({ embeds: [montarEmbedFicha(char)] });
+
+                } catch {}
             }
 
             if (interaction.customId === 'edit_deslocamento') {
-                const modal = new ModalBuilder().setCustomId('modal_deslocamento' + uniqueID).setTitle('Editar Deslocamento');
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_deslocamento').setLabel('Deslocamento (em metros)').setStyle(TextInputStyle.Short).setValue(String(char.deslocamento || 9)))
-                );
+
+                const modalCustomId = `modal_deslocamento_${msg.id}`;
+
+                const modal = new ModalBuilder()
+                    .setCustomId(modalCustomId)
+                    .setTitle('Editar Deslocamento')
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('inp_deslocamento')
+                                .setLabel('Deslocamento (em metros)')
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                                .setValue(String(char.deslocamento || 9))
+                        )
+                    );
+
                 await interaction.showModal(modal);
+
+                try {
+                    const modalSubmit = await interaction.awaitModalSubmit({
+                        filter: i =>
+                            i.customId === modalCustomId &&
+                            i.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    await modalSubmit.deferUpdate();
+
+                    const valor = parseFloat(
+                        modalSubmit.fields.getTextInputValue('inp_deslocamento')
+                    );
+
+                    if (isNaN(valor) || valor <= 0) {
+                        return modalSubmit.followUp({
+                            content: "Valor inválido.",
+                            ephemeral: true
+                        });
+                    }
+
+                    await prisma.personagens.update({
+                        where: { id: char.id },
+                        data: { deslocamento: valor }
+                    });
+
+                    // 🔥 Buscar estado atualizado
+                    char = await prisma.personagens.findUnique({
+                        where: { id: char.id },
+                        include: { classes: true }
+                    });
+
+                    await msg.edit({
+                        embeds: [montarEmbedFicha(char)]
+                    });
+
+                    await modalSubmit.followUp({
+                        content: `✅ Deslocamento atualizado para ${valor}m.`,
+                        ephemeral: true
+                    });
+
+                } catch (err) {
+                    // modal expirou
+                }
+
+                return;
             }
 
             if (interaction.customId === 'edit_obs') {
-                const modal = new ModalBuilder().setCustomId('modal_obs' + uniqueID).setTitle('Editar Observações');
-                modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_obs').setLabel('Anotações').setStyle(TextInputStyle.Paragraph).setValue(char.observacoes || '').setMaxLength(1000)));
+
+                const modalCustomId = `modal_obs_${msg.id}`;
+
+                const modal = new ModalBuilder()
+                    .setCustomId(modalCustomId)
+                    .setTitle('Editar Observações')
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId('inp_obs')
+                                .setLabel('Anotações')
+                                .setStyle(TextInputStyle.Paragraph)
+                                .setMaxLength(1000)
+                                .setRequired(false)
+                                .setValue(char.observacoes || '')
+                        )
+                    );
+
                 await interaction.showModal(modal);
+
+                try {
+                    const modalSubmit = await interaction.awaitModalSubmit({
+                        filter: i =>
+                            i.customId === modalCustomId &&
+                            i.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    await modalSubmit.deferUpdate();
+
+                    const novaObs = modalSubmit.fields.getTextInputValue('inp_obs') || '';
+
+                    await prisma.personagens.update({
+                        where: { id: char.id },
+                        data: { observacoes: novaObs }
+                    });
+
+                    // 🔥 sempre buscar versão atualizada
+                    char = await prisma.personagens.findUnique({
+                        where: { id: char.id },
+                        include: { classes: true }
+                    });
+
+                    await msg.edit({
+                        embeds: [montarEmbedFicha(char)]
+                    });
+
+                    await modalSubmit.followUp({
+                        content: "✅ Observações atualizadas.",
+                        ephemeral: true
+                    });
+
+                } catch (err) {
+                    // Modal expirou ou foi fechado
+                }
+
+                return;
             }
         });
-
-        const modalHandler = async (i) => {
-            if (!i.isModalSubmit() || !i.customId.endsWith(msg.id) || i.user.id !== message.author.id) return;
-
-            let logDescricao = "";
-            const uniqueID = `_${msg.id}`;
-
-            if (i.customId.startsWith('modal_descanso_')) {
-                const partes = i.customId.replace(uniqueID, '').split('_');
-                const tipoDescansoCode = partes[2]; 
-
-                const bonusVidaInput = parseInt(i.fields.getTextInputValue('inp_bonus_vida')) || 0;
-                const bonusManaInput = parseInt(i.fields.getTextInputValue('inp_bonus_mana')) || 0;
-
-                const { nivelReal } = calcularDados(char);
-                let multiplicador = 1;
-                let nomeTipo = "Normal";
-
-                if (tipoDescansoCode === 'ruim') { multiplicador = 0.5; nomeTipo = "Ruim"; }
-                if (tipoDescansoCode === 'confortavel') { multiplicador = 2; nomeTipo = "Confortável"; }
-                if (tipoDescansoCode === 'luxuoso') { multiplicador = 3; nomeTipo = "Luxuoso"; }
-
-                const recBase = Math.floor(nivelReal * multiplicador) || 1;
-                const recVidaTotal = recBase + bonusVidaInput;
-                const recManaTotal = recBase + bonusManaInput;
-
-                const novaVida = Math.min(char.vida_max, char.vida_atual + recVidaTotal);
-                const novaMana = Math.min(char.mana_max, char.mana_atual + recManaTotal);
-                const curouVida = novaVida - char.vida_atual;
-                const curouMana = novaMana - char.mana_atual;
-
-                await prisma.$transaction([
-                    prisma.personagens.update({
-                        where: { id: char.id },
-                        data: { vida_atual: novaVida, mana_atual: novaMana, ultimo_descanso: new Date() }
-                    }),
-                    prisma.transacao.create({
-                        data: {
-                            personagem_id: char.id,
-                            descricao: `Descanso ${nomeTipo} (Bônus +${bonusVidaInput}/+${bonusManaInput}): +${curouVida} PV, +${curouMana} PM`,
-                            valor: 0,
-                            tipo: 'LOG'
-                        }
-                    })
-                ]);
-                
-                logDescricao = "Realizou Descanso"; 
-                await i.reply({ content: `✅ **Descanso realizado!**\nRecuperou: +${curouVida} Vida e +${curouMana} Mana.\n(Base: ${recBase} + Bônus)`, flags: MessageFlags.Ephemeral });
-            }
-
-            if (i.customId.startsWith('modal_nivel_')) {
-                const classeNome = i.customId.replace('modal_nivel_', '').replace(uniqueID, '');
-                const nivelInput = parseInt(i.fields.getTextInputValue('inp_nivel'));
-
-                if (isNaN(nivelInput)) return i.reply({content: "Nível inválido", flags: MessageFlags.Ephemeral});
-
-                if (nivelInput > 0) {
-                    const somaAtual = char.classes.reduce((acc, c) => acc + (c.nome_classe === classeNome ? 0 : c.nivel), 0);
-                    if (somaAtual + nivelInput > char.nivel_personagem) {
-                        return i.reply({ content: `🚫 Você não pode exceder o nível total do personagem (${char.nivel_personagem}).`, flags: MessageFlags.Ephemeral });
-                    }
-                }
-
-                if (nivelInput <= 0) {
-                    await prisma.personagemClasse.deleteMany({ where: { personagem_id: char.id, nome_classe: classeNome } });
-                    logDescricao = `Removeu a classe ${classeNome}`;
-                } else {
-                    const existe = await prisma.personagemClasse.findFirst({ where: { personagem_id: char.id, nome_classe: classeNome } });
-                    if (existe) {
-                        await prisma.personagemClasse.update({ where: { id: existe.id }, data: { nivel: nivelInput }});
-                        logDescricao = `Atualizou ${classeNome} para nível ${nivelInput}`;
-                    } else {
-                        await prisma.personagemClasse.create({ data: { personagem_id: char.id, nome_classe: classeNome, nivel: nivelInput }});
-                        logDescricao = `Adicionou ${classeNome} nível ${nivelInput}`;
-                    }
-                }
-                
-                await i.reply({
-                    content: `✅ **Sucesso:** ${logDescricao}`,
-                    flags: MessageFlags.Ephemeral
-                });
-            }
-
-            if (i.customId === 'modal_status' + uniqueID) {
-                const [vAtual, vMax] = i.fields.getTextInputValue('inp_vida').split('/').map(Number);
-                const [mAtual, mMax] = i.fields.getTextInputValue('inp_mana').split('/').map(Number);
-                const vTemp = parseInt(i.fields.getTextInputValue('inp_vida_temp')) || 0;
-                const mTemp = parseInt(i.fields.getTextInputValue('inp_mana_temp')) || 0;
-
-                logDescricao = `Editou Status: Vida ${vAtual}/${vMax}, Mana ${mAtual}/${mMax}`;
-
-                await prisma.personagens.update({
-                    where: { id: char.id },
-                    data: { 
-                        vida_atual: vAtual || 0, vida_max: vMax || vAtual || 10, vida_temp: vTemp,
-                        mana_atual: mAtual || 0, mana_max: mMax || mAtual || 0, mana_temp: mTemp
-                    }
-                });
-                await i.deferUpdate();
-            }
-
-            if (i.customId === 'modal_obs' + uniqueID) {
-                const obs = i.fields.getTextInputValue('inp_obs');
-                logDescricao = "Editou Observações da Ficha";
-                await prisma.personagens.update({ where: { id: char.id }, data: { observacoes: obs } });
-                await i.deferUpdate();
-            }
-
-            if (i.customId === 'modal_fisico' + uniqueID) {
-                const nFor = parseInt(i.fields.getTextInputValue('inp_for'));
-                const nDes = parseInt(i.fields.getTextInputValue('inp_des'));
-                const nCon = parseInt(i.fields.getTextInputValue('inp_con'));
-                logDescricao = `Editou Físicos: FOR ${nFor}, DES ${nDes}, CON ${nCon}`;
-                await prisma.personagens.update({ where: { id: char.id }, data: { forca: nFor || 0, destreza: nDes || 0, constituicao: nCon || 0 } });
-                await i.deferUpdate();
-            }
-
-            if (i.customId === 'modal_mental' + uniqueID) {
-                const nInt = parseInt(i.fields.getTextInputValue('inp_int'));
-                const nSab = parseInt(i.fields.getTextInputValue('inp_sab'));
-                const nCar = parseInt(i.fields.getTextInputValue('inp_car'));
-                logDescricao = `Editou Mentais: INT ${nInt}, SAB ${nSab}, CAR ${nCar}`;
-                await prisma.personagens.update({ where: { id: char.id }, data: { inteligencia: nInt || 0, sabedoria: nSab || 0, carisma: nCar || 0 } });
-                await i.deferUpdate();
-            }
-
-            if (i.customId === 'modal_deslocamento' + uniqueID) {
-                const inputTexto = i.fields.getTextInputValue('inp_deslocamento');
-                
-                const valorNumerico = parseFloat(inputTexto) || 9;
-                
-                logDescricao = `Editou Deslocamento para ${valorNumerico}m`;
-                
-                await prisma.personagens.update({ 
-                    where: { id: char.id }, 
-                    data: { 
-                        deslocamento: String(valorNumerico) 
-                    } 
-                });
-                await i.deferUpdate();
-            }
-
-            if (logDescricao) {
-                char = await prisma.personagens.findFirst({ where: { id: char.id }, include: { classes: true } });
-                await msg.edit({ embeds: [montarEmbedFicha(char)] });
-            }
-        };
-
-        client.on('interactionCreate', modalHandler);
-        setTimeout(() => { client.off('interactionCreate', modalHandler); }, 600000);
     }
 
     else if (command === 'resgatarforja') {
