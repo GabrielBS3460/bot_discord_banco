@@ -118,9 +118,8 @@ const DADOS = {
         };
 
         if (nd <= 4) {
-            if (d100 <= 50) return { val: 0 };
-            if (d100 <= 70) return { val: roll("1d6") * 10 }; 
-            if (d100 <= 95) return { val: roll("1d6") * 20 }; 
+            if (d100 <= 20) return { val: roll("1d6") * 10 }; 
+            if (d100 <= 50) return { val: roll("1d6") * 20 }; 
             return { val: roll("2d3") * 40 };
         }
         else if (nd <= 10) {
