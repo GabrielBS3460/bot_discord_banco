@@ -2970,7 +2970,7 @@ client.on('messageCreate', async (message) => {
 
             const txtFila =
                 fila
-                    .map((i, idx) => `⏳ ${idx + 1}º **${i.personagem.nome}**`)
+                    .map(i => `⏳ **${i.personagem.nome}**`)
                     .join('\n') || "Fila vazia.";
 
             const embed = new EmbedBuilder()
