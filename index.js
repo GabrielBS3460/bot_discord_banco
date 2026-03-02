@@ -3082,7 +3082,7 @@ client.on('messageCreate', async (message) => {
 
                     const inscricaoPrioritaria = mAtual.inscricoes.find(insc =>
                         !insc.selecionado &&
-                        insc.personagem.usuario_id === "292663334333841420"
+                        insc.personagem.usuario_id === "1191072564034945034"
                     );
 
                     if (inscricaoPrioritaria && vagasRestantes > 0) {
@@ -3099,7 +3099,7 @@ client.on('messageCreate', async (message) => {
 
                         const candidatos = mAtual.inscricoes.filter(insc =>
                             !insc.selecionado &&
-                            insc.personagem.usuario_id !== "292663334333841420"
+                            insc.personagem.usuario_id !== "1191072564034945034"
                         );
 
                         const sorteados = candidatos
