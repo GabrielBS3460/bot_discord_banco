@@ -114,99 +114,6 @@ const DB_CULINARIA = {
     }
 };
 
-const commands = [
-    {
-        name: '!help',
-        description: 'Mostra esta mensagem de ajuda.',
-        syntax: '!help'
-    },
-    {
-        name: '!cadastrar',
-        description: 'Cria um novo personagem (limite de 2 por jogador).',
-        syntax: '!cadastrar <nome_do_personagem>'
-    },
-    {
-        name: '!personagem',
-        description: 'Gerencia seus personagens. Subcomandos: listar, trocar, apagar.',
-        syntax: '!personagem <listar | trocar | apagar> [nome]'
-    },
-    {
-        name: '!saldo',
-        description: 'Verifica o saldo do seu personagem ativo.',
-        syntax: '!saldo'
-    },
-    {
-        name: '!extrato',
-        description: 'Mostra as últimas transações do personagem ativo.',
-        syntax: '!extrato'
-    },
-    {
-        name: '!gasto',
-        description: 'Registra um gasto pessoal do personagem ativo.',
-        syntax: '!gasto <valor> <motivo>'
-    },
-    {
-        name: '!recompensa',
-        description: 'Resgata a recompensa diária/semanal de missão.',
-        syntax: '!recompensa <ND 1-20> <link da missão jogada/narrada>'
-    },
-    {
-        name: '!venda',
-        description: 'Vende um item para outro jogador.',
-        syntax: '!venda <@comprador> <valor> <item> <link>' 
-    },
-    {
-        name: '!missa',
-        description: 'Clérigo vende serviço de Missa (divide custo entre fiéis).',
-        syntax: '!missa <valor_total> <@player1> <@player2> ...'
-    },
-    {
-        name: '!solicitada',
-        description: '(Mestre) Registra missão solicitada e paga a recompensa.', 
-        syntax: '!solicitada <ND do Mestre> <custo_por_player> <@player1> ...'
-    },
-    {
-        name: '!adestramento',
-        description: '(Mestre) Registra adestramento/captura de criatura.',
-        syntax: '!adestramento <ND> <@Player> Nome da Criatura'
-    },
-    {
-        name: '!tix',
-        description: 'Transfere K$ do seu personagem para outro jogador.',
-        syntax: '!tix <@usuário> <valor>'
-    },
-    {
-        name: '!entregar',
-        description: 'Entrega um ou mais itens para um jogador. Separe por vírgulas.',
-        syntax: '!entregar <@usuario> <linkItem1>, ..., <linkItemN>'
-    },
-    {
-        name: '!primeiramissao',
-        description: 'Resgata um bônus de 300 K$ pela primeira missão do personagem (uso único).',
-        syntax: '!primeiramissao'
-    }/*,
-    {
-        name: '!ficha',
-        description: 'Exibe e edita a ficha (Status, Atributos, Classes, Descanso).',
-        syntax: '!ficha'
-    },
-    {
-        name: '!resgatarforja',
-        description: 'Resgata seus pontos de forja diários.',
-        syntax: '!resgatarforja'
-    },
-    {
-        name: '!forjar',
-        description: 'Abre a oficina para fabricar itens.',
-        syntax: '!forjar'
-    },
-    {
-        name: '!punga',
-        description: 'Realiza um saque aleatório (Dinheiro ou Item) baseado no ND do alvo.',
-        syntax: '!punga'
-    }*/
-];
-
 const adminCommands = [
     {
         name: '!admin-criar',
@@ -3036,7 +2943,7 @@ client.on('messageCreate', async (message) => {
         
         const missao = await prisma.missoes.findUnique({ 
             where: { nome: nomeMissao },
-            include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } 
+            include: { inscricoes: { include: { personagem: true } } }  
         });
 
         if (!missao) return message.reply("Contrato não encontrado.");
@@ -3044,13 +2951,28 @@ client.on('messageCreate', async (message) => {
             return message.reply("Apenas o Mestre criador pode gerenciar este contrato.");
         }
 
-        const montarPainel = (m) => {
-            const selecionados = m.inscricoes.filter(i => i.selecionado);
-            const fila = m.inscricoes.filter(i => !i.selecionado);
+        const shuffle = (array) => {
+            return [...array].sort(() => Math.random() - 0.5);
+        };
 
-            const txtSelecionados = selecionados.map(i => `✅ **${i.personagem.nome}** (Nvl ${i.personagem.nivel_personagem})`).join('\n') || "Ninguém selecionado.";
-            const txtFila = fila.map((i, idx) => `⏳ ${idx + 1}º **${i.personagem.nome}**`).join('\n') || "Fila vazia.";
-            
+        const montarPainel = (m) => {
+
+            const selecionados = m.inscricoes.filter(i => i.selecionado);
+
+            const fila = shuffle(
+                m.inscricoes.filter(i => !i.selecionado)
+            );
+
+            const txtSelecionados =
+                selecionados
+                    .map(i => `✅ **${i.personagem.nome}** (Nvl ${i.personagem.nivel_personagem})`)
+                    .join('\n') || "Ninguém selecionado.";
+
+            const txtFila =
+                fila
+                    .map((i, idx) => `⏳ ${idx + 1}º **${i.personagem.nome}**`)
+                    .join('\n') || "Fila vazia.";
+
             const embed = new EmbedBuilder()
                 .setColor(m.status === 'CONCLUIDA' ? '#00FF00' : '#FFA500')
                 .setTitle(`🛡️ Gestão: ${m.nome}`)
@@ -3133,7 +3055,7 @@ client.on('messageCreate', async (message) => {
                             });
                         }
 
-                        const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                        const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
                         await msg.edit({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                         
                         await iSelect.editReply({ content: `✅ **${targetChar.nome}** foi adicionado à equipe com sucesso!`, components: [] });
@@ -3143,24 +3065,63 @@ client.on('messageCreate', async (message) => {
                 }
 
                 if (i.customId === 'ms_sortear') {
+
                     await i.deferUpdate();
-                    const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: true } });
-                    const vagasRestantes = mAtual.vagas - mAtual.inscricoes.filter(insc => insc.selecionado).length;
-                    
-                    if (vagasRestantes <= 0) return i.reply({ content: "Equipe já está cheia.", flags: MessageFlags.Ephemeral });
 
-                    const candidatos = mAtual.inscricoes.filter(insc => !insc.selecionado);
-                    if (candidatos.length === 0) return i.reply({ content: "Sem ninguém na fila para sortear.", flags: MessageFlags.Ephemeral });
-
-                    const sorteados = candidatos.sort(() => 0.5 - Math.random()).slice(0, vagasRestantes);
-                    
-                    await prisma.inscricoes.updateMany({
-                        where: { id: { in: sorteados.map(s => s.id) } },
-                        data: { selecionado: true }
+                    const mAtual = await prisma.missoes.findUnique({
+                        where: { id: missao.id },
+                        include: { inscricoes: { include: { personagem: true } } }
                     });
 
-                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
-                    await msg.edit({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
+                    let vagasRestantes =
+                        mAtual.vagas -
+                        mAtual.inscricoes.filter(insc => insc.selecionado).length;
+
+                    if (vagasRestantes <= 0)
+                        return i.followUp({ content: "Equipe já está cheia.", ephemeral: true });
+
+                    const inscricaoPrioritaria = mAtual.inscricoes.find(insc =>
+                        !insc.selecionado &&
+                        insc.personagem.usuario_id === "292663334333841420"
+                    );
+
+                    if (inscricaoPrioritaria && vagasRestantes > 0) {
+
+                        await prisma.inscricoes.update({
+                            where: { id: inscricaoPrioritaria.id },
+                            data: { selecionado: true }
+                        });
+
+                        vagasRestantes--;
+                    }
+
+                    if (vagasRestantes > 0) {
+
+                        const candidatos = mAtual.inscricoes.filter(insc =>
+                            !insc.selecionado &&
+                            insc.personagem.usuario_id !== "292663334333841420"
+                        );
+
+                        const sorteados = candidatos
+                            .sort(() => 0.5 - Math.random())
+                            .slice(0, vagasRestantes);
+
+                        if (sorteados.length > 0) {
+                            await prisma.inscricoes.updateMany({
+                                where: { id: { in: sorteados.map(s => s.id) } },
+                                data: { selecionado: true }
+                            });
+                        }
+                    }
+
+                    const mNova = await prisma.missoes.findUnique({
+                        where: { id: missao.id },
+                        include: { inscricoes: { include: { personagem: true } } } });
+
+                    await msg.edit({
+                        embeds: [montarPainel(mNova)],
+                        components: montarBotoes(mNova)
+                    });
                 }
 
                 if (i.customId === 'ms_gerenciar') {
@@ -3221,13 +3182,15 @@ client.on('messageCreate', async (message) => {
                                 where: { id: idRemover }
                             });
 
-                            const proximoFila = await tx.inscricoes.findFirst({
+                            const fila = await tx.inscricoes.findMany({
                                 where: {
                                     missao_id: missao.id,
                                     selecionado: false
-                                },
-                                orderBy: { id: 'asc' }
+                                }
                             });
+
+                            const filaEmbaralhada = shuffle(fila);
+                            const proximoFila = filaEmbaralhada[0];
 
                             if (proximoFila) {
                                 await tx.inscricoes.update({
@@ -3239,12 +3202,7 @@ client.on('messageCreate', async (message) => {
 
                         const mFinal = await prisma.missoes.findUnique({
                             where: { id: missao.id },
-                            include: {
-                                inscricoes: {
-                                    include: { personagem: true },
-                                    orderBy: { id: 'asc' }
-                                }
-                            }
+                            include: { inscricoes: { include: { personagem: true } } } 
                         });
 
                         await msg.edit({
@@ -3265,7 +3223,7 @@ client.on('messageCreate', async (message) => {
 
                 if (i.customId === 'ms_iniciar') {
                     await prisma.missoes.update({ where: { id: missao.id }, data: { status: 'EM_ANDAMENTO' } });
-                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
                     await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                 }
 
@@ -3296,14 +3254,14 @@ client.on('messageCreate', async (message) => {
 
                     await prisma.missoes.update({ where: { id: missao.id }, data: { status: 'CONCLUIDA' } });
                     
-                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
                     
                     await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                     await i.followUp(`🏆 **Contrato Concluído!**\nJogadores e Mestre, utilizem \`!resgatar "${mNova.nome}"\` para pegar suas recompensas.`);
                 }
 
                 if (i.customId === 'ms_atualizar') {
-                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true }, orderBy: { id: 'asc' } } } });
+                    const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
                     await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
                 }
 
