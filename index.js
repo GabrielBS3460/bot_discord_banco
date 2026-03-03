@@ -3229,7 +3229,19 @@ client.on('messageCreate', async (message) => {
             const inscId = parseInt(parts[2]);
             const ndMissao = parseInt(parts[3]);
             
-            const pontosGanhos = parseInt(i.fields.getTextInputValue('inp_pontos'));
+            let pontosInput = i.fields.getTextInputValue('inp_pontos')
+                .replace(',', '.')  // aceita 3,5
+                .trim();
+
+            const pontosGanhos = parseFloat(pontosInput);
+
+            if (isNaN(pontosGanhos) || pontosGanhos < 0) {
+                return i.reply({
+                    content: "Valor inválido. Use apenas números (ex: 3,5 ou 3.5).",
+                    flags: MessageFlags.Ephemeral
+                });
+            }   
+                    
             if (isNaN(pontosGanhos) || pontosGanhos < 0) return i.reply({ content: "Valor inválido.", flags: MessageFlags.Ephemeral });
 
             const ouroGanho = ndMissao * 100;
