@@ -3148,12 +3148,13 @@ client.on('messageCreate', async (message) => {
 
                         const rowMenu = new ActionRowBuilder().addComponents(menu);
 
-                        await i.editReply({
+                        const reply = await i.editReply({
                             content: "Quem deve ser removido? O próximo da fila entrará automaticamente.",
-                            components: [rowMenu]
+                            components: [rowMenu],
+                            fetchReply: true
                         });
 
-                        const menuCollector = i.message.createMessageComponentCollector({
+                        const menuCollector = reply.createMessageComponentCollector({
                             filter: interaction =>
                                 interaction.user.id === i.user.id &&
                                 interaction.customId === 'menu_remover_jogador',
