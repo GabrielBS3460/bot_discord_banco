@@ -2544,7 +2544,7 @@ client.on('messageCreate', async (message) => {
 
             const ganhoDiario = char.pontos_forja_max; 
             
-            const limiteAcumulo = ganhoDiario * (patamar + 1);
+            const limiteAcumulo = ganhoDiario * (patamar + 3);
             
             let novoTotal = char.pontos_forja_atual + ganhoDiario;
             
