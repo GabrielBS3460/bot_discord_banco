@@ -233,16 +233,21 @@ const client = new Client({
     ]
 });
 
-process.on("unhandledRejection", (reason, promise) => {
+process.on("unhandledRejection", (reason) => {
     console.error("Unhandled Rejection:", reason);
+    process.exit(1);
 });
 
 process.on("uncaughtException", (err) => {
     console.error("Uncaught Exception:", err);
+    process.exit(1);
 });
 
-client.on("error", (err) => {
-    console.error("Discord Client Error:", err);
+client.on("error", console.error);
+client.on("shardError", console.error);
+client.on("disconnect", () => {
+    console.log("Bot desconectado.");
+    process.exit(1);
 });
 
 client.once('ready', () => {
