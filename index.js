@@ -275,7 +275,12 @@ client.on('messageCreate', async (message) => {
                 verificarLimiteMestre,
                 calcularNivelEPatamar,
                 gerarRecompensa,
-                PungaSystem
+                PungaSystem,
+                DB_CULINARIA,
+                CUSTO_FORJA,
+                BICHOS_T20,
+                ID_CARGO_ADMIN,
+                ID_CARGO_MOD
             });
 
         } catch (err) {
