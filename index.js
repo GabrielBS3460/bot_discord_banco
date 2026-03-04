@@ -99,6 +99,13 @@ const BICHOS_T20 = {
     "95": "Crias do Gordolembas", "96": "Cogumelo Anão Druida", "97": "Paraelemental do Magma", "98": "Armadilefante", "99": "Mastim das Sombras"
 };
 
+const CUSTO_NIVEL = {
+    3: 4, 4: 5,
+    5: 6, 6: 7, 7: 8, 8: 9, 9: 10, 10: 10,
+    11: 10, 12: 10, 13: 10, 14: 10, 15: 10, 16: 10
+};
+
+
 async function getPersonagemAtivo(discordId) {
     const usuario = await prisma.usuarios.findUnique({
         where: { discord_id: discordId },
@@ -280,7 +287,8 @@ client.on('messageCreate', async (message) => {
                 CUSTO_FORJA,
                 BICHOS_T20,
                 ID_CARGO_ADMIN,
-                ID_CARGO_MOD
+                ID_CARGO_MOD,
+                CUSTO_NIVEL
             });
 
         } catch (err) {

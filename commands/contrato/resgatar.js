@@ -15,7 +15,8 @@ module.exports = {
     async execute({
         message,
         prisma,
-        getPersonagemAtivo
+        getPersonagemAtivo,
+        CUSTO_NIVEL
     }) {
 
         const char = await getPersonagemAtivo(message.author.id);
