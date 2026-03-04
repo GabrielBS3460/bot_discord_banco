@@ -26,8 +26,7 @@ model Personagens {
   ultimo_resgate_manavitra  DateTime?
   
   nivel_personagem Int @default(3) 
-  pontos_missao Decimal @default(0) 
-   
+  pontos_missao Decimal @default(0)  
   vida_atual    Int     @default(10)
   vida_max      Int     @default(10)
   vida_temp     Int     @default(0)
