@@ -218,9 +218,6 @@ client.once('ready', () => {
     console.log(`Logado como ${client.user.tag}!`);
 });
 
-const fs = require("fs");
-const path = require("path");
-
 const commandsPath = path.join(__dirname, "commands");
 const commandFolders = fs.readdirSync(commandsPath);
 
