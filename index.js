@@ -218,31 +218,25 @@ client.once('ready', () => {
     console.log(`Logado como ${client.user.tag}!`);
 });
 
-const commandFolders = [
-    "personagem",
-    "contrato",
-    "sistemas",
-    "atividades",
-    "mestre"
-];
+const fs = require("fs");
+const path = require("path");
+
+const commandsPath = path.join(__dirname, "commands");
+const commandFolders = fs.readdirSync(commandsPath);
 
 for (const folder of commandFolders) {
 
-    const folderPath = path.join(__dirname, folder);
-
-    const commandFiles = fs
-        .readdirSync(folderPath)
-        .filter(file => file.endsWith(".js"));
+    const folderPath = path.join(commandsPath, folder);
+    const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith(".js"));
 
     for (const file of commandFiles) {
 
-        const command = require(`./${folder}/${file}`);
+        const command = require(path.join(folderPath, file));
 
-        if (!command.name) continue;
+        if (command.name) {
+            client.commands.set(command.name, command);
+        }
 
-        client.commands.set(command.name, command);
-
-        console.log(`Comando carregado: ${command.name}`);
     }
 }
 
