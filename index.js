@@ -3220,6 +3220,7 @@ client.on('messageCreate', async (message) => {
                     }
 
                     if (i.customId === 'ms_concluir') {
+                        await i.deferUpdate();
                         const dmChar = await getPersonagemAtivo(missao.criador_id);
 
                         if (dmChar) {
@@ -3248,7 +3249,7 @@ client.on('messageCreate', async (message) => {
                         
                         const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
                         
-                        await i.update({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
+                        await msg.edit({embeds: [montarPainel(mNova)],components: montarBotoes(mNova)}).catch(()=>{});                        
                         await i.followUp(`🏆 **Contrato Concluído!**\nJogadores e Mestre, utilizem \`!resgatar "${mNova.nome}"\` para pegar suas recompensas.`);
                     }
 
