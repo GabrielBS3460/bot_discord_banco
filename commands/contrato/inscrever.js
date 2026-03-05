@@ -49,17 +49,7 @@ module.exports = {
                 ).catch(()=>{});
             }
 
-            // 🔒 transaction para evitar race condition
             await prisma.$transaction(async (tx) => {
-
-                const inscritos = await tx.inscricoes.count({
-                    where: { missao_id: missao.id }
-                });
-
-                if (inscritos >= missao.vagas) {
-                    throw new Error("SEM_VAGAS");
-                }
-
                 await tx.inscricoes.create({
                     data: {
                         missao_id: missao.id,
