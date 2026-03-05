@@ -246,7 +246,7 @@ module.exports = {
                 
                     const inscricaoPrioritaria = mAtual.inscricoes.find(insc =>
                         !insc.selecionado &&
-                        insc.personagem.usuario_id === "1191072564034945034"
+                        insc.personagem.usuario_id === "292663334333841420"
                     );
                 
                     if (inscricaoPrioritaria && vagasRestantes > 0) {
@@ -263,7 +263,7 @@ module.exports = {
                 
                         const candidatos = mAtual.inscricoes.filter(insc =>
                             !insc.selecionado &&
-                            insc.personagem.usuario_id !== "1191072564034945034"
+                            insc.personagem.usuario_id !== "292663334333841420"
                         );
                 
                         const sorteados = candidatos
