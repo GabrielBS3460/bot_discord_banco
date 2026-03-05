@@ -21,6 +21,14 @@ module.exports = {
         if (!char)
             return message.reply("Sem personagem.");
 
+        const listaPericias = char.pericias || [];
+
+        if (!listaPericias.includes("Ofício Cozinheiro")) {
+            return message.reply(
+                "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!"
+            );
+        }
+
         const limiteReceitas = Math.max(1, char.inteligencia + 1);
 
         const conhecidas = char.receitas_conhecidas || [];
