@@ -244,27 +244,7 @@ module.exports = {
                             flags: MessageFlags.Ephemeral
                         });
                 
-                    const inscricaoPrioritaria = mAtual.inscricoes.find(insc =>
-                        !insc.selecionado &&
-                        insc.personagem.usuario_id === "292663334333841420"
-                    );
-                
-                    if (inscricaoPrioritaria && vagasRestantes > 0) {
-                
-                        await prisma.inscricoes.update({
-                            where: { id: inscricaoPrioritaria.id },
-                            data: { selecionado: true }
-                        });
-                
-                        vagasRestantes--;
-                    }
-                
                     if (vagasRestantes > 0) {
-                
-                        const candidatos = mAtual.inscricoes.filter(insc =>
-                            !insc.selecionado &&
-                            insc.personagem.usuario_id !== "292663334333841420"
-                        );
                 
                         const sorteados = candidatos
                             .sort(() => 0.5 - Math.random())
