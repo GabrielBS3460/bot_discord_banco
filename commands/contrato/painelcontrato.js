@@ -245,11 +245,15 @@ module.exports = {
                         });
                 
                     if (vagasRestantes > 0) {
-                
+
+                        const candidatos = mAtual.inscricoes.filter(insc =>
+                            !insc.selecionado
+                        );
+
                         const sorteados = candidatos
                             .sort(() => 0.5 - Math.random())
                             .slice(0, vagasRestantes);
-                
+
                         if (sorteados.length > 0) {
                             await prisma.inscricoes.updateMany({
                                 where: { id: { in: sorteados.map(s => s.id) } },
