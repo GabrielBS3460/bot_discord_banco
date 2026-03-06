@@ -10,6 +10,7 @@ const {
 
 module.exports = {
     name: "resgatar",
+    
     async execute({
         message,
         prisma,

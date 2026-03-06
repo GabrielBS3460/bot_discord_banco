@@ -51,6 +51,7 @@ module.exports = {
                     {cmd:"!feirinha", desc:"Mercado semanal.", syntax:"!feirinha"},
                     {cmd:"!cozinhar", desc:"Prepara pratos.", syntax:"!cozinhar"},
                     {cmd:"!aprenderculinaria", desc:"Aprende receitas.", syntax:"!aprenderculinaria"},
+                    {cmd: '!venda-npc',desc: 'Vende um item  para um NPC.',syntax: '!venda-npc <valor> <link do item>'},
                     {cmd:"!venda-ingredientes", desc:"Venda entre jogadores.", syntax:"!venda-ingredientes @player"}
                 ]
             },
