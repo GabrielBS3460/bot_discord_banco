@@ -53,11 +53,6 @@ const DADOS = {
             "Cetro de Prata", "Foco de Matéria Vermelha", 
             "Bolsa de Pó", "Cetro Elemental", "Costela de Lich", "Dedo de Ente", "Tomo Hermético"
         ],
-        ACESSORIOS: [
-            "Mochila de Aventureiro", "Algibeira Mordedora", "Algibeira Provedora", "Cinto de Poções",
-            "Relógio de Algibeira", "Óculos de Cristal", "Pingente da Devoção", "Vial de Água Benta Infinita",
-            "Manoplas da Força", "Anel de Proteção", "Mochila a Vapor", "Membro Mecânico"
-        ],
         CONSUMIVEIS: [
             "Bálsamo restaurador", "Essência de Mana", "Pergaminho (Aleatório)", 
             "Bomba de Fumaça", "Granada", "Pó de Cristal", 
