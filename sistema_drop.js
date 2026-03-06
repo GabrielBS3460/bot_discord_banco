@@ -12,8 +12,7 @@ const DADOS = {
         } else if (nd <= 10) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 70) return { tipo: 'SUPERIOR', slots: 1 };
-            if (roll <= 95) return { tipo: 'SUPERIOR', slots: 2 }; 
-            return { tipo: 'MAGIC', poder: 1 }; 
+            return { tipo: 'SUPERIOR', slots: 2 };
         } else if (nd <= 16) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 85) return { tipo: 'SUPERIOR', slots: 3 };
