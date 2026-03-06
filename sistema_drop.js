@@ -54,7 +54,7 @@ const DADOS = {
             "Bolsa de Pó", "Cetro Elemental", "Costela de Lich", "Dedo de Ente", "Tomo Hermético"
         ],
         ACESSORIOS: [
-            "Mochila de Carga", "Algibeira Mordedora", "Algibeira Provedora", "Cinto de Poções",
+            "Mochila de Aventureiro", "Algibeira Mordedora", "Algibeira Provedora", "Cinto de Poções",
             "Relógio de Algibeira", "Óculos de Cristal", "Pingente da Devoção", "Vial de Água Benta Infinita",
             "Manoplas da Força", "Anel de Proteção", "Mochila a Vapor", "Membro Mecânico"
         ],
