@@ -49,13 +49,12 @@ const DADOS = {
             "Armadura Completa", "Escudo Leve", "Escudo Pesado", "Escudo de Duelo", "Escudo de Couro", "Traje de Infiltrador"
         ],
         ESOTERICOS: [
-            "Cajado Arcano", "Varinha", "Medalhão Sagrado", "Orbe Cristalino", "Luva de Ferro de Guerra",
-            "Cetro de Prata", "Foco de Matéria Vermelha", 
+            "Cajado Arcano", "Varinha", "Medalhão Sagrado", "Orbe Cristalino", "Luva de Ferro",
             "Bolsa de Pó", "Cetro Elemental", "Costela de Lich", "Dedo de Ente", "Tomo Hermético"
         ],
         CONSUMIVEIS: [
             "Bálsamo restaurador", "Essência de Mana", "Pergaminho (Aleatório)", 
-            "Bomba de Fumaça", "Granada", "Pó de Cristal", 
+            "Bomba de Fumaça", "Granada", "Pó Azul", 
             "Venenos: Peçonha de Serpente", "Venenos: Essência de Sszzaas"
         ]
     },
