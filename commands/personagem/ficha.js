@@ -155,7 +155,7 @@ module.exports = {
             const msg = await interaction.reply({
                 embeds: [montarEmbedFicha(char)],
                 components: [getBotoes(), row2],
-                withResponse: true
+                fetchReply: true
             });
 
             const collector = msg.createMessageComponentCollector({
