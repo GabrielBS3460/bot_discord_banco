@@ -111,9 +111,15 @@ module.exports = {
                     .setStyle(ButtonStyle.Danger)
                     .setDisabled(m.status === "CONCLUIDA"),
                 new ButtonBuilder()
+                    .setCustomId("ms_alterar_vagas")
+                    .setLabel("Vagas")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("🔢")
+                    .setDisabled(m.status === "CONCLUIDA"),    
+                new ButtonBuilder()
                     .setCustomId("ms_atualizar")
                     .setLabel("🔄 Atualizar Lista")
-                    .setStyle(ButtonStyle.Secondary)
+                    .setStyle(ButtonStyle.Secondary)    
             );
 
             return [row1, row2];
@@ -323,6 +329,69 @@ module.exports = {
                         }
                     });
 
+                    return;
+                }
+
+                if (iBtn.customId === 'ms_alterar_vagas') {
+                    const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id } });
+
+                    const modalCustomId = `modal_vagas_${missao.id}_${Date.now()}`;
+                    const modal = new ModalBuilder()
+                        .setCustomId(modalCustomId)
+                        .setTitle('Alterar Número de Vagas')
+                        .addComponents(
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('inp_vagas')
+                                    .setLabel('Novo limite de jogadores')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setRequired(true)
+                                    .setValue(String(mAtual.vagas))
+                            )
+                        );
+
+                    await iBtn.showModal(modal);
+
+                    try {
+                        const modalSubmit = await iBtn.awaitModalSubmit({
+                            filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
+                            time: 60000
+                        });
+
+                        await modalSubmit.deferUpdate();
+
+                        const novasVagas = parseInt(modalSubmit.fields.getTextInputValue('inp_vagas'));
+
+                        if (isNaN(novasVagas) || novasVagas <= 0) {
+                            return modalSubmit.followUp({ 
+                                content: "🚫 Valor inválido. Digite um número maior que zero.", 
+                                ephemeral: true 
+                            });
+                        }
+
+                        await prisma.missoes.update({
+                            where: { id: missao.id },
+                            data: { vagas: novasVagas }
+                        });
+
+                        const mFinal = await prisma.missoes.findUnique({
+                            where: { id: missao.id },
+                            include: { inscricoes: { include: { personagem: true } } }
+                        });
+
+                        await interaction.editReply({
+                            embeds: [montarPainel(mFinal)],
+                            components: montarBotoes(mFinal)
+                        });
+
+                        await modalSubmit.followUp({ 
+                            content: `✅ Limite de vagas alterado para **${novasVagas}** com sucesso!`, 
+                            ephemeral: true 
+                        });
+
+                    } catch (err) {
+                        console.error("Erro ao alterar vagas:", err);
+                    }
                     return;
                 }
 
