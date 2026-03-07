@@ -1,94 +1,85 @@
-const {
-    EmbedBuilder,
-    ActionRowBuilder,
-    ButtonBuilder,
-    ButtonStyle
-} = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("help")
+        .setDescription("Abre a Central de Ajuda interativa com todos os comandos do sistema."),
 
-    name: "help",
-
-    async execute({ message, client }) {
-
+    async execute({ interaction, client }) {
         const CATEGORIAS = {
-
             personagem: {
                 emoji: "👤",
                 titulo: "Personagem & Economia",
                 descricao: "Gerencie sua ficha e economia.",
                 comandos: [
-                    {cmd:"!cadastrar", desc:"Cria um personagem.", syntax:"!cadastrar <nome>"},
-                    {cmd:"!personagem", desc:"Gerencia personagens.", syntax:"!personagem <listar|trocar|apagar>"},
-                    {cmd:"!ficha", desc:"Mostra sua ficha.", syntax:"!ficha"},
-                    {cmd:"!saldo", desc:"Mostra seu saldo.", syntax:"!saldo"},
-                    {cmd:"!extrato", desc:"Histórico financeiro.", syntax:"!extrato"},
-                    {cmd:"!tix", desc:"Transferência entre jogadores.", syntax:"!tix <@usuario> <valor>"},
-                    {cmd:"!gasto", desc:"Registra gasto.", syntax:"!gasto <valor> <motivo>"}
+                    {cmd: "/cadastrar", desc: "Cria um personagem.", syntax: "/cadastrar nome:<nome>"},
+                    {cmd: "/personagem", desc: "Gerencia personagens (listar, trocar, apagar).", syntax: "/personagem <subcomando>"},
+                    {cmd: "/ficha", desc: "Mostra sua ficha.", syntax: "/ficha"},
+                    {cmd: "/saldo", desc: "Mostra seu saldo atual.", syntax: "/saldo"},
+                    {cmd: "/extrato", desc: "Histórico financeiro do personagem.", syntax: "/extrato"},
+                    {cmd: "/tix", desc: "Transferência de K$ entre jogadores.", syntax: "/tix destinatario:@usuario valor:<valor>"},
+                    {cmd: "/gasto", desc: "Registra um gasto no seu extrato.", syntax: "/gasto valor:<valor> motivo:<motivo>"}
                 ]
             },
-
             contrato: {
                 emoji: "🛡️",
                 titulo: "Sistema de Contratos",
-                descricao: "Participe de aventuras.",
+                descricao: "Participe de aventuras e missões.",
                 comandos: [
-                    {cmd:"!inscrever", desc:"Se candidata a um contrato.", syntax:"!inscrever"},
-                    {cmd:"!resgatar", desc:"Resgata recompensa.", syntax:'!resgatar "Nome do Contrato"'},
-                    {cmd:"!drop", desc:"Gera loot por ND.", syntax:"!drop <ND>"},
-                    {cmd:"!avaliar", desc:"Avalia mestre.", syntax:"!avaliar @Mestre <link>"}
+                    {cmd: "/inscrever", desc: "Se candidata a um contrato aberto.", syntax: "/inscrever"},
+                    {cmd: "/resgatar", desc: "Resgata a recompensa de um contrato.", syntax: '/resgatar contrato:"Nome"'},
+                    {cmd: "/drop", desc: "Gera loot aleatório baseado no ND.", syntax: "/drop nd:<ND>"},
+                    {cmd: "/avaliar", desc: "Avalia o mestre da sessão.", syntax: "/avaliar mestre:@usuario link:<link>"}
                 ]
             },
-
             sistemas: {
                 emoji: "⚒️",
                 titulo: "Ofícios & Comércio",
-                descricao: "Crafting e mercado.",
+                descricao: "Crafting, culinária e mercado.",
                 comandos: [
-                    {cmd:"!forjar", desc:"Cria itens.", syntax:"!forjar"},
-                    {cmd:"!setforja", desc:"Configura forja.", syntax:"!setforja <poderes>"},
-                    {cmd:"!resgatarforja", desc:"Resgata forja diária.", syntax:"!resgatarforja"},
-                    {cmd:"!feirinha", desc:"Mercado semanal.", syntax:"!feirinha"},
-                    {cmd:"!cozinhar", desc:"Prepara pratos.", syntax:"!cozinhar"},
-                    {cmd:"!aprenderculinaria", desc:"Aprende receitas.", syntax:"!aprenderculinaria"},
-                    {cmd: '!venda-npc',desc: 'Vende um item  para um NPC.',syntax: '!venda-npc <valor> <link do item>'},
-                    {cmd:"!venda-ingredientes", desc:"Venda entre jogadores.", syntax:"!venda-ingredientes @player"}
+                    {cmd: "/forjar", desc: "Cria itens usando pontos de forja.", syntax: "/forjar"},
+                    {cmd: "/setforja", desc: "Configura seus poderes de forja.", syntax: "/setforja poderes:<texto>"},
+                    {cmd: "/resgatarforja", desc: "Resgata seus pontos de forja diários.", syntax: "/resgatarforja"},
+                    {cmd: "/feirinha", desc: "Mercado semanal de ingredientes.", syntax: "/feirinha"},
+                    {cmd: "/cozinhar", desc: "Prepara pratos com bônus.", syntax: "/cozinhar"},
+                    {cmd: "/aprenderculinaria", desc: "Aprende novas receitas.", syntax: "/aprenderculinaria"},
+                    {cmd: "/venda-npc", desc: "Vende um item para um NPC por K$.", syntax: "/venda-npc valor:<valor> link:<link>"},
+                    {cmd: "/venda-ingredientes", desc: "Venda P2P (entre jogadores).", syntax: "/venda-ingredientes comprador:@usuario"},
+                    {cmd: "/venda", desc: "Propõe venda de qualquer item a um jogador.", syntax: "/venda comprador:@usuario item:<nome> valor:<valor> link:<link>"}
                 ]
             },
-
             atividades: {
                 emoji: "🎲",
                 titulo: "Jogos & Interação",
-                descricao: "Atividades paralelas.",
+                descricao: "Atividades paralelas e minigames.",
                 comandos: [
-                    {cmd:"!apostar", desc:"Jogo do bicho.", syntax:"!apostar <valor> <tipo> <numero> <posicao>"},
-                    {cmd:"!punga", desc:"Roubo aleatório.", syntax:"!punga"}
+                    {cmd: "/apostar", desc: "Faz uma aposta no jogo do bicho.", syntax: "/apostar valor:<valor> tipo:<tipo> numero:<num>"},
+                    {cmd: "/punga", desc: "Tenta roubar K$ de um alvo aleatório.", syntax: "/punga"}
                 ]
             },
-
             mestre: {
                 emoji: "👑",
                 titulo: "Comandos de Mestre",
-                descricao: "Gerenciamento de contratos.",
+                descricao: "Gerenciamento de mesas e recompensas.",
                 comandos: [
-                    {cmd:"!criarcontrato", desc:"Cria contrato.", syntax:'!criarcontrato "Nome" <ND> <vagas>'},
-                    {cmd:"!painelcontrato", desc:"Gerencia contrato.", syntax:'!painelcontrato "Nome"'},
-                    {cmd:"!loot", desc:"Entrega recompensa.", syntax:"!loot @player <valor>"}
+                    {cmd: "/criarcontrato", desc: "Cria um novo contrato no mural.", syntax: '/criarcontrato nome:"Nome" nd:<ND> vagas:<num>'},
+                    {cmd: "/painelcontrato", desc: "Gerencia os inscritos do contrato.", syntax: '/painelcontrato nome:"Nome"'},
+                    {cmd: "/loot", desc: "Entrega K$ diretamente a um jogador.", syntax: "/loot jogador:@usuario valor:<valor>"},
+                    {cmd: "/solicitada", desc: "Registra missão solicitada e paga o grupo.", syntax: "/solicitada nd:<ND> custo:<valor> jogador1:@usuario ..."},
+                    {cmd: "/missa", desc: "Cobra o dízimo e transfere para o clérigo.", syntax: "/missa valor_total:<valor> fiel1:@usuario ..."}
                 ]
             }
-
         };
 
         const criarEmbedMenu = () => {
             return new EmbedBuilder()
                 .setColor("#2B2D31")
                 .setTitle("📘 Central de Ajuda")
-                .setDescription("Clique em uma categoria abaixo.")
+                .setDescription("O sistema foi atualizado para **Slash Commands** (`/`).\nClique em uma categoria abaixo para ver a nova sintaxe dos comandos.")
                 .setThumbnail(client.user.displayAvatarURL());
         };
 
         const criarEmbedCategoria = (cat) => {
-
             const lista = cat.comandos.map(c =>
                 `**${c.cmd}**\n${c.desc}\n\`${c.syntax}\``
             ).join("\n\n");
@@ -98,46 +89,39 @@ module.exports = {
                 .setTitle(`${cat.emoji} ${cat.titulo}`)
                 .setDescription(cat.descricao)
                 .addFields({
-                    name: "Comandos",
+                    name: "Comandos Disponíveis",
                     value: lista
                 });
         };
 
         const rowMenu = new ActionRowBuilder().addComponents(
-
             new ButtonBuilder().setCustomId("help_personagem").setLabel("Personagem").setEmoji("👤").setStyle(ButtonStyle.Primary),
-
             new ButtonBuilder().setCustomId("help_contrato").setLabel("Contrato").setEmoji("🛡️").setStyle(ButtonStyle.Primary),
-
             new ButtonBuilder().setCustomId("help_sistemas").setLabel("Sistemas").setEmoji("⚒️").setStyle(ButtonStyle.Primary),
-
             new ButtonBuilder().setCustomId("help_atividades").setLabel("Atividades").setEmoji("🎲").setStyle(ButtonStyle.Primary),
-
             new ButtonBuilder().setCustomId("help_mestre").setLabel("Mestre").setEmoji("👑").setStyle(ButtonStyle.Primary)
-
         );
 
         const rowVoltar = new ActionRowBuilder().addComponents(
-
             new ButtonBuilder()
                 .setCustomId("help_menu")
                 .setLabel("⬅ Voltar")
                 .setStyle(ButtonStyle.Secondary)
-
         );
 
-        const msg = await message.reply({
+        const msg = await interaction.reply({
             embeds: [criarEmbedMenu()],
-            components: [rowMenu]
+            components: [rowMenu],
+            ephemeral: true,
+            fetchReply: true
         });
 
         const collector = msg.createMessageComponentCollector({
-            filter: i => i.user.id === message.author.id,
-            time: 120000
+            filter: i => i.user.id === interaction.user.id,
+            time: 120000 
         });
 
         collector.on("collect", async i => {
-
             if (i.customId === "help_menu") {
                 return i.update({
                     embeds: [criarEmbedMenu()],
@@ -154,9 +138,13 @@ module.exports = {
                 embeds: [criarEmbedCategoria(cat)],
                 components: [rowVoltar]
             });
-
         });
 
+        collector.on("end", async () => {
+            try {
+                await interaction.editReply({ components: [] });
+            } catch (err) {
+            }
+        });
     }
-
 };
