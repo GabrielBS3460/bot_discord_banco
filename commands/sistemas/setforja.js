@@ -28,7 +28,8 @@ module.exports = {
                 "Ofício Alquimista",
                 "Ofício Cozinheiro",
                 "Ofício Alfaiate",
-                "Ofício Escriba"
+                "Ofício Escriba",
+                "Ofício Tatuador"
             ];
 
             const oficiosTreinados = pericias.filter(p =>

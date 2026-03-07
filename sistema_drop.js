@@ -12,8 +12,7 @@ const DADOS = {
         } else if (nd <= 10) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 70) return { tipo: 'SUPERIOR', slots: 1 };
-            if (roll <= 95) return { tipo: 'SUPERIOR', slots: 2 }; 
-            return { tipo: 'MAGIC', poder: 1 }; 
+            return { tipo: 'SUPERIOR', slots: 2 };
         } else if (nd <= 16) {
             if (roll <= 50) return { tipo: 'DINHEIRO' };
             if (roll <= 85) return { tipo: 'SUPERIOR', slots: 3 };
@@ -50,18 +49,12 @@ const DADOS = {
             "Armadura Completa", "Escudo Leve", "Escudo Pesado", "Escudo de Duelo", "Escudo de Couro", "Traje de Infiltrador"
         ],
         ESOTERICOS: [
-            "Cajado Arcano", "Varinha", "Medalhão Sagrado", "Orbe Cristalino", "Luva de Ferro de Guerra",
-            "Cetro de Prata", "Foco de Matéria Vermelha", 
+            "Cajado Arcano", "Varinha", "Medalhão Sagrado", "Orbe Cristalino", "Luva de Ferro",
             "Bolsa de Pó", "Cetro Elemental", "Costela de Lich", "Dedo de Ente", "Tomo Hermético"
-        ],
-        ACESSORIOS: [
-            "Mochila de Carga", "Algibeira Mordedora", "Algibeira Provedora", "Cinto de Poções",
-            "Relógio de Algibeira", "Óculos de Cristal", "Pingente da Devoção", "Vial de Água Benta Infinita",
-            "Manoplas da Força", "Anel de Proteção", "Mochila a Vapor", "Membro Mecânico"
         ],
         CONSUMIVEIS: [
             "Bálsamo restaurador", "Essência de Mana", "Pergaminho (Aleatório)", 
-            "Bomba de Fumaça", "Granada", "Pó de Cristal", 
+            "Bomba de Fumaça", "Granada", "Pó Azul", 
             "Venenos: Peçonha de Serpente", "Venenos: Essência de Sszzaas"
         ]
     },
