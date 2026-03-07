@@ -1,63 +1,49 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("loot")
+        .setDescription("Concede uma quantia de dinheiro (Loot) para um jogador.")
+        .addUserOption(option => 
+            option.setName("jogador")
+                .setDescription("O jogador que vai receber o loot")
+                .setRequired(true)
+        )
+        .addNumberOption(option => 
+            option.setName("valor")
+                .setDescription("Valor em Kwanzas a ser concedido")
+                .setRequired(true)
+                .setMinValue(0.1) 
+        ),
 
-    name: "loot",
+    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+        const destinatarioUser = interaction.options.getUser("jogador");
+        const valor = interaction.options.getNumber("valor");
 
-    async execute({
-        message,
-        args,
-        prisma,
-        getPersonagemAtivo,
-        formatarMoeda
-    }) {
-
-        const destinatarioUser = message.mentions.users.first();
-
-        if (!destinatarioUser || destinatarioUser.bot) {
-
-            return message.reply(
-                "Você precisa mencionar um jogador válido. Ex: `!loot @Player 500`"
-            );
-
-        }
-
-        const valorStr = args.find(
-            arg => !isNaN(parseFloat(arg)) && !arg.includes("<@")
-        );
-
-        const valor = parseFloat(valorStr);
-
-        if (isNaN(valor) || valor <= 0) {
-
-            return message.reply(
-                "Valor inválido. Digite um valor positivo maior que zero."
-            );
-
+        if (destinatarioUser.bot) {
+            return interaction.reply({
+                content: "🚫 Você não pode enviar loot para um bot.",
+                ephemeral: true
+            });
         }
 
         try {
-
-            const charDestinatario =
-                await getPersonagemAtivo(destinatarioUser.id);
+            const charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
 
             if (!charDestinatario) {
-
-                return message.reply(
-                    `O usuário **${destinatarioUser.username}** não tem personagem ativo.`
-                );
-
+                return interaction.reply({
+                    content: `🚫 O usuário **${destinatarioUser.username}** não tem um personagem ativo.`,
+                    ephemeral: true
+                });
             }
 
             await prisma.$transaction([
-
                 prisma.personagens.update({
                     where: { id: charDestinatario.id },
                     data: {
                         saldo: { increment: valor }
                     }
                 }),
-
                 prisma.transacao.create({
                     data: {
                         personagem_id: charDestinatario.id,
@@ -66,15 +52,11 @@ module.exports = {
                         tipo: "RECOMPENSA"
                     }
                 })
-
             ]);
 
             const embed = new EmbedBuilder()
-
                 .setColor("#F1C40F")
-
                 .setTitle("🏆 Loot Concedido")
-
                 .addFields(
                     {
                         name: "Jogador",
@@ -87,26 +69,22 @@ module.exports = {
                         inline: true
                     }
                 )
-
                 .setFooter({
-                    text: `Concedido por ${message.author.username}`
+                    text: `Concedido por ${interaction.user.username}`
                 })
-
                 .setTimestamp();
 
-            return message.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed] });
 
-        }
-        catch (err) {
-
+        } catch (err) {
             console.error("Erro no comando loot:", err);
 
-            return message.reply(
-                "Ocorreu um erro ao conceder o loot."
-            );
-
+            const erroMsg = { content: "❌ Ocorreu um erro ao conceder o loot.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(() => {});
+            } else {
+                await interaction.reply(erroMsg).catch(() => {});
+            }
         }
-
     }
-
 };

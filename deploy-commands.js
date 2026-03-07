@@ -14,7 +14,6 @@ for (const folder of commandFolders) {
     for (const file of commandFiles) {
         const command = require(path.join(folderPath, file));
         if ('data' in command && 'execute' in command) {
-            // Extrai o JSON gerado pelo SlashCommandBuilder
             commands.push(command.data.toJSON());
         }
     }
