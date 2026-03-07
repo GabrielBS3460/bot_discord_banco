@@ -155,7 +155,7 @@ module.exports = {
             const msg = await interaction.reply({
                 embeds: [montarEmbedFicha(char)],
                 components: [getBotoes(), row2],
-                fetchReply: true
+                withResponse: true
             });
 
             const collector = msg.createMessageComponentCollector({
@@ -598,7 +598,7 @@ module.exports = {
 
                         await prisma.personagens.update({
                             where: { id: char.id },
-                            data: { deslocamento: valor }
+                            data: { deslocamento: String(valor) }
                         });
 
                         char = await prisma.personagens.findUnique({ where: { id: char.id }, include: { classes: true } });
