@@ -156,8 +156,7 @@ module.exports = {
                                  `💰 **Kwanzas Gastos:** ${formatarMoeda(custoOuro)}\n` +
                                  `🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n` +
                                  `*Saldo Restante: ${formatarMoeda(charAtual.saldo - custoOuro)} | ` +
-                                 `Pts: ${(charAtual.pontos_forja_atual - custoPontosTotal).toFixed(1)}*`,
-                        ephemeral: true 
+                                 `Pts: ${(charAtual.pontos_forja_atual - custoPontosTotal).toFixed(1)}*`
                     });
 
                     await msg.edit({ components: [] }).catch(()=>{});
