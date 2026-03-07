@@ -17,15 +17,11 @@ const { Client,
     } = require('discord.js');
 
 const prisma = require('./database.js');
-
 const PungaSystem = require('./punga_sistema.js');
-
 const { gerarRecompensa } = require('./sistema_drop');
-
 const express = require('express');
 
 const ID_CARGO_ADMIN = "1463009702807081217"; 
-
 const ID_CARGO_MOD = '1462994696921157652';
 
 const CUSTO_FORJA = {
@@ -105,7 +101,6 @@ const CUSTO_NIVEL = {
     11: 10, 12: 10, 13: 10, 14: 10, 15: 10, 16: 10
 };
 
-
 async function getPersonagemAtivo(discordId) {
     const usuario = await prisma.usuarios.findUnique({
         where: { discord_id: discordId },
@@ -113,18 +108,6 @@ async function getPersonagemAtivo(discordId) {
     });
 
     return usuario?.personagemAtivo; 
-}
-
-function isSameWeek(date1, date2) {
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
-
-    const sundayD1 = new Date(d1.setDate(d1.getDate() - d1.getDay()));
-    const sundayD2 = new Date(d2.setDate(d2.getDate() - d2.getDay()));
-
-    return sundayD1.getFullYear() === sundayD2.getFullYear() &&
-           sundayD1.getMonth() === sundayD2.getMonth() &&
-           sundayD1.getDate() === sundayD2.getDate();
 }
 
 function formatarMoeda(valor) {
@@ -229,77 +212,57 @@ const commandsPath = path.join(__dirname, "commands");
 const commandFolders = fs.readdirSync(commandsPath);
 
 for (const folder of commandFolders) {
-
     const folderPath = path.join(commandsPath, folder);
     const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith(".js"));
 
     for (const file of commandFiles) {
-
         const command = require(path.join(folderPath, file));
-
-        if (command.name) {
-            client.commands.set(command.name, command);
+        
+        if ('data' in command && 'execute' in command) {
+            client.commands.set(command.data.name, command);
+        } else {
+            console.log(`[AVISO] O comando em ${file} não possui "data" ou "execute". Ele já foi convertido para Slash Command?`);
         }
-
     }
 }
 
-client.on('messageCreate', async (message) => {
+client.on('interactionCreate', async (interaction) => {
+    
+    if (!interaction.isChatInputCommand()) return;
+
+    const command = client.commands.get(interaction.commandName);
+
+    if (!command) {
+        console.error(`Nenhum comando combinando com ${interaction.commandName} foi encontrado.`);
+        return;
+    }
 
     try {
-
-        if (!message) return;
-        if (!message.content) return;
-        if (message.author?.bot) return;
-        if (!message.guild) return;
-
-        const prefix = "!";
-
-        if (!message.content.startsWith(prefix)) return;
-
-        const args = message.content
-            .slice(prefix.length)
-            .trim()
-            .split(/\s+/);
-
-        const command = args.shift()?.toLowerCase();
-
-        if (!command) return;
-
-        const cmd = client.commands.get(command);
-
-        if (!cmd) return;
-
-        try {
-
-            await cmd.execute({
-                message,
-                args,
-                prisma,
-                client,
-                getPersonagemAtivo,
-                formatarMoeda,
-                verificarLimiteMestre,
-                calcularNivelEPatamar,
-                gerarRecompensa,
-                PungaSystem,
-                DB_CULINARIA,
-                CUSTO_FORJA,
-                BICHOS_T20,
-                ID_CARGO_ADMIN,
-                ID_CARGO_MOD,
-                CUSTO_NIVEL
-            });
-
-        } catch (err) {
-
-            console.error(`Erro no comando ${command}:`, err);
-
-            message.reply("Ocorreu um erro ao executar este comando.").catch(()=>{});
-        }
+        await command.execute({
+            interaction,
+            prisma,
+            client,
+            getPersonagemAtivo,
+            formatarMoeda,
+            verificarLimiteMestre,
+            calcularNivelEPatamar,
+            gerarRecompensa,
+            PungaSystem,
+            DB_CULINARIA,
+            CUSTO_FORJA,
+            BICHOS_T20,
+            ID_CARGO_ADMIN,
+            ID_CARGO_MOD,
+            CUSTO_NIVEL
+        });
 
     } catch (err) {
-        console.error("Erro no messageCreate:", err);
+        console.error(`Erro no comando ${interaction.commandName}:`, err);
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'Ocorreu um erro ao executar este comando!', ephemeral: true }).catch(()=>{});
+        } else {
+            await interaction.reply({ content: 'Ocorreu um erro ao executar este comando!', ephemeral: true }).catch(()=>{});
+        }
     }
 });
         
@@ -311,7 +274,7 @@ app.get('/', (req, res) => {
 });
         
 app.listen(port, () => {
-    console.log(`Servidor de keep-alive rodando em http://localhost:${port}`);
+    console.log(`Servidor de keep-alive rodando na porta ${port}`);
 });
         
 client.login(process.env.DISCORD_TOKEN);

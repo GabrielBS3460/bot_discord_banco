@@ -1,41 +1,43 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("admin-criar")
+        .setDescription("Cria um personagem para um jogador (Apenas Admins/Mods).")
+        .addUserOption(option => 
+            option.setName("jogador")
+                .setDescription("O jogador que receberá o personagem")
+                .setRequired(true)
+        )
+        .addStringOption(option => 
+            option.setName("nome")
+                .setDescription("O nome do personagem")
+                .setRequired(true)
+        ),
 
-    name: "admin-criar",
-
-    async execute({
-        message,
-        args,
-        prisma,
-        ID_CARGO_ADMIN,
-        ID_CARGO_MOD
-    }) {
-
+    async execute({ interaction, prisma, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
         if (
-            !message.member.roles.cache.has(ID_CARGO_ADMIN) &&
-            !message.member.roles.cache.has(ID_CARGO_MOD)
+            !interaction.member.roles.cache.has(ID_CARGO_ADMIN) &&
+            !interaction.member.roles.cache.has(ID_CARGO_MOD)
         ) {
-            return message.reply("🚫 Você não tem permissão para usar este comando.");
+            return interaction.reply({ 
+                content: "🚫 Você não tem permissão para usar este comando.", 
+                ephemeral: true 
+            });
         }
 
-        const alvo = message.mentions.users.first();
+        const alvo = interaction.options.getUser("jogador");
+        const nomePersonagem = interaction.options.getString("nome");
 
-        const nomePersonagem = args
-            .filter(arg => !arg.includes("<@"))
-            .join(" ")
-            .trim();
-
-        if (!alvo || !nomePersonagem) {
-            return message.reply(
-                "Sintaxe incorreta!\n`!admin-criar <@jogador> <nome do personagem>`"
-            );
+        if (alvo.bot) {
+            return interaction.reply({ 
+                content: "🚫 Bots não podem possuir personagens.", 
+                ephemeral: true 
+            });
         }
 
         try {
-
             const resultado = await prisma.$transaction(async tx => {
-
                 await tx.usuarios.upsert({
                     where: { discord_id: alvo.id },
                     update: {},
@@ -51,94 +53,74 @@ module.exports = {
                 }
 
                 const novoPersonagem = await tx.personagens.create({
-
                     data: {
                         nome: nomePersonagem,
                         usuario_id: alvo.id,
                         saldo: 0
                     }
-
                 });
 
                 let statusMsg = "Criado com sucesso.";
 
                 if (contagem === 0) {
-
                     await tx.usuarios.update({
                         where: { discord_id: alvo.id },
                         data: { personagem_ativo_id: novoPersonagem.id }
                     });
 
                     statusMsg = "Criado e definido como **ATIVO** automaticamente.";
-
                 }
 
                 return { novoPersonagem, statusMsg };
-
             });
 
             const embed = new EmbedBuilder()
-
                 .setColor("#F1C40F")
-
                 .setTitle("👤 Personagem Criado (Admin)")
-
-                .setDescription(
-                    `O administrador **${message.author.username}** criou um personagem para ${alvo}.`
-                )
-
+                .setDescription(`O administrador **${interaction.user.username}** criou um personagem para ${alvo}.`)
                 .addFields(
-
                     {
                         name: "Nome do Personagem",
                         value: resultado.novoPersonagem.nome,
                         inline: true
                     },
-
                     {
                         name: "Jogador",
                         value: alvo.username,
                         inline: true
                     },
-
                     {
                         name: "Status",
                         value: resultado.statusMsg
                     }
-
                 )
-
                 .setTimestamp();
 
-            return message.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed] });
 
-        }
-        catch (err) {
-
+        } catch (err) {
             if (err.message === "LIMITE_PERSONAGENS") {
-
-                return message.reply(
-                    `⚠️ O usuário **${alvo.username}** já atingiu o limite de **2 personagens**.`
-                );
-
+                return interaction.reply({
+                    content: `⚠️ O usuário **${alvo.username}** já atingiu o limite de **2 personagens**.`,
+                    ephemeral: true
+                });
             }
 
             if (err.code === "P2002") {
-
-                return message.reply(
-                    `❌ O nome **"${nomePersonagem}"** já está em uso.`
-                );
-
+                return interaction.reply({
+                    content: `❌ O nome **"${nomePersonagem}"** já está em uso no servidor.`,
+                    ephemeral: true
+                });
             }
 
             console.error("Erro no admin-criar:", err);
 
-            return message.reply(
-                "❌ Ocorreu um erro ao criar o personagem."
-            );
-
+            const erroMsg = { content: "❌ Ocorreu um erro ao criar o personagem.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(()=>{});
+            } else {
+                await interaction.reply(erroMsg).catch(()=>{});
+            }
         }
-
     }
-
 };

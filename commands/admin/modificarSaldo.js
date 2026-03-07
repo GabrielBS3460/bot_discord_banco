@@ -1,123 +1,114 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("modificar-saldo")
+        .setDescription("Adiciona ou remove saldo de um jogador (Apenas Admins/Mods).")
+        .addUserOption(option => 
+            option.setName("jogador")
+                .setDescription("O jogador que terá o saldo modificado")
+                .setRequired(true)
+        )
+        .addNumberOption(option => 
+            option.setName("valor")
+                .setDescription("Valor a adicionar (positivo) ou remover (com sinal negativo, ex: -50)")
+                .setRequired(true)
+        )
+        .addStringOption(option => 
+            option.setName("motivo")
+                .setDescription("Motivo da modificação no extrato")
+                .setRequired(false) 
+        ),
 
-    name: "modificar-saldo",
-
-    async execute({
-        message,
-        args,
-        prisma,
-        getPersonagemAtivo,
-        formatarMoeda,
-        ID_CARGO_ADMIN,
-        ID_CARGO_MOD
-    }) {
-
+    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
         if (
-            !message.member.roles.cache.has(ID_CARGO_ADMIN) &&
-            !message.member.roles.cache.has(ID_CARGO_MOD)
+            !interaction.member.roles.cache.has(ID_CARGO_ADMIN) &&
+            !interaction.member.roles.cache.has(ID_CARGO_MOD)
         ) {
-            return message.reply("🚫 Você não tem permissão para usar este comando.");
+            return interaction.reply({ 
+                content: "🚫 Você não tem permissão para usar este comando.", 
+                ephemeral: true 
+            });
         }
 
-        const alvo = message.mentions.users.first();
+        const alvo = interaction.options.getUser("jogador");
+        const valor = interaction.options.getNumber("valor");
+        const motivo = interaction.options.getString("motivo") || "Modificação administrativa";
 
-        const valor = parseFloat(args.find(a => !isNaN(parseFloat(a))));
-        const motivo = args.slice(2).join(" ") || "Modificação administrativa";
-
-        if (!alvo || isNaN(valor)) {
-            return message.reply(
-                "Sintaxe: `!modificar-saldo <@usuario> <valor> [motivo]`"
-            );
+        if (alvo.bot) {
+            return interaction.reply({ 
+                content: "🚫 Bots não possuem saldo.", 
+                ephemeral: true 
+            });
         }
 
         try {
-
             const personagemAlvo = await getPersonagemAtivo(alvo.id);
 
             if (!personagemAlvo) {
-                return message.reply(
-                    `O usuário **${alvo.username}** não tem personagem ativo.`
-                );
+                return interaction.reply({
+                    content: `🚫 O usuário **${alvo.username}** não tem um personagem ativo.`,
+                    ephemeral: true
+                });
             }
 
             const resultado = await prisma.$transaction(async tx => {
-
                 const personagemAtualizado = await tx.personagens.update({
-
                     where: { id: personagemAlvo.id },
-
                     data: {
                         saldo: { increment: valor }
                     }
-
                 });
 
                 await tx.transacao.create({
-
                     data: {
                         personagem_id: personagemAlvo.id,
                         descricao: motivo,
                         valor: valor,
                         tipo: valor >= 0 ? "RECOMPENSA" : "GASTO"
                     }
-
                 });
 
                 return personagemAtualizado;
-
             });
 
             const embed = new EmbedBuilder()
-
                 .setColor("#FFA500")
-
                 .setTitle("💰 Saldo Modificado")
-
                 .addFields(
-
                     {
                         name: "Personagem",
-                        value: `${personagemAlvo.nome} (@${alvo.username})`,
+                        value: `${personagemAlvo.nome} (<@${alvo.id}>)`,
                         inline: true
                     },
-
                     {
                         name: "Modificação",
                         value: `${valor >= 0 ? "+" : ""}${formatarMoeda(valor)}`,
                         inline: true
                     },
-
                     {
                         name: "Novo Saldo",
                         value: `**${formatarMoeda(resultado.saldo)}**`
                     },
-
                     {
                         name: "Motivo",
                         value: motivo
                     }
-
                 )
-
-                .setFooter({
-                    text: `Modificado por ${message.author.username}`
-                })
-
+                .setFooter({ text: `Modificado por ${interaction.user.username}` })
                 .setTimestamp();
 
-            return message.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed] });
 
-        }
-        catch (err) {
-
+        } catch (err) {
             console.error("Erro no modificar-saldo:", err);
 
-            return message.reply("❌ Erro ao modificar saldo.");
-
+            const erroMsg = { content: "❌ Ocorreu um erro ao modificar o saldo.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(()=>{});
+            } else {
+                await interaction.reply(erroMsg).catch(()=>{});
+            }
         }
-
     }
-
 };

@@ -1,51 +1,45 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
-
-    name: "venda-npc",
+    data: new SlashCommandBuilder()
+        .setName("venda-npc")
+        .setDescription("Vende um item para um comerciante NPC e recebe Kwanzas.")
+        .addNumberOption(option => 
+            option.setName("valor")
+                .setDescription("Valor da venda (ex: 50 ou 50.5)")
+                .setRequired(true)
+        )
+        .addStringOption(option => 
+            option.setName("link")
+                .setDescription("Link do item que está sendo vendido")
+                .setRequired(true)
+        ),
 
     async execute({
-        message,
-        args,
+        interaction, 
         prisma,
         getPersonagemAtivo,
         formatarMoeda
     }) {
+        const valor = interaction.options.getNumber("valor");
+        const linkItem = interaction.options.getString("link");
 
-        const char = await getPersonagemAtivo(message.author.id);
+        const char = await getPersonagemAtivo(interaction.user.id);
 
         if (!char) {
-            return message.reply("🚫 Você não tem personagem ativo.");
-        }
-
-        if (args.length < 2) {
-            return message.reply(
-                "Uso: `!venda-npc <valor> <link do item>`"
-            );
-        }
-
-        const valor = parseFloat(args[0]);
-        const linkItem = args[1];
-
-        if (isNaN(valor) || valor <= 0) {
-            return message.reply("🚫 Valor inválido.");
+            return interaction.reply({ content: "🚫 Você não tem personagem ativo.", ephemeral: true });
         }
 
         if (!linkItem.startsWith("http")) {
-            return message.reply("🚫 Você precisa enviar um link válido do item.");
+            return interaction.reply({ content: "🚫 Você precisa enviar um link válido do item.", ephemeral: true });
         }
 
         try {
-
             await prisma.$transaction([
-
                 prisma.personagens.update({
                     where: { id: char.id },
-                    data: {
-                        saldo: { increment: valor }
-                    }
+                    data: { saldo: { increment: valor } }
                 }),
-
                 prisma.transacao.create({
                     data: {
                         personagem_id: char.id,
@@ -54,7 +48,6 @@ module.exports = {
                         tipo: "GANHO"
                     }
                 })
-
             ]);
 
             const embed = new EmbedBuilder()
@@ -68,15 +61,11 @@ module.exports = {
                 .setFooter({ text: "O item foi vendido para um comerciante NPC." })
                 .setTimestamp();
 
-            return message.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed] });
 
         } catch (err) {
-
             console.error("Erro no comando venda-npc:", err);
-            return message.reply("❌ Ocorreu um erro ao registrar a venda.");
-
+            return interaction.reply({ content: "❌ Ocorreu um erro ao registrar a venda.", ephemeral: true });
         }
-
     }
-
 };

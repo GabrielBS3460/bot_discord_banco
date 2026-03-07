@@ -1,26 +1,53 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("personagem")
+        .setDescription("Gerencia seus personagens.")
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("listar")
+                .setDescription("Lista todos os seus personagens criados.")
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("trocar")
+                .setDescription("Troca o seu personagem ativo.")
+                .addStringOption(option => 
+                    option.setName("nome")
+                        .setDescription("Nome exato do personagem que deseja ativar")
+                        .setRequired(true)
+                )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName("apagar")
+                .setDescription("Apaga permanentemente um personagem seu.")
+                .addStringOption(option => 
+                    option.setName("nome")
+                        .setDescription("Nome exato do personagem a ser apagado")
+                        .setRequired(true)
+                )
+        ),
 
-    name: "personagem",
-
-    async execute({ message, args, prisma, formatarMoeda }) {
+    async execute({ interaction, prisma, formatarMoeda }) {
+        const subcomando = interaction.options.getSubcommand();
 
         try {
-
-            const subcomando = args[0]?.toLowerCase();
-
             if (subcomando === 'listar') {
-
                 const personagens = await prisma.personagens.findMany({
-                    where: { usuario_id: message.author.id }
+                    where: { usuario_id: interaction.user.id }
                 });
 
-                if (personagens.length === 0)
-                    return message.reply("Você não tem personagens. Use `!cadastrar`.").catch(()=>{});
+                if (personagens.length === 0) {
+                    return interaction.reply({ 
+                        content: "🚫 Você não tem personagens. Use `/cadastrar`.", 
+                        ephemeral: true 
+                    });
+                }
 
                 const usuario = await prisma.usuarios.findUnique({
-                    where: { discord_id: message.author.id }
+                    where: { discord_id: interaction.user.id }
                 });
 
                 const ativoId = usuario?.personagem_ativo_id;
@@ -35,50 +62,52 @@ module.exports = {
                     .setTitle('📜 Seus Personagens')
                     .setDescription(lista);
 
-                return message.reply({ embeds: [embed] }).catch(()=>{});
+                return interaction.reply({ embeds: [embed], ephemeral: true });
             }
 
             else if (subcomando === 'trocar') {
-
-                const nomeAlvo = args.slice(1).join(' ').trim();
-
-                if (!nomeAlvo)
-                    return message.reply("Use: `!personagem trocar <nome do personagem>`").catch(()=>{});
+                const nomeAlvo = interaction.options.getString("nome").trim();
 
                 const personagemAlvo = await prisma.personagens.findFirst({
                     where: {
                         nome: { equals: nomeAlvo, mode: 'insensitive' },
-                        usuario_id: message.author.id
+                        usuario_id: interaction.user.id
                     }
                 });
 
-                if (!personagemAlvo)
-                    return message.reply("Você não possui um personagem com esse nome.").catch(()=>{});
+                if (!personagemAlvo) {
+                    return interaction.reply({ 
+                        content: "🚫 Você não possui um personagem com esse nome.", 
+                        ephemeral: true 
+                    });
+                }
 
                 await prisma.usuarios.update({
-                    where: { discord_id: message.author.id },
+                    where: { discord_id: interaction.user.id },
                     data: { personagem_ativo_id: personagemAlvo.id }
                 });
 
-                return message.reply(`🔄 Você agora está jogando como **${personagemAlvo.nome}**!`).catch(()=>{});
+                return interaction.reply({ 
+                    content: `🔄 Você agora está jogando como **${personagemAlvo.nome}**!`
+                });
             }
 
             else if (subcomando === 'apagar') {
-
-                const nomeAlvo = args.slice(1).join(' ').trim();
-
-                if (!nomeAlvo)
-                    return message.reply("Use: `!personagem apagar <nome do personagem>`").catch(()=>{});
+                const nomeAlvo = interaction.options.getString("nome").trim();
 
                 const personagemAlvo = await prisma.personagens.findFirst({
                     where: {
                         nome: { equals: nomeAlvo, mode: 'insensitive' },
-                        usuario_id: message.author.id
+                        usuario_id: interaction.user.id
                     }
                 });
 
-                if (!personagemAlvo)
-                    return message.reply("Você não possui um personagem com esse nome.").catch(()=>{});
+                if (!personagemAlvo) {
+                    return interaction.reply({ 
+                        content: "🚫 Você não possui um personagem com esse nome.", 
+                        ephemeral: true 
+                    });
+                }
 
                 const confirmacaoEmbed = new EmbedBuilder()
                     .setColor('#FF0000')
@@ -95,42 +124,35 @@ module.exports = {
                         .setCustomId('confirmar_apagar')
                         .setLabel('Sim, apagar')
                         .setStyle(ButtonStyle.Danger),
-
                     new ButtonBuilder()
                         .setCustomId('cancelar_apagar')
                         .setLabel('Cancelar')
                         .setStyle(ButtonStyle.Secondary)
                 );
 
-                const mensagemConfirmacao = await message.reply({
+                const mensagemConfirmacao = await interaction.reply({
                     embeds: [confirmacaoEmbed],
                     components: [botoes],
+                    ephemeral: true,
                     fetchReply: true
                 });
 
-                const filter = i => i.user.id === message.author.id;
-
                 const collector = mensagemConfirmacao.createMessageComponentCollector({
-                    filter,
+                    filter: i => i.user.id === interaction.user.id,
                     time: 30000,
                     max: 1
                 });
 
-                collector.on('collect', async interaction => {
-
+                collector.on('collect', async iBtn => {
                     try {
-
-                        await interaction.deferUpdate();
-
-                        if (interaction.customId === 'confirmar_apagar') {
-
+                        if (iBtn.customId === 'confirmar_apagar') {
                             const usuario = await prisma.usuarios.findUnique({
-                                where: { discord_id: message.author.id }
+                                where: { discord_id: interaction.user.id }
                             });
 
                             if (usuario?.personagem_ativo_id === personagemAlvo.id) {
                                 await prisma.usuarios.update({
-                                    where: { discord_id: message.author.id },
+                                    where: { discord_id: interaction.user.id },
                                     data: { personagem_ativo_id: null }
                                 });
                             }
@@ -145,65 +167,44 @@ module.exports = {
                                 .setTitle('🗑️ Personagem Apagado')
                                 .setDescription(`O personagem **${personagemAlvo.nome}** foi removido.`);
 
-                            await interaction.editReply({ embeds: [sucessoEmbed], components: [] });
-
+                            await iBtn.update({ embeds: [sucessoEmbed], components: [] });
                         } else {
-
-                            await interaction.editReply({
+                            await iBtn.update({
                                 content: 'Ação cancelada.',
                                 embeds: [],
                                 components: []
                             });
-
                         }
-
                     } catch (err) {
-
                         console.error("Erro ao apagar personagem:", err);
-
-                        if (!interaction.replied)
-                            await interaction.editReply({
-                                content: "Ocorreu um erro ao apagar o personagem.",
-                                embeds: [],
-                                components: []
-                            }).catch(()=>{});
-
+                        await iBtn.update({
+                            content: "Ocorreu um erro ao apagar o personagem.",
+                            embeds: [],
+                            components: []
+                        }).catch(()=>{});
                     }
-
                 });
 
                 collector.on('end', async collected => {
-
                     if (collected.size === 0) {
-
-                        await mensagemConfirmacao.edit({
+                        await interaction.editReply({
                             content: '⏱️ Confirmação expirada.',
                             embeds: [],
                             components: []
                         }).catch(()=>{});
-
                     }
-
                 });
-
-            }
-
-            else {
-
-                return message.reply(
-                    "Comandos disponíveis:\n`!personagem listar`\n`!personagem trocar <nome>`\n`!personagem apagar <nome>`"
-                ).catch(()=>{});
-
             }
 
         } catch (err) {
-
             console.error("Erro no comando personagem:", err);
-
-            return message.reply("Ocorreu um erro ao executar este comando.").catch(()=>{});
-
+            
+            const erroMsg = { content: "❌ Ocorreu um erro ao executar este comando.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(()=>{});
+            } else {
+                await interaction.reply(erroMsg).catch(()=>{});
+            }
         }
-
     }
-
 };

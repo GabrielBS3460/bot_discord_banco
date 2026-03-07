@@ -1,67 +1,71 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("tix")
+        .setDescription("Transfere dinheiro (Kwanzas) do seu personagem para outro jogador.")
+        .addUserOption(option => 
+            option.setName("destinatario")
+                .setDescription("O jogador que vai receber o dinheiro")
+                .setRequired(true)
+        )
+        .addNumberOption(option => 
+            option.setName("valor")
+                .setDescription("O valor que deseja transferir")
+                .setRequired(true)
+                .setMinValue(0.1) 
+        ),
 
-    name: "tix",
+    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+        const destinatarioUser = interaction.options.getUser("destinatario");
+        const valor = interaction.options.getNumber("valor");
 
-    async execute({ message, args, prisma, getPersonagemAtivo, formatarMoeda }) {
-
-        const destinatarioUser = message.mentions.users.first();
-
-        if (!destinatarioUser || destinatarioUser.bot) {
-            return message.reply(
-                "Você precisa mencionar para quem vai enviar os K$. Ex: `!tix @Amigo 500`"
-            ).catch(()=>{});
+        if (destinatarioUser.bot) {
+            return interaction.reply({
+                content: "🚫 Você não pode enviar dinheiro para um bot.",
+                ephemeral: true
+            });
         }
 
-        if (destinatarioUser.id === message.author.id) {
-            return message.reply(
-                "Você não pode transferir dinheiro para si mesmo."
-            ).catch(()=>{});
-        }
-
-        const valorStr = args.find(arg =>
-            !isNaN(parseFloat(arg)) && !arg.includes('<@')
-        );
-
-        const valor = parseFloat(valorStr);
-
-        if (isNaN(valor) || valor <= 0) {
-            return message.reply(
-                "Valor inválido. Digite um valor positivo maior que zero."
-            ).catch(()=>{});
+        if (destinatarioUser.id === interaction.user.id) {
+            return interaction.reply({
+                content: "🚫 Você não pode transferir dinheiro para si mesmo.",
+                ephemeral: true
+            });
         }
 
         try {
-
             const [charRemetente, charDestinatario] = await Promise.all([
-                getPersonagemAtivo(message.author.id),
+                getPersonagemAtivo(interaction.user.id),
                 getPersonagemAtivo(destinatarioUser.id)
             ]);
 
-            if (!charRemetente)
-                return message.reply(
-                    "Você não tem um personagem ativo para enviar dinheiro."
-                ).catch(()=>{});
+            if (!charRemetente) {
+                return interaction.reply({
+                    content: "🚫 Você não tem um personagem ativo para enviar dinheiro. Use `/cadastrar` ou `/personagem trocar`.",
+                    ephemeral: true
+                });
+            }
 
-            if (!charDestinatario)
-                return message.reply(
-                    `O usuário **${destinatarioUser.username}** não tem um personagem ativo para receber.`
-                ).catch(()=>{});
+            if (!charDestinatario) {
+                return interaction.reply({
+                    content: `🚫 O usuário **${destinatarioUser.username}** não tem um personagem ativo para receber.`,
+                    ephemeral: true
+                });
+            }
 
             if (charRemetente.saldo < valor) {
-                return message.reply(
-                    `🚫 **${charRemetente.nome}** não tem saldo suficiente. Atual: **${formatarMoeda(charRemetente.saldo)}**.`
-                ).catch(()=>{});
+                return interaction.reply({
+                    content: `💸 **${charRemetente.nome}** não tem saldo suficiente. Atual: **${formatarMoeda(charRemetente.saldo)}**.`,
+                    ephemeral: true
+                });
             }
 
             await prisma.$transaction([
-
                 prisma.personagens.update({
                     where: { id: charRemetente.id },
                     data: { saldo: { decrement: valor } }
                 }),
-
                 prisma.transacao.create({
                     data: {
                         personagem_id: charRemetente.id,
@@ -70,21 +74,18 @@ module.exports = {
                         tipo: 'GASTO'
                     }
                 }),
-
                 prisma.personagens.update({
                     where: { id: charDestinatario.id },
                     data: { saldo: { increment: valor } }
                 }),
-
                 prisma.transacao.create({
                     data: {
                         personagem_id: charDestinatario.id,
                         descricao: `Recebeu de ${charRemetente.nome}`,
                         valor: valor,
-                        tipo: 'RECOMPENSA'
+                        tipo: 'RECOMPENSA' 
                     }
                 })
-
             ]);
 
             const embed = new EmbedBuilder()
@@ -97,17 +98,17 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            await message.reply({ embeds: [embed] }).catch(()=>{});
+            return interaction.reply({ embeds: [embed] });
 
         } catch (err) {
+            console.error("Erro no comando tix:", err);
 
-            console.error("Erro no comando !tix:", err);
-
-            await message.reply(
-                "Ocorreu um erro ao processar a transferência."
-            ).catch(()=>{});
+            const erroMsg = { content: "❌ Ocorreu um erro ao processar a transferência.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(()=>{});
+            } else {
+                await interaction.reply(erroMsg).catch(()=>{});
+            }
         }
-
     }
-
 };

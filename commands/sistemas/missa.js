@@ -1,48 +1,74 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("missa")
+        .setDescription("Cobra o dízimo dos fiéis e transfere para o Clérigo.")
+        .addNumberOption(option => 
+            option.setName("valor_total")
+                .setDescription("O valor TOTAL arrecadado (será dividido entre os fiéis)")
+                .setRequired(true)
+                .setMinValue(0.1)
+        )
+        .addUserOption(option => option.setName("fiel1").setDescription("Fiel pagante 1").setRequired(true))
+        .addUserOption(option => option.setName("fiel2").setDescription("Fiel pagante 2").setRequired(false))
+        .addUserOption(option => option.setName("fiel3").setDescription("Fiel pagante 3").setRequired(false))
+        .addUserOption(option => option.setName("fiel4").setDescription("Fiel pagante 4").setRequired(false))
+        .addUserOption(option => option.setName("fiel5").setDescription("Fiel pagante 5").setRequired(false))
+        .addUserOption(option => option.setName("fiel6").setDescription("Fiel pagante 6").setRequired(false)),
 
-    name: "missa",
+    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+        const valorTotal = interaction.options.getNumber("valor_total");
 
-    async execute({ message, args, prisma, getPersonagemAtivo, formatarMoeda }) {
-
-        const mencoes = message.mentions.users;
-
-        const valorTotal = parseFloat(args[0]);
-        const participantesIds = mencoes
-            .map(u => u.id)
-            .filter(id => id !== message.author.id);
-
-        if (isNaN(valorTotal) || valorTotal <= 0 || participantesIds.length === 0) {
-            return message.reply(
-                "Sintaxe incorreta! Use: `!missa <valor_total> <@player1> <@player2> ...`"
-            ).catch(()=>{});
+        const fiéisUsers = [];
+        for (let i = 1; i <= 6; i++) {
+            const user = interaction.options.getUser(`fiel${i}`);
+            if (user && user.id !== interaction.user.id && !user.bot) {
+                if (!fiéisUsers.some(u => u.id === user.id)) {
+                    fiéisUsers.push(user);
+                }
+            }
         }
 
+        if (fiéisUsers.length === 0) {
+            return interaction.reply({
+                content: "🚫 Você precisa informar pelo menos 1 fiel válido (bots e você mesmo são ignorados).",
+                ephemeral: true
+            });
+        }
+
+        const participantesIds = fiéisUsers.map(u => u.id);
         const custoIndividual = valorTotal / participantesIds.length;
 
         try {
+            const charClerigo = await getPersonagemAtivo(interaction.user.id);
 
-            const charClerigo = await getPersonagemAtivo(message.author.id);
-
-            if (!charClerigo)
-                return message.reply("Você (Clérigo) não tem personagem ativo.").catch(()=>{});
+            if (!charClerigo) {
+                return interaction.reply({
+                    content: "🚫 Você (Clérigo) não tem um personagem ativo.",
+                    ephemeral: true
+                });
+            }
 
             let charsPagantes = [];
 
             for (const id of participantesIds) {
-
                 const char = await getPersonagemAtivo(id);
+                const userDiscord = fiéisUsers.find(u => u.id === id);
 
-                if (!char)
-                    return message.reply(
-                        `O usuário <@${id}> não tem personagem ativo.`
-                    ).catch(()=>{});
+                if (!char) {
+                    return interaction.reply({
+                        content: `🚫 O usuário **${userDiscord.username}** não tem um personagem ativo.`,
+                        ephemeral: true
+                    });
+                }
 
-                if (char.saldo < custoIndividual)
-                    return message.reply(
-                        `**${char.nome}** não tem saldo suficiente para pagar a parte dele.`
-                    ).catch(()=>{});
+                if (char.saldo < custoIndividual) {
+                    return interaction.reply({
+                        content: `💸 **${char.nome}** (de ${userDiscord.username}) não tem saldo suficiente para pagar a parte dele (K$ ${custoIndividual.toFixed(2)}).`,
+                        ephemeral: true
+                    });
+                }
 
                 charsPagantes.push(char);
             }
@@ -53,30 +79,23 @@ module.exports = {
                 prisma.personagens.update({
                     where: { id: charClerigo.id },
                     data: { saldo: { increment: valorTotal } }
-                })
-            );
-
-            operacoes.push(
+                }),
                 prisma.transacao.create({
                     data: {
                         personagem_id: charClerigo.id,
                         descricao: `Realizou Missa`,
                         valor: valorTotal,
-                        tipo: 'VENDA'
+                        tipo: 'VENDA' 
                     }
                 })
             );
 
             for (const fiel of charsPagantes) {
-
                 operacoes.push(
                     prisma.personagens.update({
                         where: { id: fiel.id },
                         data: { saldo: { decrement: custoIndividual } }
-                    })
-                );
-
-                operacoes.push(
+                    }),
                     prisma.transacao.create({
                         data: {
                             personagem_id: fiel.id,
@@ -98,18 +117,21 @@ module.exports = {
                 .addFields(
                     { name: 'Clérigo', value: `${charClerigo.nome} (+${formatarMoeda(valorTotal)})` },
                     { name: 'Custo por Fiel', value: formatarMoeda(custoIndividual) },
-                    { name: 'Fiéis', value: lista }
-                );
+                    { name: 'Fiéis Presentes', value: lista }
+                )
+                .setTimestamp();
 
-            await message.channel.send({ embeds: [embed] }).catch(()=>{});
+            return interaction.reply({ embeds: [embed] });
 
         } catch (err) {
+            console.error("Erro no comando missa:", err);
 
-            console.error(err);
-
-            message.reply("Erro ao processar a missa.").catch(()=>{});
+            const erroMsg = { content: "❌ Ocorreu um erro ao processar a missa.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(()=>{});
+            } else {
+                await interaction.reply(erroMsg).catch(()=>{});
+            }
         }
-
     }
-
 };

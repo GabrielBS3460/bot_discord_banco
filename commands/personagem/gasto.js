@@ -1,37 +1,40 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("gasto")
+        .setDescription("Registra um gasto em Kwanzas no seu extrato.")
+        .addNumberOption(option => 
+            option.setName("valor")
+                .setDescription("O valor do gasto (ex: 50.5)")
+                .setRequired(true)
+                .setMinValue(0.1) 
+        )
+        .addStringOption(option => 
+            option.setName("motivo")
+                .setDescription("O motivo do gasto")
+                .setRequired(true)
+        ),
 
-    name: "gasto",
-
-    async execute({ message, args, prisma, getPersonagemAtivo, formatarMoeda }) {
-
-        if (args.length < 2)
-            return message.reply(
-                "Sintaxe incorreta! Use: `!gasto <valor> <motivo do gasto>`"
-            ).catch(()=>{});
-
-        const valorGasto = parseFloat(args[0]);
-        const motivo = args.slice(1).join(' ');
-
-        if (isNaN(valorGasto) || valorGasto <= 0)
-            return message.reply(
-                "O valor do gasto deve ser um número positivo."
-            ).catch(()=>{});
+    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+        const valorGasto = interaction.options.getNumber("valor");
+        const motivo = interaction.options.getString("motivo");
 
         try {
+            const personagem = await getPersonagemAtivo(interaction.user.id);
 
-            const personagem = await getPersonagemAtivo(message.author.id);
-
-            if (!personagem)
-                return message.reply(
-                    "Você não tem um personagem ativo. Use `!cadastrar` ou `!personagem trocar`."
-                ).catch(()=>{});
+            if (!personagem) {
+                return interaction.reply({
+                    content: "🚫 Você não tem um personagem ativo. Use `/cadastrar` ou `/personagem trocar`.",
+                    ephemeral: true
+                });
+            }
 
             if (personagem.saldo < valorGasto) {
-                return message.reply(
-                    `Você não tem saldo suficiente! Saldo de **${personagem.nome}**: **${formatarMoeda(personagem.saldo)}**.`
-                ).catch(()=>{});
+                return interaction.reply({
+                    content: `❌ Você não tem saldo suficiente! Saldo de **${personagem.nome}**: **${formatarMoeda(personagem.saldo)}**.`,
+                    ephemeral: true
+                });
             }
 
             const [updatedPersonagem] = await prisma.$transaction([
@@ -60,18 +63,17 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            await message.reply({ embeds: [gastoEmbed] }).catch(()=>{});
+            return interaction.reply({ embeds: [gastoEmbed] });
 
         } catch (err) {
+            console.error("Erro no comando gasto:", err);
 
-            console.error("Erro no comando !gasto:", err);
-
-            await message.reply(
-                "Ocorreu um erro ao tentar registrar seu gasto."
-            ).catch(()=>{});
-
+            const erroMsg = { content: "❌ Ocorreu um erro ao tentar registrar seu gasto.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(()=>{});
+            } else {
+                await interaction.reply(erroMsg).catch(()=>{});
+            }
         }
-
     }
-
 };
