@@ -568,7 +568,14 @@ module.exports = {
                         .setCustomId(modalCustomId)
                         .setTitle('Editar Deslocamento')
                         .addComponents(
-                            new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_deslocamento').setLabel('Deslocamento (em metros)').setStyle(TextInputStyle.Short).setRequired(true).setValue(String(char.deslocamento || 9)))
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId('inp_deslocamento')
+                                    .setLabel('Deslocamento (em metros)')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setRequired(true)
+                                    .setValue(String(char.deslocamento || 9))
+                            )
                         );
 
                     await iBtn.showModal(modal);
@@ -578,12 +585,15 @@ module.exports = {
                             filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
                             time: 60000
                         });
+                        
                         await modalSubmit.deferUpdate();
 
-                        const valor = parseFloat(modalSubmit.fields.getTextInputValue('inp_deslocamento'));
+                        const textoDeslocamento = modalSubmit.fields.getTextInputValue('inp_deslocamento').replace(',', '.');
+                        
+                        const valor = parseFloat(textoDeslocamento);
 
                         if (isNaN(valor) || valor <= 0) {
-                            return modalSubmit.followUp({ content: "Valor inválido.", ephemeral: true });
+                            return modalSubmit.followUp({ content: "🚫 Valor inválido. Digite um número maior que zero.", ephemeral: true });
                         }
 
                         await prisma.personagens.update({
@@ -592,9 +602,22 @@ module.exports = {
                         });
 
                         char = await prisma.personagens.findUnique({ where: { id: char.id }, include: { classes: true } });
-                        await interaction.editReply({ embeds: [montarEmbedFicha(char)] });
+                        
+                        await msg.edit({ embeds: [montarEmbedFicha(char)] });
+                        
                         await modalSubmit.followUp({ content: `✅ Deslocamento atualizado para ${valor}m.`, ephemeral: true });
-                    } catch (err) {}
+
+                    } catch (err) {
+                        console.error("Erro ao atualizar deslocamento:", err);
+                        
+                        try {
+                            await iBtn.followUp({ 
+                                content: "❌ Ocorreu um erro ao salvar o deslocamento no banco de dados.", 
+                                ephemeral: true 
+                            });
+                        } catch(e) {}
+                    }
+                    
                     return;
                 }
 
