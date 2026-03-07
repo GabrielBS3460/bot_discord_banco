@@ -7,7 +7,10 @@ const {
     EmbedBuilder,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
-    UserSelectMenuBuilder
+    UserSelectMenuBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require("discord.js");
 
 module.exports = {
