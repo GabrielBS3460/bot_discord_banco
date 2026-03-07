@@ -1,4 +1,5 @@
 const {
+    SlashCommandBuilder,
     MessageFlags,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
@@ -9,18 +10,25 @@ const {
 } = require("discord.js");
 
 module.exports = {
-    name: "resgatar",
-    
+    data: new SlashCommandBuilder()
+        .setName("resgatar")
+        .setDescription("Resgata recompensas e pontos de missões concluídas."),
+        
     async execute({
-        message,
+        interaction,
         prisma,
         getPersonagemAtivo,
         CUSTO_NIVEL
     }) {
 
-        const char = await getPersonagemAtivo(message.author.id);
+        const char = await getPersonagemAtivo(interaction.user.id);
 
-        if (!char) return message.reply("Sem personagem ativo.");
+        if (!char) {
+            return interaction.reply({ 
+                content: "🚫 Sem personagem ativo.", 
+                ephemeral: true 
+            });
+        }
 
         const inscricoesPendentes = await prisma.inscricoes.findMany({
             where: {
@@ -33,7 +41,10 @@ module.exports = {
         });
 
         if (inscricoesPendentes.length === 0) {
-            return message.reply("🚫 Você não tem recompensas pendentes de missões concluídas.");
+            return interaction.reply({ 
+                content: "🚫 Você não tem recompensas pendentes de missões concluídas.", 
+                ephemeral: true 
+            });
         }
 
         const menu = new StringSelectMenuBuilder()
@@ -51,13 +62,15 @@ module.exports = {
 
         const row = new ActionRowBuilder().addComponents(menu);
 
-        const msg = await message.reply({
+        const msg = await interaction.reply({
             content: "💰 **Recompensas Disponíveis:**",
-            components: [row]
+            components: [row],
+            ephemeral: true, 
+            fetchReply: true 
         });
 
         const collector = msg.createMessageComponentCollector({
-            filter: i => i.user.id === message.author.id && i.customId === "menu_resgate_missao",
+            filter: i => i.user.id === interaction.user.id && i.customId === "menu_resgate_missao",
             time: 60000
         });
 
@@ -91,7 +104,6 @@ module.exports = {
                     time: 120000
                 });
 
-                // 1. TRAVA DE SEGURANÇA (EXPLOIT DE MÚLTIPLOS MODAIS)
                 const checkInscricao = await prisma.inscricoes.findUnique({ where: { id: inscId } });
                 if (checkInscricao.recompensa_resgatada) {
                     return modalSubmit.reply({ 

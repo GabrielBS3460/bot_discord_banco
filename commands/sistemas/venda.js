@@ -1,67 +1,69 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("venda")
+        .setDescription("Propõe a venda de um item para outro jogador.")
+        .addUserOption(option => 
+            option.setName("comprador")
+                .setDescription("O jogador que vai comprar o item")
+                .setRequired(true)
+        )
+        .addStringOption(option => 
+            option.setName("item")
+                .setDescription("O nome do item que está sendo vendido")
+                .setRequired(true)
+        )
+        .addNumberOption(option => 
+            option.setName("valor")
+                .setDescription("O valor da venda em Kwanzas")
+                .setRequired(true)
+                .setMinValue(0.1) 
+        )
+        .addStringOption(option => 
+            option.setName("link")
+                .setDescription("Link (http/https) com a imagem ou documento do item")
+                .setRequired(true)
+        ),
 
-    name: "venda",
+    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+        const vendedorUser = interaction.user;
+        const compradorUser = interaction.options.getUser("comprador");
+        const item = interaction.options.getString("item");
+        const valor = interaction.options.getNumber("valor");
+        const link = interaction.options.getString("link");
 
-    async execute({ message, args, prisma, getPersonagemAtivo, formatarMoeda }) {
+        if (compradorUser.bot) {
+            return interaction.reply({ content: "🚫 Bots não compram itens.", ephemeral: true });
+        }
 
-        const vendedorUser = message.author;
+        if (compradorUser.id === vendedorUser.id) {
+            return interaction.reply({ content: "🚫 Você não pode vender para si mesmo.", ephemeral: true });
+        }
 
-        const compradorMencionado = message.mentions.users.first();
-
-        if (!compradorMencionado || compradorMencionado.bot)
-            return message.reply("Mencione um comprador válido. Ex: `!venda @Player 100 Item Link`").catch(()=>{});
-
-        if (compradorMencionado.id === vendedorUser.id)
-            return message.reply("Não pode vender para si mesmo.").catch(()=>{});
-
-        const link = args.find(arg =>
-            arg.startsWith('http://') || arg.startsWith('https://')
-        );
-
-        const valorStr = args.find(arg =>
-            !isNaN(parseFloat(arg)) &&
-            !arg.includes('<@') &&
-            !arg.startsWith('http')
-        );
-
-        const valor = parseFloat(valorStr);
-
-        if (isNaN(valor) || valor <= 0)
-            return message.reply("Valor inválido. Informe um preço positivo.").catch(()=>{});
-
-        if (!link)
-            return message.reply("Você precisa fornecer um link (http/https) para o item.").catch(()=>{});
-
-        const itemParts = args.filter(arg =>
-            !arg.includes(compradorMencionado.id) &&
-            arg !== link &&
-            arg !== valorStr
-        );
-
-        const item = itemParts.join(' ');
-
-        if (!item)
-            return message.reply("Você precisa escrever o nome do item.").catch(()=>{});
+        if (!link.startsWith('http://') && !link.startsWith('https://')) {
+            return interaction.reply({ content: "🚫 O link do item deve ser válido (começar com http:// ou https://).", ephemeral: true });
+        }
 
         try {
-
             const [charVendedor, charComprador] = await Promise.all([
                 getPersonagemAtivo(vendedorUser.id),
-                getPersonagemAtivo(compradorMencionado.id)
+                getPersonagemAtivo(compradorUser.id)
             ]);
 
-            if (!charVendedor)
-                return message.reply("Você (vendedor) não tem personagem ativo.").catch(()=>{});
+            if (!charVendedor) {
+                return interaction.reply({ content: "🚫 Você (vendedor) não tem um personagem ativo.", ephemeral: true });
+            }
 
-            if (!charComprador)
-                return message.reply(`O comprador ${compradorMencionado.username} não tem personagem ativo.`).catch(()=>{});
+            if (!charComprador) {
+                return interaction.reply({ content: `🚫 O comprador **${compradorUser.username}** não tem um personagem ativo.`, ephemeral: true });
+            }
 
             if (charComprador.saldo < valor) {
-                return message.reply(
-                    `**${charComprador.nome}** não tem saldo suficiente (Saldo: ${formatarMoeda(charComprador.saldo)}).`
-                ).catch(()=>{});
+                return interaction.reply({
+                    content: `🚫 **${charComprador.nome}** não tem saldo suficiente para essa compra (Saldo: ${formatarMoeda(charComprador.saldo)}).`,
+                    ephemeral: true
+                });
             }
 
             const propostaEmbed = new EmbedBuilder()
@@ -74,8 +76,9 @@ module.exports = {
                 )
                 .setFooter({ text: 'Expira em 60 segundos.' });
 
-            if (/\.(jpeg|jpg|gif|png|webp)$/i.test(link))
+            if (/\.(jpeg|jpg|gif|png|webp)$/i.test(link)) {
                 propostaEmbed.setThumbnail(link);
+            }
 
             const botoes = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -83,7 +86,6 @@ module.exports = {
                     .setLabel('Comprar')
                     .setStyle(ButtonStyle.Success)
                     .setEmoji('✔️'),
-
                 new ButtonBuilder()
                     .setCustomId('cancelar_venda')
                     .setLabel('Cancelar')
@@ -91,32 +93,52 @@ module.exports = {
                     .setEmoji('✖️')
             );
 
-            const msg = await message.channel.send({
-                content: `${compradorMencionado}`,
+            const msg = await interaction.reply({
+                content: `<@${compradorUser.id}>`,
                 embeds: [propostaEmbed],
-                components: [botoes]
+                components: [botoes],
+                fetchReply: true
             });
 
             const collector = msg.createMessageComponentCollector({
-                filter: i => i.user.id === compradorMencionado.id,
+                filter: i => i.user.id === compradorUser.id || i.user.id === vendedorUser.id,
                 time: 60000
             });
 
-            collector.on('collect', async interaction => {
+            collector.on('collect', async iBtn => {
+                await iBtn.deferUpdate();
 
-                await interaction.deferUpdate();
+                if (iBtn.customId === 'cancelar_venda') {
+                    const canceladoEmbed = new EmbedBuilder()
+                        .setColor('#FF0000')
+                        .setTitle('✖️ Venda Cancelada')
+                        .setDescription(`A venda de **${item}** foi cancelada por ${iBtn.user.username}.`);
 
-                if (interaction.customId === 'confirmar_venda') {
+                    await msg.edit({ content: null, embeds: [canceladoEmbed], components: [] });
+                    return collector.stop('cancelado');
+                }
+
+                if (iBtn.customId === 'confirmar_venda') {
+                    if (iBtn.user.id !== compradorUser.id) {
+                        return iBtn.followUp({ content: "🚫 Apenas o comprador pode aceitar a venda.", ephemeral: true });
+                    }
 
                     try {
+                        const cFinal = await prisma.personagens.findUnique({ where: { id: charComprador.id } });
+                        if (cFinal.saldo < valor) {
+                            await msg.edit({
+                                content: "❌ O comprador não tem mais saldo suficiente.",
+                                embeds: [],
+                                components: []
+                            });
+                            return collector.stop('sem_saldo');
+                        }
 
                         await prisma.$transaction([
-
                             prisma.personagens.update({
                                 where: { id: charComprador.id },
                                 data: { saldo: { decrement: valor } }
                             }),
-
                             prisma.transacao.create({
                                 data: {
                                     personagem_id: charComprador.id,
@@ -125,12 +147,10 @@ module.exports = {
                                     tipo: 'COMPRA'
                                 }
                             }),
-
                             prisma.personagens.update({
                                 where: { id: charVendedor.id },
                                 data: { saldo: { increment: valor } }
                             }),
-
                             prisma.transacao.create({
                                 data: {
                                     personagem_id: charVendedor.id,
@@ -139,7 +159,6 @@ module.exports = {
                                     tipo: 'VENDA'
                                 }
                             })
-
                         ]);
 
                         const sucesso = new EmbedBuilder()
@@ -152,61 +171,43 @@ module.exports = {
                                 { name: 'Valor', value: formatarMoeda(valor) }
                             );
 
-                        if (/\.(jpeg|jpg|gif|png|webp)$/i.test(link))
+                        if (/\.(jpeg|jpg|gif|png|webp)$/i.test(link)) {
                             sucesso.setThumbnail(link);
+                        }
 
-                        await msg.edit({ embeds: [sucesso], components: [] });
+                        await msg.edit({ content: null, embeds: [sucesso], components: [] });
 
                     } catch (err) {
-
                         console.error("Erro na transação de venda:", err);
-
                         await msg.edit({
-                            content: '❌ Ocorreu um erro ao processar a venda.',
+                            content: '❌ Ocorreu um erro ao processar a venda no banco de dados.',
                             embeds: [],
                             components: []
                         });
-
                     }
-
                     collector.stop('concluido');
                 }
-
-                else if (interaction.customId === 'cancelar_venda') {
-
-                    const canceladoEmbed = new EmbedBuilder()
-                        .setColor('#FF0000')
-                        .setTitle('✖️ Venda Cancelada')
-                        .setDescription(`A venda de **${item}** foi recusada pelo comprador.`);
-
-                    await msg.edit({ embeds: [canceladoEmbed], components: [] });
-
-                    collector.stop('cancelado');
-                }
-
             });
 
             collector.on('end', (collected, reason) => {
-
                 if (reason === 'time') {
-
                     const expiradoEmbed = new EmbedBuilder()
                         .setColor('#808080')
                         .setTitle('⌛ Proposta Expirada')
                         .setDescription(`A oferta de venda de **${item}** expirou porque o comprador não respondeu.`);
 
-                    msg.edit({ embeds: [expiradoEmbed], components: [] }).catch(()=>{});
+                    msg.edit({ content: null, embeds: [expiradoEmbed], components: [] }).catch(()=>{});
                 }
-
             });
 
         } catch (err) {
-
-            console.error(err);
-
-            message.reply("Erro ao processar venda.").catch(()=>{});
+            console.error("Erro ao processar venda:", err);
+            const erroMsg = { content: "❌ Ocorreu um erro ao iniciar a proposta de venda.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(()=>{});
+            } else {
+                await interaction.reply(erroMsg).catch(()=>{});
+            }
         }
-
     }
-
 };

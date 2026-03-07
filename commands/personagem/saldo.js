@@ -1,19 +1,19 @@
-const { EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 
 module.exports = {
+    data: new SlashCommandBuilder()
+        .setName("saldo")
+        .setDescription("Verifica o saldo atual de Kwanzas do seu personagem ativo."),
 
-    name: "saldo",
-
-    async execute({ message, getPersonagemAtivo, formatarMoeda }) {
-
+    async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         try {
-
-            const personagem = await getPersonagemAtivo(message.author.id);
+            const personagem = await getPersonagemAtivo(interaction.user.id);
 
             if (!personagem) {
-                return message.reply(
-                    "Você não tem um personagem ativo. Use `!cadastrar` ou `!personagem trocar`."
-                ).catch(()=>{});
+                return interaction.reply({
+                    content: "🚫 Você não tem um personagem ativo. Use `/cadastrar` ou `/personagem trocar`.",
+                    ephemeral: true 
+                });
             }
 
             const embed = new EmbedBuilder()
@@ -21,16 +21,17 @@ module.exports = {
                 .setTitle("💰 Saldo do Personagem")
                 .setDescription(`**${personagem.nome}** possui ${formatarMoeda(personagem.saldo)}`);
 
-            return message.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed] });
 
         } catch (err) {
+            console.error("Erro no comando saldo:", err);
 
-            console.error("Erro no saldo:", err);
-
-            return message.reply("Erro ao buscar saldo.").catch(()=>{});
-
+            const erroMsg = { content: "❌ Ocorreu um erro ao buscar o seu saldo.", ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(()=>{});
+            } else {
+                await interaction.reply(erroMsg).catch(()=>{});
+            }
         }
-
     }
-
 };
