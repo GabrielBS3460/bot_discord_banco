@@ -254,61 +254,75 @@ module.exports = {
                         menu.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(insc.personagem.nome)
-                                .setValue(insc.id.toString())
+                                .setValue(String(insc.id)) 
                                 .setEmoji('❌')
                         );
                     });
 
                     const rowMenu = new ActionRowBuilder().addComponents(menu);
 
-                    const reply = await iBtn.reply({
+                    await iBtn.reply({
                         content: "Quem deve ser removido? O próximo da fila entrará automaticamente.",
                         components: [rowMenu],
-                        flags: MessageFlags.Ephemeral,
-                        fetchReply: true
+                        ephemeral: true
                     });
 
-                    const menuCollector = reply.resource.message.createMessageComponentCollector({
-                        filter: interaction => interaction.user.id === iBtn.user.id,
+                    const replyMsg = await iBtn.fetchReply();
+
+                    const menuCollector = replyMsg.createMessageComponentCollector({
+                        filter: i => i.user.id === iBtn.user.id && i.customId === 'menu_remover_jogador',
                         time: 60000,
                         max: 1
                     });
 
                     menuCollector.on('collect', async iMenu => {
-                        await iMenu.deferUpdate();
-                        const idRemover = parseInt(iMenu.values[0]);
+                        try {
+                            await iMenu.deferUpdate();
+                            
+                            const idRemover = parseInt(iMenu.values[0]);
 
-                        await prisma.$transaction(async tx => {
-                            await tx.inscricoes.delete({ where: { id: idRemover } });
+                            await prisma.$transaction(async tx => {
+                                await tx.inscricoes.delete({ where: { id: idRemover } });
 
-                            const fila = await tx.inscricoes.findMany({
-                                where: { missao_id: missao.id, selecionado: false }
+                                const fila = await tx.inscricoes.findMany({
+                                    where: { missao_id: missao.id, selecionado: false }
+                                });
+
+                                const filaEmbaralhada = shuffle(fila);
+                                const proximoFila = filaEmbaralhada[0];
+
+                                if (proximoFila) {
+                                    await tx.inscricoes.update({
+                                        where: { id: proximoFila.id },
+                                        data: { selecionado: true }
+                                    });
+                                }
                             });
 
-                            const filaEmbaralhada = shuffle(fila);
-                            const proximoFila = filaEmbaralhada[0];
+                            const mFinal = await prisma.missoes.findUnique({
+                                where: { id: missao.id },
+                                include: { inscricoes: { include: { personagem: true } } } 
+                            });
 
-                            if (proximoFila) {
-                                await tx.inscricoes.update({
-                                    where: { id: proximoFila.id },
-                                    data: { selecionado: true }
-                                });
-                            }
-                        });
+                            await interaction.editReply({
+                                embeds: [montarPainel(mFinal)],
+                                components: montarBotoes(mFinal)
+                            });
 
-                        const mFinal = await prisma.missoes.findUnique({
-                            where: { id: missao.id },
-                            include: { inscricoes: { include: { personagem: true } } } 
-                        });
+                            await iMenu.editReply({ 
+                                content: "✅ Jogador removido com sucesso. Painel atualizado.", 
+                                components: [] 
+                            });
 
-                        await interaction.editReply({
-                            embeds: [montarPainel(mFinal)],
-                            components: montarBotoes(mFinal)
-                        });
-
-                        await iMenu.editReply({ content: "✅ Jogador removido com sucesso. Painel atualizado.", components: [] });
-                        menuCollector.stop();
+                        } catch (erroDB) {
+                            console.error("Erro ao remover jogador da missão:", erroDB);
+                            await iMenu.editReply({
+                                content: "❌ Erro ao remover o jogador. Verifique o terminal para mais detalhes.",
+                                components: []
+                            }).catch(()=>{});
+                        }
                     });
+
                     return;
                 }
 
