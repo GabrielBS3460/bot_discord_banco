@@ -131,7 +131,6 @@ module.exports = {
         const msg = await interaction.reply({
             embeds: [montarPainel(missao)],
             components: montarBotoes(missao),
-            ephemeral: true,
             fetchReply: true
         });
 
