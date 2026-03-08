@@ -48,7 +48,7 @@ module.exports = {
                     where: { usuario_id: alvo.id }
                 });
 
-                if (contagem >= 2) {
+                if (contagem >= 3) {
                     throw new Error("LIMITE_PERSONAGENS");
                 }
 
