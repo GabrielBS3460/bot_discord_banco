@@ -3,7 +3,7 @@ const { SlashCommandBuilder } = require("discord.js");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("apostar")
-        .setDescription("Faça sua aposta no Jogo do Bicho de Arton!")
+        .setDescription("Faça sua aposta no Jogo do Bicho do Herdeiros das Cinzas!")
         .addNumberOption(option => 
             option.setName("valor")
                 .setDescription("Valor da aposta em Kwanzas")
