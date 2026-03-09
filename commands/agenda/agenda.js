@@ -11,7 +11,6 @@ const {
 } = require("discord.js");
 const { createCanvas } = require("canvas");
 
-// Configurações Visuais e de Texto
 const DAY_NAMES = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"];
 const DAY_EMOJIS = ["🌕", "🔥", "💧", "🌲", "✨", "🌟", "☀️"];
 const DAY_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
@@ -30,7 +29,6 @@ function getColor(count) {
     return "#383a40";
 }
 
-// Funções de Ajuda para os Menus
 function generateHourOptions(selectedHours) {
     const options = [];
     for (let i = 0; i < 24; i++) {
@@ -100,7 +98,7 @@ module.exports = {
         const userId = interaction.user.id;
         const subcomando = interaction.options.getSubcommand();
 
-        const NOME_COLUNA_DISCORD = "discord_id"; 
+        const NOME_COLUNA_DISCORD = "usuario_id"; 
 
         try {
             if (subcomando === "marcar") {
@@ -178,15 +176,14 @@ module.exports = {
             }
 
             if (subcomando === "mapa") {
-                await interaction.deferReply();
+                await interaction.deferReply(); 
 
                 const players = await prisma.personagens.findMany({
-                    select: { discord_id: true, agenda: true },
+                    select: { usuario_id: true, agenda: true },
                     distinct: [NOME_COLUNA_DISCORD]
                 });
 
                 const matrix = Array(7).fill(0).map(() => Array(24).fill(0));
-
                 let totalPlayersComAgenda = 0;
 
                 players.forEach(p => {

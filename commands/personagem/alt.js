@@ -40,7 +40,7 @@ module.exports = {
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
-        const NOME_COLUNA_DISCORD = "discord_id"; 
+        const NOME_COLUNA_DISCORD = "usuario_id"; 
 
         try {
             const charAtivo = await getPersonagemAtivo(interaction.user.id);
