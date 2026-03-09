@@ -5,7 +5,10 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    MessageFlags
+    MessageFlags,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require("discord.js");
 
 module.exports = {
@@ -18,7 +21,7 @@ module.exports = {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
-                return interaction.reply({ content: "🚫 Você não tem um personagem ativo.", ephemeral: true });
+                return interaction.reply({ content: "🚫 Você não tem um personagem ativo.", flags: MessageFlags.Ephemeral });
             }
 
             const listaPericias = char.pericias || [];
@@ -26,7 +29,7 @@ module.exports = {
             if (!listaPericias.includes("Ofício Cozinheiro")) {
                 return interaction.reply({
                     content: "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -35,7 +38,7 @@ module.exports = {
             if (receitasConhecidas.length === 0) {
                 return interaction.reply({
                     content: "⚠️ Você tem a habilidade, mas não conhece nenhuma receita. Use `/aprenderculinaria` primeiro.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -71,13 +74,13 @@ module.exports = {
             const msg = await interaction.reply({
                 content: `🔥 **Fogão Aceso (Rende 5 Porções)**\n👤 **Cozinheiro:** ${char.nome}\n🔨 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)}\n🎒 **Estoque:** ${estoqueTxt}\n\n*Dica: Você pode selecionar até 2 pratos para fazer uma Refeição Combinada.*`,
                 components: [montarMenuReceitas()],
-                ephemeral: true, 
+                flags: MessageFlags.Ephemeral, 
                 fetchReply: true
             });
 
             const collector = msg.createMessageComponentCollector({
                 filter: i => i.user.id === interaction.user.id,
-                time: 120000
+                time: 300000
             });
 
             let receitasSelecionadas = [];
@@ -96,7 +99,7 @@ module.exports = {
 
                     receitasSelecionadas.forEach(nome => {
                         const r = DB_CULINARIA.RECEITAS[nome];
-                        efeitosTxt.push(`**${nome}**: ${r.desc}`);
+                        efeitosTxt.push(`• ${r.desc}`);
                         for (const [ing, qtd] of Object.entries(r.ing)) {
                             ingredientesAgregados[ing] = (ingredientesAgregados[ing] || 0) + qtd;
                         }
@@ -153,7 +156,7 @@ module.exports = {
                     const tituloPreparo = numReceitas > 1 ? "Prato Combinado" : receitasSelecionadas[0];
 
                     return i.update({
-                        content: `🥘 **Preparando: ${tituloPreparo}**\n📦 **Rendimento:** 5 Porções\n\n**Efeitos:**\n${efeitosTxt.join("\n")}\n\n🔹 **Padrão:** Custa ${custoBasePts.toFixed(1)} pts\n✨ **Especial:** Custa ${custoEspecialPts.toFixed(1)} pts + 1 Especiaria`,
+                        content: `🥘 **Preparando: ${tituloPreparo}**\n📦 **Rendimento:** 5 Porções\n\n**Efeitos Originais:**\n${efeitosTxt.join("\n")}\n\n🔹 **Padrão:** Custa ${custoBasePts.toFixed(1)} pts\n✨ **Especial:** Custa ${custoEspecialPts.toFixed(1)} pts + 1 Especiaria\n\n*Nota: Você poderá editar os efeitos na próxima tela.*`,
                         components: [botoes]
                     });
                 }
@@ -182,63 +185,94 @@ module.exports = {
                         return i.reply({ content: "Sem especiarias no estoque.", flags: MessageFlags.Ephemeral });
                     }
 
-                    for (const [ing, qtdNecessaria] of Object.entries(ingredientesAgregados)) {
-                        estoque[ing] -= qtdNecessaria;
-                        if (estoque[ing] <= 0) delete estoque[ing];
-                    }
-
-                    if (usarEspeciarias) {
-                        estoque["Especiarias"] -= 1;
-                        if (estoque["Especiarias"] <= 0) delete estoque["Especiarias"];
-                    }
-
-                    await prisma.personagens.update({
-                        where: { id: charAtual.id },
-                        data: {
-                            estoque_ingredientes: estoque,
-                            pontos_forja_atual: { decrement: custoPts }
-                        }
-                    });
-
-                    const nomePratoLog = receitasSelecionadas.join(" + ");
-                    const descLog = usarEspeciarias
-                        ? `Cozinhou ${nomePratoLog} x5 (Especial)`
-                        : `Cozinhou ${nomePratoLog} x5`;
-
-                    await prisma.transacao.create({
-                        data: {
-                            personagem_id: charAtual.id,
-                            descricao: descLog,
-                            valor: 0,
-                            tipo: "GASTO"
-                        }
-                    });
-
-                    let efeitosFinais = [];
+                    let efeitosPadrao = [];
                     receitasSelecionadas.forEach(nome => {
-                        efeitosFinais.push(`• ${DB_CULINARIA.RECEITAS[nome].desc}`);
+                        efeitosPadrao.push(`• ${DB_CULINARIA.RECEITAS[nome].desc}`);
                     });
 
-                    const msgSucesso = usarEspeciarias
-                        ? `✨ **Banquete Gourmet! (5 Porções)**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}**.\n*Efeitos (Aprimorados):*\n${efeitosFinais.join("\n")}`
-                        : `🍲 **Refeição Pronta! (5 Porções)**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}**.\n*Efeitos:*\n${efeitosFinais.join("\n")}`;
+                    const modalId = `modal_efeitos_cozinha_${Date.now()}`;
+                    const modal = new ModalBuilder()
+                        .setCustomId(modalId)
+                        .setTitle("Descreva a Refeição");
 
-                    await interaction.channel.send({ content: msgSucesso });
+                    const inputEfeitos = new TextInputBuilder()
+                        .setCustomId("inp_efeitos")
+                        .setLabel("Efeitos mecânicos e sabor do prato:")
+                        .setStyle(TextInputStyle.Paragraph)
+                        .setRequired(true)
+                        .setValue(efeitosPadrao.join("\n")); 
 
-                    const estoqueFinal = Object.entries(estoque).map(([k, v]) => `${k}: ${v}`).join(", ") || "Vazio";
+                    modal.addComponents(new ActionRowBuilder().addComponents(inputEfeitos));
 
-                    await i.update({
-                        content: `✅ O prato foi servido na mesa!\n\n🎒 **Estoque:** ${estoqueFinal}\n🔨 **Pts Restantes:** ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
-                        components: []
-                    });
+                    await i.showModal(modal);
 
-                    collector.stop("cozinhou");
+                    try {
+                        const modalSubmit = await i.awaitModalSubmit({
+                            filter: m => m.customId === modalId && m.user.id === interaction.user.id,
+                            time: 120000 
+                        });
+
+                        await modalSubmit.deferUpdate();
+
+                        const efeitosEditados = modalSubmit.fields.getTextInputValue("inp_efeitos");
+
+                        for (const [ing, qtdNecessaria] of Object.entries(ingredientesAgregados)) {
+                            estoque[ing] -= qtdNecessaria;
+                            if (estoque[ing] <= 0) delete estoque[ing];
+                        }
+
+                        if (usarEspeciarias) {
+                            estoque["Especiarias"] -= 1;
+                            if (estoque["Especiarias"] <= 0) delete estoque["Especiarias"];
+                        }
+
+                        await prisma.personagens.update({
+                            where: { id: charAtual.id },
+                            data: {
+                                estoque_ingredientes: estoque,
+                                pontos_forja_atual: { decrement: custoPts }
+                            }
+                        });
+
+                        const nomePratoLog = receitasSelecionadas.join(" + ");
+                        const descLog = usarEspeciarias
+                            ? `Cozinhou ${nomePratoLog} x5 (Especial)`
+                            : `Cozinhou ${nomePratoLog} x5`;
+
+                        await prisma.transacao.create({
+                            data: {
+                                personagem_id: charAtual.id,
+                                descricao: descLog,
+                                valor: 0,
+                                tipo: "GASTO"
+                            }
+                        });
+
+                        const msgSucesso = usarEspeciarias
+                            ? `✨ **Banquete Gourmet! (5 Porções)**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}**.\n*Efeitos (Aprimorados):*\n${efeitosEditados}`
+                            : `🍲 **Refeição Pronta! (5 Porções)**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}**.\n*Efeitos:*\n${efeitosEditados}`;
+
+                        await interaction.channel.send({ content: msgSucesso });
+
+                        const estoqueFinal = Object.entries(estoque).map(([k, v]) => `${k}: ${v}`).join(", ") || "Vazio";
+
+                        await modalSubmit.editReply({
+                            content: `✅ O prato foi servido na mesa!\n\n🎒 **Estoque:** ${estoqueFinal}\n🔨 **Pts Restantes:** ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
+                            components: []
+                        });
+
+                        collector.stop("cozinhou");
+
+                    } catch (err) {
+                        if (err.code === 'InteractionCollectorError') return;
+                        console.error("Erro no modal de cozinha:", err);
+                    }
                 }
             });
 
         } catch (err) {
             console.error("Erro no comando cozinhar:", err);
-            const erroMsg = { content: "❌ Ocorreu um erro ao acessar o fogão.", ephemeral: true };
+            const erroMsg = { content: "❌ Ocorreu um erro ao acessar o fogão.", flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(()=>{});
             } else {
