@@ -90,13 +90,13 @@ module.exports = {
                     .setDisabled(m.status !== "ABERTA"),
                 new ButtonBuilder()
                     .setCustomId("ms_add_player")
-                    .setLabel("Adicionar Player")
+                    .setLabel("Add Player")
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji("➕")
                     .setDisabled(m.status === "CONCLUIDA"),
                 new ButtonBuilder()
                     .setCustomId("ms_gerenciar")
-                    .setLabel("Substituir Jogador")
+                    .setLabel("Remover")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("👥")
                     .setDisabled(m.status === "CONCLUIDA")
@@ -121,7 +121,7 @@ module.exports = {
                     .setDisabled(m.status === "CONCLUIDA"),    
                 new ButtonBuilder()
                     .setCustomId("ms_atualizar")
-                    .setLabel("🔄 Atualizar Lista")
+                    .setLabel("🔄 Atualizar")
                     .setStyle(ButtonStyle.Secondary)    
             );
 
@@ -219,7 +219,16 @@ module.exports = {
                     }
 
                     const candidatos = mAtual.inscricoes.filter(insc => !insc.selecionado);
-                    const sorteados = shuffle(candidatos).slice(0, vagasRestantes);
+
+                    let candidatosSorteados = shuffle(candidatos);
+
+                    candidatosSorteados.sort((a, b) => {
+                        const dataA = a.personagem.ultima_missao ? new Date(a.personagem.ultima_missao).getTime() : 0;
+                        const dataB = b.personagem.ultima_missao ? new Date(b.personagem.ultima_missao).getTime() : 0;
+                        return dataA - dataB;
+                    });
+
+                    const sorteados = candidatosSorteados.slice(0, vagasRestantes);
 
                     if (sorteados.length > 0) {
                         await prisma.inscricoes.updateMany({
@@ -296,8 +305,9 @@ module.exports = {
                                     where: { missao_id: missao.id, selecionado: false }
                                 });
 
-                                const filaEmbaralhada = shuffle(fila);
-                                const proximoFila = filaEmbaralhada[0];
+                                let filaSorteada = shuffle(fila);
+                                
+                                const proximoFila = filaSorteada[0];
 
                                 if (proximoFila) {
                                     await tx.inscricoes.update({
@@ -457,6 +467,17 @@ module.exports = {
                         where: { id: missao.id },
                         data: { status: "CONCLUIDA" }
                     });
+
+                    const inscritosSelecionados = await prisma.inscricoes.findMany({
+                        where: { missao_id: missao.id, selecionado: true }
+                    });
+
+                    if (inscritosSelecionados.length > 0) {
+                        await prisma.personagens.updateMany({
+                            where: { id: { in: inscritosSelecionados.map(i => i.personagem_id) } },
+                            data: { ultima_missao: new Date() }
+                        });
+                    }
 
                     const mNova = await prisma.missoes.findUnique({
                         where: { id: missao.id },

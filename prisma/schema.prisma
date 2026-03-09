@@ -69,6 +69,13 @@ model Personagens {
   inscricoes Inscricoes[]
 
   pericias      String[] @default([])
+
+  base_dono       Base?           @relation("DonoDaBase")
+  base_residente  BaseResidente[] @relation("ResidenteDaBase")
+
+  ultima_missao  DateTime?
+
+  agenda  Json?
 }
 
 model PersonagemClasse {
@@ -126,7 +133,7 @@ model ApostasBicho {
   numero        String   
   posicao       String   
   valor         Float
-  status        String   @default("PENDENTE") // PENDENTE, GANHOU, PERDEU
+  status        String   @default("PENDENTE") 
   data          DateTime @default(now())
 }
 
@@ -147,4 +154,53 @@ model Avaliacao {
   nota_conhecimento Int
   nota_geral      Int
   data_avaliacao  DateTime @default(now())
+}
+
+model Base {
+  id              Int       @id @default(autoincrement())
+  nome            String
+  tipo            String    
+  porte           String    @default("Mínima") 
+  seguranca       Int       @default(0)
+  
+  dono_id         Int       @unique 
+  dono            Personagens @relation("DonoDaBase", fields: [dono_id], references: [id], onDelete: Cascade)
+  
+  manutencao_paga Boolean   @default(true)
+  data_criacao    DateTime  @default(now())
+
+  residentes      BaseResidente[]
+  comodos         BaseComodo[]
+  mobilias        BaseMobilia[]
+}
+
+model BaseResidente {
+  id            Int         @id @default(autoincrement())
+  base_id       Int
+  personagem_id Int
+  
+  base          Base        @relation(fields: [base_id], references: [id], onDelete: Cascade)
+  personagem    Personagens @relation("ResidenteDaBase", fields: [personagem_id], references: [id], onDelete: Cascade)
+
+  @@unique([base_id, personagem_id]) 
+}
+
+model BaseComodo {
+  id          Int       @id @default(autoincrement())
+  base_id     Int
+  nome_comodo String    
+  danificado  Boolean   @default(false) 
+  
+  base        Base      @relation(fields: [base_id], references: [id], onDelete: Cascade)
+  mobilias    BaseMobilia[]
+}
+
+model BaseMobilia {
+  id          Int         @id @default(autoincrement())
+  base_id     Int
+  comodo_id   Int?        
+  nome_item   String      
+  
+  base        Base        @relation(fields: [base_id], references: [id], onDelete: Cascade)
+  comodo      BaseComodo? @relation(fields: [comodo_id], references: [id], onDelete: Cascade)
 }

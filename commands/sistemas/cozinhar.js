@@ -42,7 +42,9 @@ module.exports = {
             const montarMenuReceitas = () => {
                 const menu = new StringSelectMenuBuilder()
                     .setCustomId("menu_selecionar_receita")
-                    .setPlaceholder("🍳 Escolha o prato");
+                    .setPlaceholder("🍳 Escolha 1 ou 2 pratos (Combinar)")
+                    .setMinValues(1)
+                    .setMaxValues(Math.min(2, receitasConhecidas.length)); 
 
                 receitasConhecidas.forEach(nome => {
                     const r = DB_CULINARIA.RECEITAS[nome];
@@ -67,7 +69,7 @@ module.exports = {
             const estoqueTxt = Object.entries(estoqueInicial).map(([k, v]) => `${k}: ${v}`).join(", ") || "Vazio";
 
             const msg = await interaction.reply({
-                content: `🔥 **Fogão Aceso (Rende 5 Porções)**\n👤 **Cozinheiro:** ${char.nome}\n🔨 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)}\n🎒 **Estoque:** ${estoqueTxt}`,
+                content: `🔥 **Fogão Aceso (Rende 5 Porções)**\n👤 **Cozinheiro:** ${char.nome}\n🔨 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)}\n🎒 **Estoque:** ${estoqueTxt}\n\n*Dica: Você pode selecionar até 2 pratos para fazer uma Refeição Combinada.*`,
                 components: [montarMenuReceitas()],
                 ephemeral: true, 
                 fetchReply: true
@@ -78,52 +80,67 @@ module.exports = {
                 time: 120000
             });
 
-            let receitaSelecionada = null;
+            let receitasSelecionadas = [];
+            let ingredientesAgregados = {};
 
             collector.on("collect", async i => {
                 const charAtual = await getPersonagemAtivo(interaction.user.id);
                 const estoque = charAtual.estoque_ingredientes || {};
 
                 if (i.isStringSelectMenu() && i.customId === "menu_selecionar_receita") {
-                    receitaSelecionada = i.values[0];
-                    const r = DB_CULINARIA.RECEITAS[receitaSelecionada];
+                    receitasSelecionadas = i.values; 
+                    const numReceitas = receitasSelecionadas.length;
+                    
+                    ingredientesAgregados = {};
+                    let efeitosTxt = [];
+
+                    receitasSelecionadas.forEach(nome => {
+                        const r = DB_CULINARIA.RECEITAS[nome];
+                        efeitosTxt.push(`**${nome}**: ${r.desc}`);
+                        for (const [ing, qtd] of Object.entries(r.ing)) {
+                            ingredientesAgregados[ing] = (ingredientesAgregados[ing] || 0) + qtd;
+                        }
+                    });
 
                     let temIngredientes = true;
                     let faltantes = [];
 
-                    for (const [ing, qtd] of Object.entries(r.ing)) {
-                        if (!estoque[ing] || estoque[ing] < qtd) {
+                    for (const [ing, qtdNecessaria] of Object.entries(ingredientesAgregados)) {
+                        if (!estoque[ing] || estoque[ing] < qtdNecessaria) {
                             temIngredientes = false;
-                            faltantes.push(`${ing} (${estoque[ing] || 0}/${qtd})`);
+                            faltantes.push(`${ing} (${estoque[ing] || 0}/${qtdNecessaria})`);
                         }
                     }
 
                     if (!temIngredientes) {
                         return i.reply({
-                            content: `🚫 **Faltam ingredientes:** ${faltantes.join(", ")}`,
+                            content: `🚫 **Faltam ingredientes para o preparo:** ${faltantes.join(", ")}`,
                             flags: MessageFlags.Ephemeral
                         });
                     }
 
-                    if (charAtual.pontos_forja_atual < 1.0) {
+                    const custoBasePts = numReceitas * 1.0;
+                    const custoEspecialPts = numReceitas * 2.0;
+
+                    if (charAtual.pontos_forja_atual < custoBasePts) {
                         return i.reply({
-                            content: `🚫 **Pontos de Forja insuficientes!** Custo base: 1.0 pts.\nVocê tem ${charAtual.pontos_forja_atual.toFixed(1)}.`,
+                            content: `🚫 **Pontos de Forja insuficientes!** Custo: ${custoBasePts.toFixed(1)} pts.\nVocê tem ${charAtual.pontos_forja_atual.toFixed(1)}.`,
                             flags: MessageFlags.Ephemeral
                         });
                     }
 
                     const temEspeciarias = (estoque["Especiarias"] || 0) >= 1;
-                    const podeEspecial = temEspeciarias && charAtual.pontos_forja_atual >= 2.0;
+                    const podeEspecial = temEspeciarias && charAtual.pontos_forja_atual >= custoEspecialPts;
 
                     const botoes = new ActionRowBuilder().addComponents(
                         new ButtonBuilder()
                             .setCustomId("btn_cozinhar_padrao")
-                            .setLabel("Cozinhar (1 Pts)")
+                            .setLabel(`Cozinhar (${custoBasePts} Pts)`)
                             .setStyle(ButtonStyle.Success)
                             .setEmoji("🍲"),
                         new ButtonBuilder()
                             .setCustomId("btn_cozinhar_especial")
-                            .setLabel("Com Especiarias (2 Pts)")
+                            .setLabel(`Especial (${custoEspecialPts} Pts)`)
                             .setStyle(ButtonStyle.Primary)
                             .setEmoji("✨")
                             .setDisabled(!podeEspecial),
@@ -133,8 +150,10 @@ module.exports = {
                             .setStyle(ButtonStyle.Secondary)
                     );
 
+                    const tituloPreparo = numReceitas > 1 ? "Prato Combinado" : receitasSelecionadas[0];
+
                     return i.update({
-                        content: `🥘 **Preparando: ${receitaSelecionada}**\n📦 **Rendimento:** 5 Porções\n\n🔹 **Padrão:** Custa 1.0 pts\n✨ **Especial:** Custa 2.0 pts + 1 Especiaria`,
+                        content: `🥘 **Preparando: ${tituloPreparo}**\n📦 **Rendimento:** 5 Porções\n\n**Efeitos:**\n${efeitosTxt.join("\n")}\n\n🔹 **Padrão:** Custa ${custoBasePts.toFixed(1)} pts\n✨ **Especial:** Custa ${custoEspecialPts.toFixed(1)} pts + 1 Especiaria`,
                         components: [botoes]
                     });
                 }
@@ -147,24 +166,24 @@ module.exports = {
                         });
                     }
 
-                    if (!receitaSelecionada) {
+                    if (receitasSelecionadas.length === 0) {
                         return i.reply({ content: "Nenhuma receita selecionada.", flags: MessageFlags.Ephemeral });
                     }
 
+                    const numReceitas = receitasSelecionadas.length;
                     const usarEspeciarias = i.customId === "btn_cozinhar_especial";
-                    const custoPts = usarEspeciarias ? 2.0 : 1.0;
-                    const receita = DB_CULINARIA.RECEITAS[receitaSelecionada];
+                    const custoPts = usarEspeciarias ? (numReceitas * 2.0) : (numReceitas * 1.0);
 
                     if (charAtual.pontos_forja_atual < custoPts) {
-                        return i.reply({ content: `Pontos de forja insuficientes (precisa de ${custoPts}).`, flags: MessageFlags.Ephemeral });
+                        return i.reply({ content: `Pontos de forja insuficientes (precisa de ${custoPts.toFixed(1)}).`, flags: MessageFlags.Ephemeral });
                     }
 
                     if (usarEspeciarias && (!estoque["Especiarias"] || estoque["Especiarias"] < 1)) {
-                        return i.reply({ content: "Sem especiarias.", flags: MessageFlags.Ephemeral });
+                        return i.reply({ content: "Sem especiarias no estoque.", flags: MessageFlags.Ephemeral });
                     }
 
-                    for (const [ing, qtd] of Object.entries(receita.ing)) {
-                        estoque[ing] -= qtd;
+                    for (const [ing, qtdNecessaria] of Object.entries(ingredientesAgregados)) {
+                        estoque[ing] -= qtdNecessaria;
                         if (estoque[ing] <= 0) delete estoque[ing];
                     }
 
@@ -181,9 +200,10 @@ module.exports = {
                         }
                     });
 
+                    const nomePratoLog = receitasSelecionadas.join(" + ");
                     const descLog = usarEspeciarias
-                        ? `Cozinhou ${receitaSelecionada} x5 (Especial)`
-                        : `Cozinhou ${receitaSelecionada} x5`;
+                        ? `Cozinhou ${nomePratoLog} x5 (Especial)`
+                        : `Cozinhou ${nomePratoLog} x5`;
 
                     await prisma.transacao.create({
                         data: {
@@ -194,9 +214,14 @@ module.exports = {
                         }
                     });
 
+                    let efeitosFinais = [];
+                    receitasSelecionadas.forEach(nome => {
+                        efeitosFinais.push(`• ${DB_CULINARIA.RECEITAS[nome].desc}`);
+                    });
+
                     const msgSucesso = usarEspeciarias
-                        ? `✨ **Prato Gourmet Pronto! (5 Porções)**\nO cozinheiro **${charAtual.nome}** fez **${receitaSelecionada}**.\n*Efeito:* ${receita.desc} (Aprimorado)`
-                        : `🍲 **Prato Pronto! (5 Porções)**\nO cozinheiro **${charAtual.nome}** fez **${receitaSelecionada}**.\n*Efeito:* ${receita.desc}`;
+                        ? `✨ **Banquete Gourmet! (5 Porções)**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}**.\n*Efeitos (Aprimorados):*\n${efeitosFinais.join("\n")}`
+                        : `🍲 **Refeição Pronta! (5 Porções)**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}**.\n*Efeitos:*\n${efeitosFinais.join("\n")}`;
 
                     await interaction.channel.send({ content: msgSucesso });
 

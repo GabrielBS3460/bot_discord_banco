@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -18,7 +18,28 @@ module.exports = {
                     {cmd: "/saldo", desc: "Mostra seu saldo atual.", syntax: "/saldo"},
                     {cmd: "/extrato", desc: "Histórico financeiro do personagem.", syntax: "/extrato"},
                     {cmd: "/tix", desc: "Transferência de K$ entre jogadores.", syntax: "/tix destinatario:@usuario valor:<valor>"},
-                    {cmd: "/gasto", desc: "Registra um gasto no seu extrato.", syntax: "/gasto valor:<valor> motivo:<motivo>"}
+                    {cmd: "/gasto", desc: "Registra um gasto no seu extrato.", syntax: "/gasto valor:<valor> motivo:<motivo>"},
+                    {cmd: "/alt", desc: "Transfere K$, itens ou equipamentos entre seus personagens.", syntax: "/alt <dinheiro | itens | diverso>"}
+                ]
+            },
+            base: {
+                emoji: "🏰",
+                titulo: "Bases & Organizações",
+                descricao: "Sistema de propriedades e moradia do grupo.",
+                comandos: [
+                    {cmd: "/base fundar", desc: "Compra e funda uma nova base.", syntax: "/base fundar"},
+                    {cmd: "/base painel", desc: "Abre o painel de gerenciamento da sua base.", syntax: "/base painel"},
+                    {cmd: "/base construir", desc: "Constrói um novo cômodo (K$ 1.000).", syntax: "/base construir"},
+                    {cmd: "/base mobiliar", desc: "Compra mobílias para os seus cômodos.", syntax: "/base mobiliar"}
+                ]
+            },
+            agenda: {
+                emoji: "📅",
+                titulo: "Agenda & Horários",
+                descricao: "Sincronização de disponibilidade do servidor.",
+                comandos: [
+                    {cmd: "/agenda marcar", desc: "Define os dias e horários que você está livre.", syntax: "/agenda marcar"},
+                    {cmd: "/agenda mapa", desc: "Mostra o mapa de calor com os horários de todos.", syntax: "/agenda mapa"}
                 ]
             },
             contrato: {
@@ -75,7 +96,7 @@ module.exports = {
             return new EmbedBuilder()
                 .setColor("#2B2D31")
                 .setTitle("📘 Central de Ajuda")
-                .setDescription("O sistema foi atualizado para **Slash Commands** (`/`).\nClique em uma categoria abaixo para ver a nova sintaxe dos comandos.")
+                .setDescription("O sistema funciona através de **Slash Commands** (`/`).\nClique em uma categoria abaixo para consultar a documentação.")
                 .setThumbnail(client.user.displayAvatarURL());
         };
 
@@ -88,33 +109,33 @@ module.exports = {
                 .setColor("#0099FF")
                 .setTitle(`${cat.emoji} ${cat.titulo}`)
                 .setDescription(cat.descricao)
-                .addFields({
-                    name: "Comandos Disponíveis",
-                    value: lista
-                });
+                .addFields({ name: "Comandos Disponíveis", value: lista });
         };
 
-        const rowMenu = new ActionRowBuilder().addComponents(
+        const rowMenu1 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("help_personagem").setLabel("Personagem").setEmoji("👤").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId("help_contrato").setLabel("Contrato").setEmoji("🛡️").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder().setCustomId("help_sistemas").setLabel("Sistemas").setEmoji("⚒️").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("help_contrato").setLabel("Contratos").setEmoji("🛡️").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("help_sistemas").setLabel("Ofícios").setEmoji("⚒️").setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId("help_atividades").setLabel("Atividades").setEmoji("🎲").setStyle(ButtonStyle.Primary),
             new ButtonBuilder().setCustomId("help_mestre").setLabel("Mestre").setEmoji("👑").setStyle(ButtonStyle.Primary)
         );
 
-        const rowVoltar = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("help_menu")
-                .setLabel("⬅ Voltar")
-                .setStyle(ButtonStyle.Secondary)
+        const rowMenu2 = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId("help_base").setLabel("Bases").setEmoji("🏰").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("help_agenda").setLabel("Agenda").setEmoji("📅").setStyle(ButtonStyle.Primary)
         );
 
-        const msg = await interaction.reply({
+        const rowVoltar = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId("help_menu").setLabel("⬅ Voltar ao Início").setStyle(ButtonStyle.Secondary)
+        );
+
+        await interaction.reply({
             embeds: [criarEmbedMenu()],
-            components: [rowMenu],
-            ephemeral: true,
-            fetchReply: true
+            components: [rowMenu1, rowMenu2],
+            flags: MessageFlags.Ephemeral
         });
+
+        const msg = await interaction.fetchReply();
 
         const collector = msg.createMessageComponentCollector({
             filter: i => i.user.id === interaction.user.id,
@@ -125,7 +146,7 @@ module.exports = {
             if (i.customId === "help_menu") {
                 return i.update({
                     embeds: [criarEmbedMenu()],
-                    components: [rowMenu]
+                    components: [rowMenu1, rowMenu2]
                 });
             }
 
@@ -143,8 +164,7 @@ module.exports = {
         collector.on("end", async () => {
             try {
                 await interaction.editReply({ components: [] });
-            } catch (err) {
-            }
+            } catch (err) {}
         });
     }
 };
