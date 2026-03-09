@@ -21,7 +21,7 @@ module.exports = {
                 .setDescription("Envia K$ do seu personagem ativo para outro personagem seu.")
         )
         .addSubcommand(sub =>
-            sub.setName("ingredientes")
+            sub.setName("ingredientes") 
                 .setDescription("Envia ingredientes do seu estoque para outro personagem seu.")
         )
         .addSubcommand(sub =>
@@ -29,7 +29,7 @@ module.exports = {
                 .setDescription("Envia um equipamento/item avulso para um alt usando um link.")
                 .addStringOption(opt => 
                     opt.setName("nome")
-                       .setDescription("Nome do item (Ex: Espada Longa de Tollon)")
+                       .setDescription("Nome do item (Ex: Espada Longa)")
                        .setRequired(true)
                 )
                 .addStringOption(opt => 
@@ -43,13 +43,12 @@ module.exports = {
         const NOME_COLUNA_DISCORD = "usuario_id"; 
 
         try {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
             const charAtivo = await getPersonagemAtivo(interaction.user.id);
 
             if (!charAtivo) {
-                return interaction.reply({
-                    content: "🚫 Você não tem um personagem ativo no momento.",
-                    flags: MessageFlags.Ephemeral
-                });
+                return interaction.editReply({ content: "🚫 Você não tem um personagem ativo no momento." });
             }
 
             const meusAlts = await prisma.personagens.findMany({
@@ -60,10 +59,7 @@ module.exports = {
             });
 
             if (meusAlts.length === 0) {
-                return interaction.reply({
-                    content: "🚫 Você não possui outros personagens criados para receber a transferência.",
-                    flags: MessageFlags.Ephemeral
-                });
+                return interaction.editReply({ content: "🚫 Você não possui outros personagens criados para receber a transferência." });
             }
 
             const subcomando = interaction.options.getSubcommand();
@@ -82,13 +78,11 @@ module.exports = {
                     );
                 });
 
-                await interaction.reply({
+                const replyMsg = await interaction.editReply({
                     content: `💸 **Transferência entre Alts (Dinheiro)**\n**Origem:** ${charAtivo.nome}\n**Seu Saldo:** ${formatarMoeda(charAtivo.saldo)}\n\nSelecione o destinatário:`,
-                    components: [new ActionRowBuilder().addComponents(menuAlts)],
-                    flags: MessageFlags.Ephemeral
+                    components: [new ActionRowBuilder().addComponents(menuAlts)]
                 });
 
-                const replyMsg = await interaction.fetchReply();
                 const collector = replyMsg.createMessageComponentCollector({ filter: i => i.user.id === interaction.user.id, time: 60000 });
 
                 collector.on('collect', async iSelect => {
@@ -138,17 +132,16 @@ module.exports = {
                             components: [] 
                         });
                         collector.stop();
-
                     } catch (err) {}
                 });
             }
 
-            if (subcomando === "ingrediente") {
+            if (subcomando === "ingredientes") {
                 const estoque = charAtivo.estoque_ingredientes || {};
                 const listaItens = Object.keys(estoque);
 
                 if (listaItens.length === 0) {
-                    return interaction.reply({ content: "🚫 O estoque deste personagem está vazio.", flags: MessageFlags.Ephemeral });
+                    return interaction.editReply({ content: "🚫 O estoque deste personagem está vazio." });
                 }
 
                 const menuItens = new StringSelectMenuBuilder()
@@ -171,17 +164,15 @@ module.exports = {
                     .setStyle(ButtonStyle.Primary)
                     .setDisabled(true);
 
-                await interaction.reply({
+                const replyMsg = await interaction.editReply({
                     content: `📦 **Transferência entre Alts (Estoque)**\n**Origem:** ${charAtivo.nome}\n\nSelecione o Item e o Destino abaixo:`,
                     components: [
                         new ActionRowBuilder().addComponents(menuItens),
                         new ActionRowBuilder().addComponents(menuAlts),
                         new ActionRowBuilder().addComponents(btnConfirmar)
-                    ],
-                    flags: MessageFlags.Ephemeral
+                    ]
                 });
 
-                const replyMsg = await interaction.fetchReply();
                 const collector = replyMsg.createMessageComponentCollector({ filter: i => i.user.id === interaction.user.id, time: 120000 });
 
                 let itemEscolhido = null;
@@ -196,7 +187,6 @@ module.exports = {
                             btnConfirmar.setDisabled(false);
                             btnConfirmar.setStyle(ButtonStyle.Success);
                         }
-
                         await iComp.update({ components: [new ActionRowBuilder().addComponents(menuItens), new ActionRowBuilder().addComponents(menuAlts), new ActionRowBuilder().addComponents(btnConfirmar)] });
                     }
 
@@ -205,9 +195,11 @@ module.exports = {
                         const maxDisp = estoque[itemEscolhido];
 
                         const modalId = `mod_qtd_item_${interaction.id}`;
+                        const nomeCurto = itemEscolhido.length > 25 ? itemEscolhido.substring(0, 25) + '...' : itemEscolhido;
+
                         const modal = new ModalBuilder()
                             .setCustomId(modalId)
-                            .setTitle(`Enviar ${itemEscolhido}`)
+                            .setTitle(`Enviar ${nomeCurto}`)
                             .addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('inp_qtd').setLabel(`Quantidade (Máx: ${maxDisp})`).setStyle(TextInputStyle.Short).setRequired(true)));
 
                         await iComp.showModal(modal);
@@ -247,7 +239,6 @@ module.exports = {
                                 components: [] 
                             });
                             collector.stop();
-
                         } catch (err) {}
                     }
                 });
@@ -265,13 +256,11 @@ module.exports = {
                     menuAlts.addOptions(new StringSelectMenuOptionBuilder().setLabel(alt.nome).setValue(String(alt.id)));
                 });
 
-                await interaction.reply({
+                const replyMsg = await interaction.editReply({
                     content: `📦 **Transferir Equipamento / Item Avulso**\n**Origem:** ${charAtivo.nome}\n**Item:** [${nomeItem}](${linkItem})\n\nSelecione para qual personagem seu você deseja enviar:`,
-                    components: [new ActionRowBuilder().addComponents(menuAlts)],
-                    flags: MessageFlags.Ephemeral
+                    components: [new ActionRowBuilder().addComponents(menuAlts)]
                 });
 
-                const replyMsg = await interaction.fetchReply();
                 const collector = replyMsg.createMessageComponentCollector({ filter: i => i.user.id === interaction.user.id, time: 60000 });
 
                 collector.on('collect', async iSelect => {
@@ -280,8 +269,8 @@ module.exports = {
                     const destinoAlt = meusAlts.find(a => a.id === destinoId);
 
                     await prisma.$transaction([
-                        prisma.transacao.create({ data: { personagem_id: charAtivo.id, descricao: `Enviou o item RP [${nomeItem}] para o Alt (${destinoAlt.nome})`, valor: 0, tipo: "LOG" } }),
-                        prisma.transacao.create({ data: { personagem_id: destinoId, descricao: `Recebeu o item RP [${nomeItem}] do Alt (${charAtivo.nome})`, valor: 0, tipo: "LOG" } })
+                        prisma.transacao.create({ data: { personagem_id: charAtivo.id, descricao: `Enviou o item [${nomeItem}] para o Alt (${destinoAlt.nome})`, valor: 0, tipo: "LOG" } }),
+                        prisma.transacao.create({ data: { personagem_id: destinoId, descricao: `Recebeu o item [${nomeItem}] do Alt (${charAtivo.nome})`, valor: 0, tipo: "LOG" } })
                     ]);
 
                     await interaction.channel.send({
@@ -299,9 +288,9 @@ module.exports = {
 
         } catch (err) {
             console.error("Erro no comando alt:", err);
-            const erroMsg = { content: "❌ Ocorreu um erro no sistema de alts.", flags: MessageFlags.Ephemeral };
-            if (interaction.replied || interaction.deferred) await interaction.followUp(erroMsg).catch(()=>{});
-            else await interaction.reply(erroMsg).catch(()=>{});
+            try {
+                await interaction.editReply({ content: "❌ Ocorreu um erro no sistema de alts.", components: [] });
+            } catch(e) {}
         }
     }
 };
