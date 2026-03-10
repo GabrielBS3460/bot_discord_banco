@@ -81,9 +81,11 @@ module.exports = {
             const sub = await i.awaitModalSubmit({ time: 60000 }).catch(() => null);
             if (!sub) return;
 
+            await sub.deferReply();
+
             const pontosGanhos = parseFloat(sub.fields.getTextInputValue("pontos").replace(",", "."));
             if (isNaN(pontosGanhos) || pontosGanhos < 0) {
-                return sub.reply({ content: "🚫 Valor inválido.", flags: MessageFlags.Ephemeral });
+                return sub.editReply({ content: "🚫 Valor inválido.", flags: MessageFlags.Ephemeral });
             }
 
             try {
@@ -97,14 +99,22 @@ module.exports = {
                     CUSTO_NIVEL
                 );
 
-                let msgFinal = `✅ **Resgate Concluído!**\n💰 **Kwanzas:** +K$ ${resultado.ouroGanho}\n📈 **Pontos:** +${pontosGanhos} (Total: ${resultado.novosPontos})`;
-                if (resultado.niveisGanhos > 0)
-                    msgFinal += `\n⏫ **LEVEL UP!** Você agora é nível **${resultado.novoNivel}**!`;
+                let msgFinal = `🎊 **RECOMPENSA RESGATADA!** 🎊\n👤 **Aventureiro:** ${interaction.user}\n💰 **Kwanzas:** +K$ ${resultado.ouroGanho}\n📈 **Pontos de Missão:** +${pontosGanhos} (Total: ${resultado.novosPontos})`;
 
-                await sub.update({ content: msgFinal, components: [] });
+                if (resultado.niveisGanhos > 0)
+                    msgFinal += `\n\n⏫ **LEVEL UP!** O personagem subiu para o nível **${resultado.novoNivel}**!`;
+
+                await sub.editReply({
+                    content: msgFinal,
+                    components: []
+                });
+
+                await interaction
+                    .editReply({ content: "✅ Resgate processado com sucesso.", components: [] })
+                    .catch(() => {});
             } catch (err) {
                 console.error(err);
-                await sub.reply({ content: "❌ Erro ao processar resgate.", flags: MessageFlags.Ephemeral });
+                await sub.editReply({ content: "❌ Erro ao processar resgate.", flags: MessageFlags.Ephemeral });
             }
         });
     }
