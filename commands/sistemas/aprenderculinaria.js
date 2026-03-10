@@ -10,18 +10,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("aprenderculinaria")
         .setDescription("Aprende novas receitas baseado na sua Inteligência.")
-        .addBooleanOption(opt => 
-            opt.setName("as_da_cozinha")
-               .setDescription("Você possui o poder 'Ás da Cozinha'?")
-               .setRequired(true)
+        .addBooleanOption(opt =>
+            opt.setName("as_da_cozinha").setDescription("Você possui o poder 'Ás da Cozinha'?").setRequired(true)
         ),
 
-    async execute({
-        interaction, 
-        prisma,
-        getPersonagemAtivo,
-        DB_CULINARIA
-    }) {
+    async execute({ interaction, prisma, getPersonagemAtivo, DB_CULINARIA }) {
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
 
@@ -33,7 +26,8 @@ module.exports = {
 
             if (!listaPericias.includes("Ofício Cozinheiro")) {
                 return interaction.reply({
-                    content: "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!",
+                    content:
+                        "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!",
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -60,8 +54,8 @@ module.exports = {
             const conhecidas = char.receitas_conhecidas || [];
 
             if (conhecidas.length >= limiteReceitas) {
-                let motivo = temAsDaCozinha 
-                    ? `Você já atingiu o limite de **${limiteReceitas}** receitas (INT + Ás da Cozinha).` 
+                let motivo = temAsDaCozinha
+                    ? `Você já atingiu o limite de **${limiteReceitas}** receitas (INT + Ás da Cozinha).`
                     : `Você já atingiu o limite de **${limiteReceitas}** receitas (Baseado apenas na sua INT).\n*Dica: Se você pegou o poder Ás da Cozinha, marque "True" no comando!*`;
 
                 return interaction.reply({
@@ -74,7 +68,10 @@ module.exports = {
             const disponiveis = todasReceitas.filter(r => !conhecidas.includes(r));
 
             if (disponiveis.length === 0) {
-                return interaction.reply({ content: "👨‍🍳 Você já conhece todas as receitas disponíveis no jogo!", flags: MessageFlags.Ephemeral });
+                return interaction.reply({
+                    content: "👨‍🍳 Você já conhece todas as receitas disponíveis no jogo!",
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
             const menu = new StringSelectMenuBuilder()
@@ -130,10 +127,7 @@ module.exports = {
                         });
                     }
 
-                    const novasConhecidas = [
-                        ...receitasAtuais,
-                        receitaEscolhida
-                    ];
+                    const novasConhecidas = [...receitasAtuais, receitaEscolhida];
 
                     await prisma.personagens.update({
                         where: { id: charUp.id },
@@ -144,20 +138,21 @@ module.exports = {
 
                     await interaction.editReply({
                         content: `✅ **Você aprendeu a fazer:** ${receitaEscolhida}!\n*Abra o fogão com /cozinhar para preparar.*`,
-                        components: [] 
+                        components: []
                     });
 
                     collector.stop();
-
-                } catch(err) {
+                } catch (err) {
                     console.error(err);
                 }
             });
-
         } catch (err) {
             console.error("Erro no comando aprenderculinaria:", err);
-            
-            const erroMsg = { content: "❌ Ocorreu um erro ao abrir o livro de receitas.", flags: MessageFlags.Ephemeral };
+
+            const erroMsg = {
+                content: "❌ Ocorreu um erro ao abrir o livro de receitas.",
+                flags: MessageFlags.Ephemeral
+            };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {

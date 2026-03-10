@@ -4,8 +4,9 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("missa")
         .setDescription("Cobra o dízimo dos fiéis e transfere para o Clérigo.")
-        .addNumberOption(option => 
-            option.setName("valor_total")
+        .addNumberOption(option =>
+            option
+                .setName("valor_total")
                 .setDescription("O valor TOTAL arrecadado (será dividido entre os fiéis)")
                 .setRequired(true)
                 .setMinValue(0.1)
@@ -85,7 +86,7 @@ module.exports = {
                         personagem_id: charClerigo.id,
                         descricao: `Realizou Missa`,
                         valor: valorTotal,
-                        tipo: 'VENDA' 
+                        tipo: "VENDA"
                     }
                 })
             );
@@ -101,7 +102,7 @@ module.exports = {
                             personagem_id: fiel.id,
                             descricao: `Pagou Missa para ${charClerigo.nome}`,
                             valor: custoIndividual,
-                            tipo: 'GASTO'
+                            tipo: "GASTO"
                         }
                     })
                 );
@@ -109,28 +110,27 @@ module.exports = {
 
             await prisma.$transaction(operacoes);
 
-            const lista = charsPagantes.map(p => `• ${p.nome}`).join('\n');
+            const lista = charsPagantes.map(p => `• ${p.nome}`).join("\n");
 
             const embed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle('🙏 Missa Realizada')
+                .setColor("#FFD700")
+                .setTitle("🙏 Missa Realizada")
                 .addFields(
-                    { name: 'Clérigo', value: `${charClerigo.nome} (+${formatarMoeda(valorTotal)})` },
-                    { name: 'Custo por Fiel', value: formatarMoeda(custoIndividual) },
-                    { name: 'Fiéis Presentes', value: lista }
+                    { name: "Clérigo", value: `${charClerigo.nome} (+${formatarMoeda(valorTotal)})` },
+                    { name: "Custo por Fiel", value: formatarMoeda(custoIndividual) },
+                    { name: "Fiéis Presentes", value: lista }
                 )
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no comando missa:", err);
 
             const erroMsg = { content: "❌ Ocorreu um erro ao processar a missa.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

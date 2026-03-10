@@ -4,25 +4,16 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("admin-criar")
         .setDescription("Cria um personagem para um jogador (Apenas Admins/Mods).")
-        .addUserOption(option => 
-            option.setName("jogador")
-                .setDescription("O jogador que receberá o personagem")
-                .setRequired(true)
+        .addUserOption(option =>
+            option.setName("jogador").setDescription("O jogador que receberá o personagem").setRequired(true)
         )
-        .addStringOption(option => 
-            option.setName("nome")
-                .setDescription("O nome do personagem")
-                .setRequired(true)
-        ),
+        .addStringOption(option => option.setName("nome").setDescription("O nome do personagem").setRequired(true)),
 
     async execute({ interaction, prisma, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
-        if (
-            !interaction.member.roles.cache.has(ID_CARGO_ADMIN) &&
-            !interaction.member.roles.cache.has(ID_CARGO_MOD)
-        ) {
-            return interaction.reply({ 
-                content: "🚫 Você não tem permissão para usar este comando.", 
-                ephemeral: true 
+        if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN) && !interaction.member.roles.cache.has(ID_CARGO_MOD)) {
+            return interaction.reply({
+                content: "🚫 Você não tem permissão para usar este comando.",
+                ephemeral: true
             });
         }
 
@@ -30,9 +21,9 @@ module.exports = {
         const nomePersonagem = interaction.options.getString("nome");
 
         if (alvo.bot) {
-            return interaction.reply({ 
-                content: "🚫 Bots não podem possuir personagens.", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "🚫 Bots não podem possuir personagens.",
+                ephemeral: true
             });
         }
 
@@ -97,7 +88,6 @@ module.exports = {
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             if (err.message === "LIMITE_PERSONAGENS") {
                 return interaction.reply({
@@ -117,9 +107,9 @@ module.exports = {
 
             const erroMsg = { content: "❌ Ocorreu um erro ao criar o personagem.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

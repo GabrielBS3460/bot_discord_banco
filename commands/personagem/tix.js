@@ -4,16 +4,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("tix")
         .setDescription("Transfere dinheiro (Kwanzas) do seu personagem para outro jogador.")
-        .addUserOption(option => 
-            option.setName("destinatario")
-                .setDescription("O jogador que vai receber o dinheiro")
-                .setRequired(true)
+        .addUserOption(option =>
+            option.setName("destinatario").setDescription("O jogador que vai receber o dinheiro").setRequired(true)
         )
-        .addNumberOption(option => 
-            option.setName("valor")
-                .setDescription("O valor que deseja transferir")
-                .setRequired(true)
-                .setMinValue(0.1) 
+        .addNumberOption(option =>
+            option.setName("valor").setDescription("O valor que deseja transferir").setRequired(true).setMinValue(0.1)
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
@@ -42,7 +37,8 @@ module.exports = {
 
             if (!charRemetente) {
                 return interaction.reply({
-                    content: "🚫 Você não tem um personagem ativo para enviar dinheiro. Use `/cadastrar` ou `/personagem trocar`.",
+                    content:
+                        "🚫 Você não tem um personagem ativo para enviar dinheiro. Use `/cadastrar` ou `/personagem trocar`.",
                     ephemeral: true
                 });
             }
@@ -71,7 +67,7 @@ module.exports = {
                         personagem_id: charRemetente.id,
                         descricao: `Transferiu para ${charDestinatario.nome}`,
                         valor: valor,
-                        tipo: 'GASTO'
+                        tipo: "GASTO"
                     }
                 }),
                 prisma.personagens.update({
@@ -83,31 +79,30 @@ module.exports = {
                         personagem_id: charDestinatario.id,
                         descricao: `Recebeu de ${charRemetente.nome}`,
                         valor: valor,
-                        tipo: 'RECOMPENSA' 
+                        tipo: "RECOMPENSA"
                     }
                 })
             ]);
 
             const embed = new EmbedBuilder()
-                .setColor('#2ECC71')
-                .setTitle('💸 Tix Realizado')
+                .setColor("#2ECC71")
+                .setTitle("💸 Tix Realizado")
                 .addFields(
-                    { name: 'Remetente', value: charRemetente.nome, inline: true },
-                    { name: 'Destinatário', value: charDestinatario.nome, inline: true },
-                    { name: 'Valor', value: `**${formatarMoeda(valor)}**`, inline: false }
+                    { name: "Remetente", value: charRemetente.nome, inline: true },
+                    { name: "Destinatário", value: charDestinatario.nome, inline: true },
+                    { name: "Valor", value: `**${formatarMoeda(valor)}**`, inline: false }
                 )
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no comando tix:", err);
 
             const erroMsg = { content: "❌ Ocorreu um erro ao processar a transferência.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

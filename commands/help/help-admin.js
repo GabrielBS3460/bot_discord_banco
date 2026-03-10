@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const CATEGORIAS = require("../data/helpAdminData.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -6,67 +7,12 @@ module.exports = {
         .setDescription("Exibe o painel de ajuda interativo com os comandos de administração."),
 
     async execute({ interaction, client, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
-        if (
-            !interaction.member.roles.cache.has(ID_CARGO_ADMIN) &&
-            !interaction.member.roles.cache.has(ID_CARGO_MOD)
-        ) {
+        if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN) && !interaction.member.roles.cache.has(ID_CARGO_MOD)) {
             return interaction.reply({
                 content: "🚫 Apenas administradores e moderadores podem usar este comando.",
                 ephemeral: true
             });
         }
-
-        const CATEGORIAS = {
-            economia: {
-                emoji: "💰",
-                titulo: "Administração de Economia",
-                comandos: [
-                    {
-                        cmd: "/modificar-saldo",
-                        desc: "Adiciona ou remove saldo de um jogador.",
-                        syntax: "/modificar-saldo jogador:@usuario valor:<valor> motivo:[motivo opcional]"
-                    },
-                    {
-                        cmd: "/admin-extrato",
-                        desc: "Consulta as últimas 10 transações de um jogador silenciosamente.",
-                        syntax: "/admin-extrato jogador:@usuario"
-                    }
-                ]
-            },
-            personagem: {
-                emoji: "👤",
-                titulo: "Administração de Personagens",
-                comandos: [
-                    {
-                        cmd: "/admin-criar",
-                        desc: "Cria um personagem para um jogador manualmente.",
-                        syntax: "/admin-criar jogador:@usuario nome:<nome>"
-                    }
-                ]
-            },
-            contratos: {
-                emoji: "📜",
-                titulo: "Administração de Contratos e Mestres",
-                comandos: [
-                    {
-                        cmd: "/conferirnota",
-                        desc: "Mostra a avaliação média e as notas detalhadas de um mestre.",
-                        syntax: "/conferirnota mestre:@usuario"
-                    }
-                ]
-            },
-            sistema: {
-                emoji: "⚙️",
-                titulo: "Ferramentas do Sistema",
-                comandos: [
-                    {
-                        cmd: "/sortearbicho",
-                        desc: "Realiza o sorteio semanal do jogo do bicho e paga os vencedores.",
-                        syntax: "/sortearbicho"
-                    }
-                ]
-            }
-        };
 
         const criarMenu = () => {
             return new EmbedBuilder()
@@ -76,18 +22,13 @@ module.exports = {
                 .setThumbnail(client.user.displayAvatarURL());
         };
 
-        const criarCategoria = (cat) => {
-            const lista = cat.comandos
-                .map(c => `**${c.cmd}**\n${c.desc}\n\`${c.syntax}\``)
-                .join("\n\n");
+        const criarCategoria = cat => {
+            const lista = cat.comandos.map(c => `**${c.cmd}**\n${c.desc}\n\`${c.syntax}\``).join("\n\n");
 
-            return new EmbedBuilder()
-                .setColor("#FF5555")
-                .setTitle(`${cat.emoji} ${cat.titulo}`)
-                .addFields({
-                    name: "Comandos",
-                    value: lista
-                });
+            return new EmbedBuilder().setColor("#FF5555").setTitle(`${cat.emoji} ${cat.titulo}`).addFields({
+                name: "Comandos",
+                value: lista
+            });
         };
 
         const rowMenu = new ActionRowBuilder().addComponents(
@@ -114,10 +55,7 @@ module.exports = {
         );
 
         const rowVoltar = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId("admin_menu")
-                .setLabel("⬅ Voltar")
-                .setStyle(ButtonStyle.Secondary)
+            new ButtonBuilder().setCustomId("admin_menu").setLabel("⬅ Voltar").setStyle(ButtonStyle.Secondary)
         );
 
         const msg = await interaction.reply({
@@ -154,7 +92,10 @@ module.exports = {
         collector.on("end", async () => {
             try {
                 await interaction.editReply({ components: [] });
-            } catch (err) {}
+                // eslint-disable-next-line no-unused-vars
+            } catch (err) {
+                /* empty */
+            }
         });
     }
 };

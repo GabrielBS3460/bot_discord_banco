@@ -18,9 +18,9 @@ module.exports = {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
-                return interaction.reply({ 
-                    content: "🚫 Sem personagem ativo. Use `/cadastrar` ou `/personagem trocar`.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "🚫 Sem personagem ativo. Use `/cadastrar` ou `/personagem trocar`.",
+                    ephemeral: true
                 });
             }
 
@@ -30,27 +30,26 @@ module.exports = {
 
             for (const [tipo, custo] of Object.entries(CUSTO_FORJA)) {
                 menu.addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(`${tipo} (Custo: ${custo} pts)`)
-                        .setValue(tipo)
+                    new StringSelectMenuOptionBuilder().setLabel(`${tipo} (Custo: ${custo} pts)`).setValue(tipo)
                 );
             }
 
             const row = new ActionRowBuilder().addComponents(menu);
 
             const msg = await interaction.reply({
-                content: `🔨 **Oficina de Forja**\n` +
-                         `💰 Saldo: ${formatarMoeda(char.saldo)}\n` +
-                         `🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\n\n` +
-                         `Selecione o **TIPO** de item que deseja criar:`,
+                content:
+                    `🔨 **Oficina de Forja**\n` +
+                    `💰 Saldo: ${formatarMoeda(char.saldo)}\n` +
+                    `🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\n\n` +
+                    `Selecione o **TIPO** de item que deseja criar:`,
                 components: [row],
-                ephemeral: true, 
+                ephemeral: true,
                 fetchReply: true
             });
 
             const collector = msg.createMessageComponentCollector({
                 filter: i => i.user.id === interaction.user.id,
-                time: 60000 
+                time: 60000
             });
 
             collector.on("collect", async i => {
@@ -58,10 +57,10 @@ module.exports = {
 
                 const tipoSelecionado = i.values[0];
 
-                const modalId = `modal_forja_${tipoSelecionado.replace(/\s+/g, '')}_${i.id}`;
+                const modalId = `modal_forja_${tipoSelecionado.replace(/\s+/g, "")}_${i.id}`;
                 const modal = new ModalBuilder()
                     .setCustomId(modalId)
-                    .setTitle(`Forjar: ${tipoSelecionado.substring(0, 30)}`); 
+                    .setTitle(`Forjar: ${tipoSelecionado.substring(0, 30)}`);
 
                 modal.addComponents(
                     new ActionRowBuilder().addComponents(
@@ -99,8 +98,8 @@ module.exports = {
                     const tipo = tipoSelecionado;
                     const nomeItem = submit.fields.getTextInputValue("inp_nome");
                     const qtd = parseInt(submit.fields.getTextInputValue("inp_qtd"));
-                    
-                    const custoString = submit.fields.getTextInputValue("inp_ouro").replace(',', '.');
+
+                    const custoString = submit.fields.getTextInputValue("inp_ouro").replace(",", ".");
                     const custoOuro = parseFloat(custoString);
 
                     const custoPontosUnit = CUSTO_FORJA[tipo];
@@ -150,30 +149,29 @@ module.exports = {
                     ]);
 
                     await submit.reply({
-                        content: `✅ **Item Forjado com Sucesso!**\n\n` +
-                                 `📦 **Item:** ${qtd}x ${nomeItem}\n` +
-                                 `📑 **Tipo:** ${tipo}\n` +
-                                 `💰 **Kwanzas Gastos:** ${formatarMoeda(custoOuro)}\n` +
-                                 `🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n` +
-                                 `*Saldo Restante: ${formatarMoeda(charAtual.saldo - custoOuro)} | ` +
-                                 `Pts: ${(charAtual.pontos_forja_atual - custoPontosTotal).toFixed(1)}*`
+                        content:
+                            `✅ **Item Forjado com Sucesso!**\n\n` +
+                            `📦 **Item:** ${qtd}x ${nomeItem}\n` +
+                            `📑 **Tipo:** ${tipo}\n` +
+                            `💰 **Kwanzas Gastos:** ${formatarMoeda(custoOuro)}\n` +
+                            `🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n` +
+                            `*Saldo Restante: ${formatarMoeda(charAtual.saldo - custoOuro)} | ` +
+                            `Pts: ${(charAtual.pontos_forja_atual - custoPontosTotal).toFixed(1)}*`
                     });
 
-                    await msg.edit({ components: [] }).catch(()=>{});
-
+                    await msg.edit({ components: [] }).catch(() => {});
                 } catch (err) {
                     console.log("Tempo de modal expirado ou erro:", err);
                 }
             });
-
         } catch (err) {
             console.error("Erro no comando forjar:", err);
-            
+
             const erroMsg = { content: "❌ Ocorreu um erro ao abrir a forja.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

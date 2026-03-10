@@ -12,7 +12,7 @@ module.exports = {
             if (!personagem) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo. Use `/cadastrar` ou `/personagem trocar`.",
-                    ephemeral: true 
+                    ephemeral: true
                 });
             }
 
@@ -22,15 +22,14 @@ module.exports = {
                 .setDescription(`**${personagem.nome}** possui ${formatarMoeda(personagem.saldo)}`);
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no comando saldo:", err);
 
             const erroMsg = { content: "❌ Ocorreu um erro ao buscar o seu saldo.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

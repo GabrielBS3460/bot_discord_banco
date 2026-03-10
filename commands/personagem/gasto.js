@@ -4,17 +4,10 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("gasto")
         .setDescription("Registra um gasto em Kwanzas no seu extrato.")
-        .addNumberOption(option => 
-            option.setName("valor")
-                .setDescription("O valor do gasto (ex: 50.5)")
-                .setRequired(true)
-                .setMinValue(0.1) 
+        .addNumberOption(option =>
+            option.setName("valor").setDescription("O valor do gasto (ex: 50.5)").setRequired(true).setMinValue(0.1)
         )
-        .addStringOption(option => 
-            option.setName("motivo")
-                .setDescription("O motivo do gasto")
-                .setRequired(true)
-        ),
+        .addStringOption(option => option.setName("motivo").setDescription("O motivo do gasto").setRequired(true)),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
         const valorGasto = interaction.options.getNumber("valor");
@@ -47,32 +40,31 @@ module.exports = {
                         personagem_id: personagem.id,
                         descricao: motivo,
                         valor: valorGasto,
-                        tipo: 'GASTO'
+                        tipo: "GASTO"
                     }
                 })
             ]);
 
             const gastoEmbed = new EmbedBuilder()
-                .setColor('#FF0000')
-                .setTitle('💸 Gasto Registrado')
+                .setColor("#FF0000")
+                .setTitle("💸 Gasto Registrado")
                 .addFields(
-                    { name: 'Personagem', value: personagem.nome, inline: true },
-                    { name: 'Valor', value: `- ${formatarMoeda(valorGasto)}`, inline: true },
-                    { name: 'Novo Saldo', value: `**${formatarMoeda(updatedPersonagem.saldo)}**` },
-                    { name: 'Motivo', value: motivo }
+                    { name: "Personagem", value: personagem.nome, inline: true },
+                    { name: "Valor", value: `- ${formatarMoeda(valorGasto)}`, inline: true },
+                    { name: "Novo Saldo", value: `**${formatarMoeda(updatedPersonagem.saldo)}**` },
+                    { name: "Motivo", value: motivo }
                 )
                 .setTimestamp();
 
             return interaction.reply({ embeds: [gastoEmbed] });
-
         } catch (err) {
             console.error("Erro no comando gasto:", err);
 
             const erroMsg = { content: "❌ Ocorreu um erro ao tentar registrar seu gasto.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

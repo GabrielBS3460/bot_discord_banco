@@ -4,14 +4,12 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("apostar")
         .setDescription("Faça sua aposta no Jogo do Bicho do Herdeiros das Cinzas!")
-        .addNumberOption(option => 
-            option.setName("valor")
-                .setDescription("Valor da aposta em Kwanzas")
-                .setRequired(true)
-                .setMinValue(0.1) 
+        .addNumberOption(option =>
+            option.setName("valor").setDescription("Valor da aposta em Kwanzas").setRequired(true).setMinValue(0.1)
         )
-        .addStringOption(option => 
-            option.setName("tipo")
+        .addStringOption(option =>
+            option
+                .setName("tipo")
                 .setDescription("O tipo da sua aposta")
                 .setRequired(true)
                 .addChoices(
@@ -20,13 +18,15 @@ module.exports = {
                     { name: "Milhar (4 dígitos)", value: "MILHAR" }
                 )
         )
-        .addStringOption(option => 
-            option.setName("numero")
+        .addStringOption(option =>
+            option
+                .setName("numero")
                 .setDescription("Número apostado (Ex: 00 para dezena, 123 para centena)")
                 .setRequired(true)
         )
-        .addStringOption(option => 
-            option.setName("posicao")
+        .addStringOption(option =>
+            option
+                .setName("posicao")
                 .setDescription("Posição do prêmio que deseja concorrer")
                 .setRequired(true)
                 .addChoices(
@@ -43,9 +43,9 @@ module.exports = {
         const char = await getPersonagemAtivo(interaction.user.id);
 
         if (!char) {
-            return interaction.reply({ 
-                content: "🚫 Você não tem um personagem ativo.", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "🚫 Você não tem um personagem ativo.",
+                ephemeral: true
             });
         }
 
@@ -55,36 +55,37 @@ module.exports = {
         const posicaoBanco = interaction.options.getString("posicao");
 
         if (char.saldo < valor) {
-            return interaction.reply({ 
-                content: `💸 Saldo insuficiente. Você possui apenas K$ ${char.saldo.toFixed(2)}.`, 
-                ephemeral: true 
+            return interaction.reply({
+                content: `💸 Saldo insuficiente. Você possui apenas K$ ${char.saldo.toFixed(2)}.`,
+                ephemeral: true
             });
         }
 
         if (!/^\d+$/.test(numero)) {
-            return interaction.reply({ 
-                content: "🔢 Número inválido. Digite apenas números, sem letras ou símbolos.", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "🔢 Número inválido. Digite apenas números, sem letras ou símbolos.",
+                ephemeral: true
             });
         }
 
         if (tipo === "DEZENA") {
             if (numero.length > 2) {
-                return interaction.reply({ content: "⚠️ Para **Dezena** use apenas 2 dígitos (00-99).", ephemeral: true });
+                return interaction.reply({
+                    content: "⚠️ Para **Dezena** use apenas 2 dígitos (00-99).",
+                    ephemeral: true
+                });
             }
             numero = numero.padStart(2, "0");
-            
+
             if (!BICHOS_T20[numero]) {
                 return interaction.reply({ content: "⚠️ Bicho inválido (00-99).", ephemeral: true });
             }
-        } 
-        else if (tipo === "CENTENA") {
+        } else if (tipo === "CENTENA") {
             if (numero.length > 3) {
                 return interaction.reply({ content: "⚠️ Para **Centena** use até 3 dígitos.", ephemeral: true });
             }
             numero = numero.padStart(3, "0");
-        } 
-        else if (tipo === "MILHAR") {
+        } else if (tipo === "MILHAR") {
             if (numero.length > 4) {
                 return interaction.reply({ content: "⚠️ Para **Milhar** use até 4 dígitos.", ephemeral: true });
             }
@@ -121,21 +122,21 @@ module.exports = {
             const posicaoTexto = posicaoBanco === "TODAS" ? "1º ao 5º" : `${posicaoBanco}º prêmio`;
 
             return interaction.reply({
-                content: `🎫 **Aposta Registrada!**\n` +
-                         `👤 Apostador: ${char.nome}\n` +
-                         `💰 Valor: K$ ${valor}\n` +
-                         `🎲 Jogo: ${tipo} **${numero}** ${nomeBicho}\n` +
-                         `📍 Posição: ${posicaoTexto}`
+                content:
+                    `🎫 **Aposta Registrada!**\n` +
+                    `👤 Apostador: ${char.nome}\n` +
+                    `💰 Valor: K$ ${valor}\n` +
+                    `🎲 Jogo: ${tipo} **${numero}** ${nomeBicho}\n` +
+                    `📍 Posição: ${posicaoTexto}`
             });
-
         } catch (err) {
             console.error("Erro no comando apostar:", err);
-            
+
             const erroMsg = { content: "❌ Ocorreu um erro ao registrar sua aposta.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

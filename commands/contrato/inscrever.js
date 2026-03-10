@@ -4,8 +4,9 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("inscrever")
         .setDescription("Inscreve seu personagem em uma missão/contrato aberto.")
-        .addStringOption(option => 
-            option.setName("missao")
+        .addStringOption(option =>
+            option
+                .setName("missao")
                 .setDescription("Nome exato do contrato/missão que deseja participar")
                 .setRequired(true)
         ),
@@ -15,9 +16,9 @@ module.exports = {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
-                return interaction.reply({ 
-                    content: "🚫 Você não tem um personagem ativo.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "🚫 Você não tem um personagem ativo.",
+                    ephemeral: true
                 });
             }
 
@@ -28,16 +29,16 @@ module.exports = {
             });
 
             if (!missao) {
-                return interaction.reply({ 
-                    content: "🚫 Missão não encontrada. Verifique se o nome foi digitado corretamente.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "🚫 Missão não encontrada. Verifique se o nome foi digitado corretamente.",
+                    ephemeral: true
                 });
             }
 
             if (missao.status !== "ABERTA") {
-                return interaction.reply({ 
-                    content: "🚫 Esta missão não está aceitando inscrições no momento.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "🚫 Esta missão não está aceitando inscrições no momento.",
+                    ephemeral: true
                 });
             }
 
@@ -61,7 +62,6 @@ module.exports = {
             await interaction.reply({
                 content: `✅ **${char.nome}** se inscreveu na missão **${missao.nome}**!`
             });
-
         } catch (err) {
             if (err.code === "P2002") {
                 return interaction.reply({
@@ -81,9 +81,9 @@ module.exports = {
 
             const erroMsg = { content: "❌ Ocorreu um erro ao se inscrever na missão.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

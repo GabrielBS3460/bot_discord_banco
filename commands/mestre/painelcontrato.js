@@ -17,10 +17,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("painelcontrato")
         .setDescription("Abre o painel de gerenciamento de um contrato/missão (Apenas Mestre Criador).")
-        .addStringOption(option => 
-            option.setName("nome")
-                .setDescription("Nome exato do contrato/missão")
-                .setRequired(true)
+        .addStringOption(option =>
+            option.setName("nome").setDescription("Nome exato do contrato/missão").setRequired(true)
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, ID_CARGO_ADMIN }) {
@@ -36,9 +34,9 @@ module.exports = {
         });
 
         if (!missao) {
-            return interaction.reply({ 
-                content: "🚫 Contrato não encontrado. Verifique se o nome foi digitado corretamente.", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "🚫 Contrato não encontrado. Verifique se o nome foi digitado corretamente.",
+                ephemeral: true
             });
         }
 
@@ -55,13 +53,12 @@ module.exports = {
             const selecionados = m.inscricoes.filter(i => i.selecionado);
             const fila = shuffle(m.inscricoes.filter(i => !i.selecionado));
 
-            const txtSelecionados = selecionados
-                .map(i => `✅ **${i.personagem.nome}** (Nvl ${i.personagem.nivel_personagem})`)
-                .join("\n") || "Ninguém selecionado.";
+            const txtSelecionados =
+                selecionados
+                    .map(i => `✅ **${i.personagem.nome}** (Nvl ${i.personagem.nivel_personagem})`)
+                    .join("\n") || "Ninguém selecionado.";
 
-            const txtFila = fila
-                .map(i => `⏳ **${i.personagem.nome}**`)
-                .join("\n") || "Fila vazia.";
+            const txtFila = fila.map(i => `⏳ **${i.personagem.nome}**`).join("\n") || "Fila vazia.";
 
             return new EmbedBuilder()
                 .setColor(m.status === "CONCLUIDA" ? "#00FF00" : "#FFA500")
@@ -118,11 +115,8 @@ module.exports = {
                     .setLabel("Vagas")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("🔢")
-                    .setDisabled(m.status === "CONCLUIDA"),    
-                new ButtonBuilder()
-                    .setCustomId("ms_atualizar")
-                    .setLabel("🔄 Atualizar")
-                    .setStyle(ButtonStyle.Secondary)    
+                    .setDisabled(m.status === "CONCLUIDA"),
+                new ButtonBuilder().setCustomId("ms_atualizar").setLabel("🔄 Atualizar").setStyle(ButtonStyle.Secondary)
             );
 
             return [row1, row2];
@@ -136,42 +130,45 @@ module.exports = {
 
         const collector = msg.createMessageComponentCollector({
             filter: i => i.user.id === interaction.user.id,
-            time: 3600000, 
-            idle: 300000   
+            time: 3600000,
+            idle: 300000
         });
 
         collector.on("collect", async iBtn => {
             if (!iBtn.isButton() && !iBtn.isUserSelectMenu() && !iBtn.isStringSelectMenu()) return;
 
             try {
-                if (iBtn.customId === 'ms_add_player') {
+                if (iBtn.customId === "ms_add_player") {
                     const userMenu = new UserSelectMenuBuilder()
-                        .setCustomId('menu_pesquisa_player')
-                        .setPlaceholder('Pesquise e selecione o jogador...')
+                        .setCustomId("menu_pesquisa_player")
+                        .setPlaceholder("Pesquise e selecione o jogador...")
                         .setMinValues(1)
                         .setMaxValues(1);
 
                     const rowUser = new ActionRowBuilder().addComponents(userMenu);
 
-                    const menuMsg = await iBtn.reply({ 
-                        content: "👥 **Selecione abaixo o jogador que deseja adicionar à missão:**", 
-                        components: [rowUser], 
-                        flags: MessageFlags.Ephemeral, 
-                        withResponse: true 
+                    const menuMsg = await iBtn.reply({
+                        content: "👥 **Selecione abaixo o jogador que deseja adicionar à missão:**",
+                        components: [rowUser],
+                        flags: MessageFlags.Ephemeral,
+                        withResponse: true
                     });
 
-                    const selectCollector = menuMsg.resource.message.createMessageComponentCollector({ 
+                    const selectCollector = menuMsg.resource.message.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
-                        time: 60000 
+                        time: 60000
                     });
 
-                    selectCollector.on('collect', async iSelect => {
-                        await iSelect.deferUpdate(); 
-                        const targetId = iSelect.values[0]; 
+                    selectCollector.on("collect", async iSelect => {
+                        await iSelect.deferUpdate();
+                        const targetId = iSelect.values[0];
 
                         const targetChar = await getPersonagemAtivo(targetId);
                         if (!targetChar) {
-                            return iSelect.followUp({ content: "⚠️ O jogador selecionado não possui um personagem ativo.", flags: MessageFlags.Ephemeral });
+                            return iSelect.followUp({
+                                content: "⚠️ O jogador selecionado não possui um personagem ativo.",
+                                flags: MessageFlags.Ephemeral
+                            });
                         }
 
                         const jaInscrito = await prisma.inscricoes.findFirst({
@@ -180,9 +177,15 @@ module.exports = {
 
                         if (jaInscrito) {
                             if (!jaInscrito.selecionado) {
-                                await prisma.inscricoes.update({ where: { id: jaInscrito.id }, data: { selecionado: true } });
+                                await prisma.inscricoes.update({
+                                    where: { id: jaInscrito.id },
+                                    data: { selecionado: true }
+                                });
                             } else {
-                                return iSelect.followUp({ content: "⚠️ Esse jogador já está na equipe selecionada.", flags: MessageFlags.Ephemeral });
+                                return iSelect.followUp({
+                                    content: "⚠️ Esse jogador já está na equipe selecionada.",
+                                    flags: MessageFlags.Ephemeral
+                                });
                             }
                         } else {
                             await prisma.inscricoes.create({
@@ -195,16 +198,22 @@ module.exports = {
                             });
                         }
 
-                        const mNova = await prisma.missoes.findUnique({ where: { id: missao.id }, include: { inscricoes: { include: { personagem: true } } } });
+                        const mNova = await prisma.missoes.findUnique({
+                            where: { id: missao.id },
+                            include: { inscricoes: { include: { personagem: true } } }
+                        });
                         await interaction.editReply({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
-                                            
-                        await iSelect.editReply({ content: `✅ **${targetChar.nome}** foi adicionado à equipe com sucesso!`, components: [] });
+
+                        await iSelect.editReply({
+                            content: `✅ **${targetChar.nome}** foi adicionado à equipe com sucesso!`,
+                            components: []
+                        });
                         selectCollector.stop();
                     });
-                    return; 
+                    return;
                 }
 
-                if (iBtn.customId === 'ms_sortear') {
+                if (iBtn.customId === "ms_sortear") {
                     await iBtn.deferUpdate();
 
                     const mAtual = await prisma.missoes.findUnique({
@@ -239,7 +248,7 @@ module.exports = {
 
                     const mNova = await prisma.missoes.findUnique({
                         where: { id: missao.id },
-                        include: { inscricoes: { include: { personagem: true } } } 
+                        include: { inscricoes: { include: { personagem: true } } }
                     });
 
                     await interaction.editReply({
@@ -249,7 +258,7 @@ module.exports = {
                     return;
                 }
 
-                if (iBtn.customId === 'ms_gerenciar') {
+                if (iBtn.customId === "ms_gerenciar") {
                     const mAtual = await prisma.missoes.findUnique({
                         where: { id: missao.id },
                         include: { inscricoes: { include: { personagem: true } } }
@@ -258,12 +267,15 @@ module.exports = {
                     const selecionados = mAtual.inscricoes.filter(insc => insc.selecionado);
 
                     if (selecionados.length === 0) {
-                        return iBtn.reply({ content: "🚫 Ninguém na equipe para remover.", flags: MessageFlags.Ephemeral });
+                        return iBtn.reply({
+                            content: "🚫 Ninguém na equipe para remover.",
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
 
                     const menu = new StringSelectMenuBuilder()
-                        .setCustomId('menu_remover_jogador')
-                        .setPlaceholder('Selecione quem VAI SAIR do contrato')
+                        .setCustomId("menu_remover_jogador")
+                        .setPlaceholder("Selecione quem VAI SAIR do contrato")
                         .setMinValues(1)
                         .setMaxValues(1);
 
@@ -271,8 +283,8 @@ module.exports = {
                         menu.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(insc.personagem.nome)
-                                .setValue(String(insc.id)) 
-                                .setEmoji('❌')
+                                .setValue(String(insc.id))
+                                .setEmoji("❌")
                         );
                     });
 
@@ -287,15 +299,15 @@ module.exports = {
                     const replyMsg = await iBtn.fetchReply();
 
                     const menuCollector = replyMsg.createMessageComponentCollector({
-                        filter: i => i.user.id === iBtn.user.id && i.customId === 'menu_remover_jogador',
+                        filter: i => i.user.id === iBtn.user.id && i.customId === "menu_remover_jogador",
                         time: 60000,
                         max: 1
                     });
 
-                    menuCollector.on('collect', async iMenu => {
+                    menuCollector.on("collect", async iMenu => {
                         try {
                             await iMenu.deferUpdate();
-                            
+
                             const idRemover = parseInt(iMenu.values[0]);
 
                             await prisma.$transaction(async tx => {
@@ -306,7 +318,7 @@ module.exports = {
                                 });
 
                                 let filaSorteada = shuffle(fila);
-                                
+
                                 const proximoFila = filaSorteada[0];
 
                                 if (proximoFila) {
@@ -319,7 +331,7 @@ module.exports = {
 
                             const mFinal = await prisma.missoes.findUnique({
                                 where: { id: missao.id },
-                                include: { inscricoes: { include: { personagem: true } } } 
+                                include: { inscricoes: { include: { personagem: true } } }
                             });
 
                             await interaction.editReply({
@@ -327,35 +339,36 @@ module.exports = {
                                 components: montarBotoes(mFinal)
                             });
 
-                            await iMenu.editReply({ 
-                                content: "✅ Jogador removido com sucesso. Painel atualizado.", 
-                                components: [] 
+                            await iMenu.editReply({
+                                content: "✅ Jogador removido com sucesso. Painel atualizado.",
+                                components: []
                             });
-
                         } catch (erroDB) {
                             console.error("Erro ao remover jogador da missão:", erroDB);
-                            await iMenu.editReply({
-                                content: "❌ Erro ao remover o jogador. Verifique o terminal para mais detalhes.",
-                                components: []
-                            }).catch(()=>{});
+                            await iMenu
+                                .editReply({
+                                    content: "❌ Erro ao remover o jogador. Verifique o terminal para mais detalhes.",
+                                    components: []
+                                })
+                                .catch(() => {});
                         }
                     });
 
                     return;
                 }
 
-                if (iBtn.customId === 'ms_alterar_vagas') {
+                if (iBtn.customId === "ms_alterar_vagas") {
                     const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id } });
 
                     const modalCustomId = `modal_vagas_${missao.id}_${Date.now()}`;
                     const modal = new ModalBuilder()
                         .setCustomId(modalCustomId)
-                        .setTitle('Alterar Número de Vagas')
+                        .setTitle("Alterar Número de Vagas")
                         .addComponents(
                             new ActionRowBuilder().addComponents(
                                 new TextInputBuilder()
-                                    .setCustomId('inp_vagas')
-                                    .setLabel('Novo limite de jogadores')
+                                    .setCustomId("inp_vagas")
+                                    .setLabel("Novo limite de jogadores")
                                     .setStyle(TextInputStyle.Short)
                                     .setRequired(true)
                                     .setValue(String(mAtual.vagas))
@@ -372,12 +385,12 @@ module.exports = {
 
                         await modalSubmit.deferUpdate();
 
-                        const novasVagas = parseInt(modalSubmit.fields.getTextInputValue('inp_vagas'));
+                        const novasVagas = parseInt(modalSubmit.fields.getTextInputValue("inp_vagas"));
 
                         if (isNaN(novasVagas) || novasVagas <= 0) {
-                            return modalSubmit.followUp({ 
-                                content: "🚫 Valor inválido. Digite um número maior que zero.", 
-                                ephemeral: true 
+                            return modalSubmit.followUp({
+                                content: "🚫 Valor inválido. Digite um número maior que zero.",
+                                ephemeral: true
                             });
                         }
 
@@ -396,11 +409,10 @@ module.exports = {
                             components: montarBotoes(mFinal)
                         });
 
-                        await modalSubmit.followUp({ 
-                            content: `✅ Limite de vagas alterado para **${novasVagas}** com sucesso!`, 
-                            ephemeral: true 
+                        await modalSubmit.followUp({
+                            content: `✅ Limite de vagas alterado para **${novasVagas}** com sucesso!`,
+                            ephemeral: true
                         });
-
                     } catch (err) {
                         console.error("Erro ao alterar vagas:", err);
                     }
@@ -484,10 +496,12 @@ module.exports = {
                         include: { inscricoes: { include: { personagem: true } } }
                     });
 
-                    await interaction.editReply({
-                        embeds: [montarPainel(mNova)],
-                        components: montarBotoes(mNova)
-                    }).catch(()=>{});
+                    await interaction
+                        .editReply({
+                            embeds: [montarPainel(mNova)],
+                            components: montarBotoes(mNova)
+                        })
+                        .catch(() => {});
 
                     await interaction.channel.send({
                         content: `🏆 **Contrato "${mNova.nome}" Concluído!**\nEquipe e Mestre, utilizem \`/resgatar contrato:${mNova.nome}\` para pegar suas recompensas e os pontos de progressão.`

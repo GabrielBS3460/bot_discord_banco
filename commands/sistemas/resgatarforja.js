@@ -1,9 +1,7 @@
 const { SlashCommandBuilder } = require("discord.js");
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName("resgatarforja")
-        .setDescription("Resgata seus pontos de forja diários."),
+    data: new SlashCommandBuilder().setName("resgatarforja").setDescription("Resgata seus pontos de forja diários."),
 
     async execute({ interaction, prisma, getPersonagemAtivo }) {
         try {
@@ -15,16 +13,16 @@ module.exports = {
             });
 
             if (!char) {
-                return interaction.reply({ 
-                    content: "🚫 Você não tem personagem ativo.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "🚫 Você não tem personagem ativo.",
+                    ephemeral: true
                 });
             }
 
             if (!char.pontos_forja_max || char.pontos_forja_max <= 0) {
-                return interaction.reply({ 
-                    content: "⚠️ Você ainda não configurou sua Forja! Use `/setforja` primeiro.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "⚠️ Você ainda não configurou sua Forja! Use `/setforja` primeiro.",
+                    ephemeral: true
                 });
             }
 
@@ -38,9 +36,9 @@ module.exports = {
                     agora.getFullYear() === ultimo.getFullYear();
 
                 if (mesmoDia) {
-                    return interaction.reply({ 
-                        content: `🚫 **${char.nome}** já pegou seus pontos de forja hoje!`, 
-                        ephemeral: true 
+                    return interaction.reply({
+                        content: `🚫 **${char.nome}** já pegou seus pontos de forja hoje!`,
+                        ephemeral: true
                     });
                 }
             }
@@ -53,7 +51,7 @@ module.exports = {
             if (nivelReal >= 17) patamar = 4;
 
             const ganhoDiario = char.pontos_forja_max;
-            
+
             const limiteAcumulo = ganhoDiario * (patamar + 3);
 
             let novoTotal = char.pontos_forja_atual + ganhoDiario;
@@ -65,9 +63,9 @@ module.exports = {
             const ganhou = novoTotal - char.pontos_forja_atual;
 
             if (ganhou <= 0) {
-                return interaction.reply({ 
-                    content: `⚠️ Seu estoque de pontos está cheio (Máx: **${limiteAcumulo}**).\nGaste forjando/cozinhando algo antes de resgatar.`, 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: `⚠️ Seu estoque de pontos está cheio (Máx: **${limiteAcumulo}**).\nGaste forjando/cozinhando algo antes de resgatar.`,
+                    ephemeral: true
                 });
             }
 
@@ -84,25 +82,25 @@ module.exports = {
                         personagem_id: char.id,
                         descricao: `Resgate Forja Diário (+${ganhou})`,
                         valor: 0,
-                        tipo: 'FORJA'
+                        tipo: "FORJA"
                     }
                 })
             ]);
 
             await interaction.reply({
-                content: `🔨 **Forja:** Você recebeu **${ganhou.toFixed(1)}** pontos!\n` +
-                         `📊 **Total:** ${novoTotal.toFixed(1)} / Máx: ${limiteAcumulo}\n` +
-                         `*(Patamar: ${patamar} | Ganho Diário: ${ganhoDiario})*`
+                content:
+                    `🔨 **Forja:** Você recebeu **${ganhou.toFixed(1)}** pontos!\n` +
+                    `📊 **Total:** ${novoTotal.toFixed(1)} / Máx: ${limiteAcumulo}\n` +
+                    `*(Patamar: ${patamar} | Ganho Diário: ${ganhoDiario})*`
             });
-
         } catch (err) {
             console.error("Erro no comando resgatarforja:", err);
-            
+
             const erroMsg = { content: "Ocorreu um erro ao resgatar seus pontos de forja.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

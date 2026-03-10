@@ -4,16 +4,15 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("loot")
         .setDescription("Concede uma quantia de dinheiro (Loot) para um jogador.")
-        .addUserOption(option => 
-            option.setName("jogador")
-                .setDescription("O jogador que vai receber o loot")
-                .setRequired(true)
+        .addUserOption(option =>
+            option.setName("jogador").setDescription("O jogador que vai receber o loot").setRequired(true)
         )
-        .addNumberOption(option => 
-            option.setName("valor")
+        .addNumberOption(option =>
+            option
+                .setName("valor")
                 .setDescription("Valor em Kwanzas a ser concedido")
                 .setRequired(true)
-                .setMinValue(0.1) 
+                .setMinValue(0.1)
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
@@ -75,7 +74,6 @@ module.exports = {
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no comando loot:", err);
 

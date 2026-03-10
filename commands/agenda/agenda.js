@@ -32,7 +32,7 @@ function getColor(count) {
 function generateHourOptions(selectedHours) {
     const options = [];
     for (let i = 0; i < 24; i++) {
-        const hourStr = `${i.toString().padStart(2, '0')}:00`;
+        const hourStr = `${i.toString().padStart(2, "0")}:00`;
         options.push(
             new StringSelectMenuOptionBuilder()
                 .setLabel(hourStr)
@@ -46,9 +46,13 @@ function generateHourOptions(selectedHours) {
 function buildSummaryField(availability, startDay, endDay) {
     const fields = [];
     for (let i = startDay; i < endDay; i++) {
-        const horas = availability[i].length > 0 
-            ? availability[i].sort((a,b) => a-b).map(h => `${h}h`).join(", ") 
-            : "Nenhum";
+        const horas =
+            availability[i].length > 0
+                ? availability[i]
+                      .sort((a, b) => a - b)
+                      .map(h => `${h}h`)
+                      .join(", ")
+                : "Nenhum";
         fields.push({ name: `${DAY_EMOJIS[i]} ${DAY_NAMES[i]}`, value: horas, inline: false });
     }
     return fields;
@@ -86,40 +90,44 @@ module.exports = {
         .setName("agenda")
         .setDescription("Sistema de disponibilidade de horários para jogar RPG.")
         .addSubcommand(sub =>
-            sub.setName("marcar")
-                .setDescription("Define os dias e horários que você está disponível para jogar.")
+            sub.setName("marcar").setDescription("Define os dias e horários que você está disponível para jogar.")
         )
         .addSubcommand(sub =>
-            sub.setName("mapa")
-                .setDescription("Exibe o Heatmap (mapa de calor) com os horários de todo o servidor.")
+            sub.setName("mapa").setDescription("Exibe o Heatmap (mapa de calor) com os horários de todo o servidor.")
         ),
 
     async execute({ interaction, prisma }) {
         const userId = interaction.user.id;
         const subcomando = interaction.options.getSubcommand();
 
-        const NOME_COLUNA_DISCORD = "usuario_id"; 
+        const NOME_COLUNA_DISCORD = "usuario_id";
 
         try {
             if (subcomando === "marcar") {
                 const char = await prisma.personagens.findFirst({ where: { [NOME_COLUNA_DISCORD]: userId } });
-                if (!char) return interaction.reply({ content: "🚫 Crie um personagem antes de usar a agenda.", flags: MessageFlags.Ephemeral });
+                if (!char)
+                    return interaction.reply({
+                        content: "🚫 Crie um personagem antes de usar a agenda.",
+                        flags: MessageFlags.Ephemeral
+                    });
 
                 let availability = char.agenda ? char.agenda : [[], [], [], [], [], [], []];
 
-                const weekdayEmbed = (avail, footer) => new EmbedBuilder()
-                    .setTitle("📅 Disponibilidade - Dias Úteis")
-                    .setDescription("Selecione os horários em que você costuma estar livre (Horário de Brasília).")
-                    .addFields(buildSummaryField(avail, 0, 5))
-                    .setColor("#5865f2")
-                    .setFooter({ text: footer });
+                const weekdayEmbed = (avail, footer) =>
+                    new EmbedBuilder()
+                        .setTitle("📅 Disponibilidade - Dias Úteis")
+                        .setDescription("Selecione os horários em que você costuma estar livre (Horário de Brasília).")
+                        .addFields(buildSummaryField(avail, 0, 5))
+                        .setColor("#5865f2")
+                        .setFooter({ text: footer });
 
-                const weekendEmbed = (avail, footer) => new EmbedBuilder()
-                    .setTitle("📅 Disponibilidade - Fim de Semana")
-                    .setDescription("Selecione os horários para sábado e domingo.")
-                    .addFields(buildSummaryField(avail, 5, 7))
-                    .setColor("#5865f2")
-                    .setFooter({ text: footer });
+                const weekendEmbed = (avail, footer) =>
+                    new EmbedBuilder()
+                        .setTitle("📅 Disponibilidade - Fim de Semana")
+                        .setDescription("Selecione os horários para sábado e domingo.")
+                        .addFields(buildSummaryField(avail, 5, 7))
+                        .setColor("#5865f2")
+                        .setFooter({ text: footer });
 
                 await interaction.reply({
                     embeds: [weekdayEmbed(availability, "Ajuste os menus abaixo para atualizar.")],
@@ -132,7 +140,7 @@ module.exports = {
                     embeds: [weekendEmbed(availability, "Clique em Salvar quando terminar tudo.")],
                     components: buildWeekendRows(availability, interaction.id),
                     flags: MessageFlags.Ephemeral,
-                    withResponse: true 
+                    withResponse: true
                 });
                 const followMsg = followUpMsg.resource ? followUpMsg.resource.message : followUpMsg;
 
@@ -143,8 +151,11 @@ module.exports = {
                 weekdayCollector.on("collect", async i => {
                     await i.deferUpdate();
                     const dayIndex = parseInt(i.customId.split("_")[1]);
-                    availability[dayIndex] = i.values.map(Number).sort((a,b) => a-b);
-                    await interaction.editReply({ embeds: [weekdayEmbed(availability, `✅ ${DAY_NAMES[dayIndex]} atualizado!`)], components: buildDayMenuRows(availability, 0, 5, interaction.id) });
+                    availability[dayIndex] = i.values.map(Number).sort((a, b) => a - b);
+                    await interaction.editReply({
+                        embeds: [weekdayEmbed(availability, `✅ ${DAY_NAMES[dayIndex]} atualizado!`)],
+                        components: buildDayMenuRows(availability, 0, 5, interaction.id)
+                    });
                 });
 
                 weekendCollector.on("collect", async i => {
@@ -152,8 +163,11 @@ module.exports = {
 
                     if (i.isStringSelectMenu()) {
                         const dayIndex = parseInt(i.customId.split("_")[1]);
-                        availability[dayIndex] = i.values.map(Number).sort((a,b) => a-b);
-                        await i.editReply({ embeds: [weekendEmbed(availability, `✅ ${DAY_NAMES[dayIndex]} atualizado!`)], components: buildWeekendRows(availability, interaction.id) });
+                        availability[dayIndex] = i.values.map(Number).sort((a, b) => a - b);
+                        await i.editReply({
+                            embeds: [weekendEmbed(availability, `✅ ${DAY_NAMES[dayIndex]} atualizado!`)],
+                            components: buildWeekendRows(availability, interaction.id)
+                        });
                     }
 
                     if (i.isButton() && i.customId.startsWith("save_availability")) {
@@ -163,27 +177,34 @@ module.exports = {
                         });
 
                         await i.followUp({
-                            embeds: [new EmbedBuilder().setTitle("✅ Disponibilidade salva!").setDescription("Seus horários foram registrados no banco de dados.").setColor("#57f287")],
+                            embeds: [
+                                new EmbedBuilder()
+                                    .setTitle("✅ Disponibilidade salva!")
+                                    .setDescription("Seus horários foram registrados no banco de dados.")
+                                    .setColor("#57f287")
+                            ],
                             flags: MessageFlags.Ephemeral
                         });
 
                         weekdayCollector.stop();
                         weekendCollector.stop();
-                        await interaction.editReply({ components: [] }).catch(()=>{});
-                        await i.editReply({ components: [] }).catch(()=>{});
+                        await interaction.editReply({ components: [] }).catch(() => {});
+                        await i.editReply({ components: [] }).catch(() => {});
                     }
                 });
             }
 
             if (subcomando === "mapa") {
-                await interaction.deferReply(); 
+                await interaction.deferReply();
 
                 const players = await prisma.personagens.findMany({
                     select: { usuario_id: true, agenda: true },
                     distinct: [NOME_COLUNA_DISCORD]
                 });
 
-                const matrix = Array(7).fill(0).map(() => Array(24).fill(0));
+                const matrix = Array(7)
+                    .fill(0)
+                    .map(() => Array(24).fill(0));
                 let totalPlayersComAgenda = 0;
 
                 players.forEach(p => {
@@ -202,10 +223,12 @@ module.exports = {
                 });
 
                 if (totalPlayersComAgenda === 0) {
-                    return interaction.editReply("🚫 Ninguém preencheu a agenda do servidor ainda! Mandem um `/agenda marcar`!");
+                    return interaction.editReply(
+                        "🚫 Ninguém preencheu a agenda do servidor ainda! Mandem um `/agenda marcar`!"
+                    );
                 }
 
-                const renderHeatmap = async (matrix) => {
+                const renderHeatmap = async matrix => {
                     const CELL_SIZE = 35;
                     const PADDING = 4;
                     const HEADER_H = 50;
@@ -217,7 +240,7 @@ module.exports = {
                     const HEIGHT = HEADER_H + (CELL_SIZE + PADDING) * ROWS + 80;
 
                     const canvas = createCanvas(WIDTH, HEIGHT);
-                    const ctx = canvas.getContext('2d');
+                    const ctx = canvas.getContext("2d");
 
                     ctx.fillStyle = "#2b2d31";
                     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -247,7 +270,7 @@ module.exports = {
 
                             ctx.fillStyle = getColor(count);
                             ctx.beginPath();
-                            ctx.roundRect(x, y, CELL_SIZE, CELL_SIZE, 6); 
+                            ctx.roundRect(x, y, CELL_SIZE, CELL_SIZE, 6);
                             ctx.fill();
 
                             if (count > 0) {
@@ -290,19 +313,20 @@ module.exports = {
                     embeds: [
                         new EmbedBuilder()
                             .setTitle("📊 Mapa de Calor - Horários do Servidor")
-                            .setDescription(`Baseado na agenda de **${totalPlayersComAgenda}** jogadores registrados.\nOs números dentro dos quadrados indicam **quantas pessoas podem jogar naquela hora**.`)
+                            .setDescription(
+                                `Baseado na agenda de **${totalPlayersComAgenda}** jogadores registrados.\nOs números dentro dos quadrados indicam **quantas pessoas podem jogar naquela hora**.`
+                            )
                             .setImage("attachment://heatmap.png")
                             .setColor("#ff5555")
                     ],
                     files: [attachment]
                 });
             }
-
         } catch (err) {
             console.error("Erro no comando agenda:", err);
             const erroMsg = { content: "❌ Ocorreu um erro no sistema de horários.", flags: MessageFlags.Ephemeral };
-            if (interaction.replied || interaction.deferred) await interaction.followUp(erroMsg).catch(()=>{});
-            else await interaction.reply(erroMsg).catch(()=>{});
+            if (interaction.replied || interaction.deferred) await interaction.followUp(erroMsg).catch(() => {});
+            else await interaction.reply(erroMsg).catch(() => {});
         }
     }
 };

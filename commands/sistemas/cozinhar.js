@@ -21,14 +21,18 @@ module.exports = {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
-                return interaction.reply({ content: "🚫 Você não tem um personagem ativo.", flags: MessageFlags.Ephemeral });
+                return interaction.reply({
+                    content: "🚫 Você não tem um personagem ativo.",
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
             const listaPericias = char.pericias || [];
 
             if (!listaPericias.includes("Ofício Cozinheiro")) {
                 return interaction.reply({
-                    content: "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!",
+                    content:
+                        "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!",
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -37,7 +41,8 @@ module.exports = {
 
             if (receitasConhecidas.length === 0) {
                 return interaction.reply({
-                    content: "⚠️ Você tem a habilidade, mas não conhece nenhuma receita. Use `/aprenderculinaria` primeiro.",
+                    content:
+                        "⚠️ Você tem a habilidade, mas não conhece nenhuma receita. Use `/aprenderculinaria` primeiro.",
                     flags: MessageFlags.Ephemeral
                 });
             }
@@ -47,7 +52,7 @@ module.exports = {
                     .setCustomId("menu_selecionar_receita")
                     .setPlaceholder("🍳 Escolha 1 ou 2 pratos (Combinar)")
                     .setMinValues(1)
-                    .setMaxValues(Math.min(2, receitasConhecidas.length)); 
+                    .setMaxValues(Math.min(2, receitasConhecidas.length));
 
                 receitasConhecidas.forEach(nome => {
                     const r = DB_CULINARIA.RECEITAS[nome];
@@ -69,12 +74,15 @@ module.exports = {
             };
 
             const estoqueInicial = char.estoque_ingredientes || {};
-            const estoqueTxt = Object.entries(estoqueInicial).map(([k, v]) => `${k}: ${v}`).join(", ") || "Vazio";
+            const estoqueTxt =
+                Object.entries(estoqueInicial)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join(", ") || "Vazio";
 
             const msg = await interaction.reply({
                 content: `🔥 **Fogão Aceso (Rende 5 Porções)**\n👤 **Cozinheiro:** ${char.nome}\n🔨 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)}\n🎒 **Estoque:** ${estoqueTxt}\n\n*Dica: Você pode selecionar até 2 pratos para fazer uma Refeição Combinada.*`,
                 components: [montarMenuReceitas()],
-                flags: MessageFlags.Ephemeral, 
+                flags: MessageFlags.Ephemeral,
                 fetchReply: true
             });
 
@@ -91,9 +99,9 @@ module.exports = {
                 const estoque = charAtual.estoque_ingredientes || {};
 
                 if (i.isStringSelectMenu() && i.customId === "menu_selecionar_receita") {
-                    receitasSelecionadas = i.values; 
+                    receitasSelecionadas = i.values;
                     const numReceitas = receitasSelecionadas.length;
-                    
+
                     ingredientesAgregados = {};
                     let efeitosTxt = [];
 
@@ -175,10 +183,13 @@ module.exports = {
 
                     const numReceitas = receitasSelecionadas.length;
                     const usarEspeciarias = i.customId === "btn_cozinhar_especial";
-                    const custoPts = usarEspeciarias ? (numReceitas * 2.0) : (numReceitas * 1.0);
+                    const custoPts = usarEspeciarias ? numReceitas * 2.0 : numReceitas * 1.0;
 
                     if (charAtual.pontos_forja_atual < custoPts) {
-                        return i.reply({ content: `Pontos de forja insuficientes (precisa de ${custoPts.toFixed(1)}).`, flags: MessageFlags.Ephemeral });
+                        return i.reply({
+                            content: `Pontos de forja insuficientes (precisa de ${custoPts.toFixed(1)}).`,
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
 
                     if (usarEspeciarias && (!estoque["Especiarias"] || estoque["Especiarias"] < 1)) {
@@ -191,16 +202,14 @@ module.exports = {
                     });
 
                     const modalId = `modal_efeitos_cozinha_${Date.now()}`;
-                    const modal = new ModalBuilder()
-                        .setCustomId(modalId)
-                        .setTitle("Descreva a Refeição");
+                    const modal = new ModalBuilder().setCustomId(modalId).setTitle("Descreva a Refeição");
 
                     const inputEfeitos = new TextInputBuilder()
                         .setCustomId("inp_efeitos")
                         .setLabel("Efeitos mecânicos e sabor do prato:")
                         .setStyle(TextInputStyle.Paragraph)
                         .setRequired(true)
-                        .setValue(efeitosPadrao.join("\n")); 
+                        .setValue(efeitosPadrao.join("\n"));
 
                     modal.addComponents(new ActionRowBuilder().addComponents(inputEfeitos));
 
@@ -209,7 +218,7 @@ module.exports = {
                     try {
                         const modalSubmit = await i.awaitModalSubmit({
                             filter: m => m.customId === modalId && m.user.id === interaction.user.id,
-                            time: 120000 
+                            time: 120000
                         });
 
                         await modalSubmit.deferUpdate();
@@ -254,7 +263,10 @@ module.exports = {
 
                         await interaction.channel.send({ content: msgSucesso });
 
-                        const estoqueFinal = Object.entries(estoque).map(([k, v]) => `${k}: ${v}`).join(", ") || "Vazio";
+                        const estoqueFinal =
+                            Object.entries(estoque)
+                                .map(([k, v]) => `${k}: ${v}`)
+                                .join(", ") || "Vazio";
 
                         await modalSubmit.editReply({
                             content: `✅ O prato foi servido na mesa!\n\n🎒 **Estoque:** ${estoqueFinal}\n🔨 **Pts Restantes:** ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
@@ -262,21 +274,19 @@ module.exports = {
                         });
 
                         collector.stop("cozinhou");
-
                     } catch (err) {
-                        if (err.code === 'InteractionCollectorError') return;
+                        if (err.code === "InteractionCollectorError") return;
                         console.error("Erro no modal de cozinha:", err);
                     }
                 }
             });
-
         } catch (err) {
             console.error("Erro no comando cozinhar:", err);
             const erroMsg = { content: "❌ Ocorreu um erro ao acessar o fogão.", flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

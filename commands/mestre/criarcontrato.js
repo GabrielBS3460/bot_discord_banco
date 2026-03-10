@@ -4,19 +4,15 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("criarcontrato")
         .setDescription("Cria um novo contrato/missão para os jogadores se inscreverem.")
-        .addStringOption(option => 
-            option.setName("nome")
-                .setDescription("Nome do contrato (ex: Resgate na Floresta)")
-                .setRequired(true)
+        .addStringOption(option =>
+            option.setName("nome").setDescription("Nome do contrato (ex: Resgate na Floresta)").setRequired(true)
         )
-        .addIntegerOption(option => 
-            option.setName("nd")
-                .setDescription("Nível de Desafio (ND) da missão")
-                .setRequired(true)
-                .setMinValue(1)
+        .addIntegerOption(option =>
+            option.setName("nd").setDescription("Nível de Desafio (ND) da missão").setRequired(true).setMinValue(1)
         )
-        .addIntegerOption(option => 
-            option.setName("vagas")
+        .addIntegerOption(option =>
+            option
+                .setName("vagas")
                 .setDescription("Quantidade de vagas disponíveis na equipe")
                 .setRequired(true)
                 .setMinValue(1)
@@ -39,12 +35,12 @@ module.exports = {
             });
 
             await interaction.reply({
-                content: `✅ **Contrato Criado!**\n` +
-                         `📜 **${nomeMissao}** (ND ${nd})\n` +
-                         `👥 Vagas: ${vagas}\n\n` +
-                         `Jogadores, usem \`/inscrever missao:${nomeMissao}\` para participar!`
+                content:
+                    `✅ **Contrato Criado!**\n` +
+                    `📜 **${nomeMissao}** (ND ${nd})\n` +
+                    `👥 Vagas: ${vagas}\n\n` +
+                    `Jogadores, usem \`/inscrever missao:${nomeMissao}\` para participar!`
             });
-
         } catch (err) {
             if (err.code === "P2002") {
                 return interaction.reply({
@@ -57,9 +53,9 @@ module.exports = {
 
             const erroMsg = { content: "❌ Ocorreu um erro ao criar o contrato.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

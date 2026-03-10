@@ -33,7 +33,9 @@ module.exports = {
 
             const resultados = [];
             for (let i = 0; i < 5; i++) {
-                const num = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
+                const num = Math.floor(Math.random() * 10000)
+                    .toString()
+                    .padStart(4, "0");
                 resultados.push(num);
             }
 
@@ -121,15 +123,15 @@ module.exports = {
             if (ganhadoresLog.length > 0) {
                 embed.addFields({
                     name: "🎉 Ganhadores",
-                    value: ganhadoresLog.slice(0, 20).join("\n") +
-                           (ganhadoresLog.length > 20 ? `\n...e mais ${ganhadoresLog.length - 20}` : "")
+                    value:
+                        ganhadoresLog.slice(0, 20).join("\n") +
+                        (ganhadoresLog.length > 20 ? `\n...e mais ${ganhadoresLog.length - 20}` : "")
                 });
             } else {
                 embed.setFooter({ text: "Nenhum ganhador nesta rodada." });
             }
 
             return interaction.editReply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro sorteio bicho:", err);
 

@@ -4,11 +4,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("drop")
         .setDescription("Gera um drop de recompensa baseado no Nível de Desafio (ND).")
-        .addIntegerOption(option => 
-            option.setName("nd")
-                .setDescription("O Nível de Desafio (ND) do drop")
-                .setRequired(true)
-                .setMinValue(1) 
+        .addIntegerOption(option =>
+            option.setName("nd").setDescription("O Nível de Desafio (ND) do drop").setRequired(true).setMinValue(1)
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, gerarRecompensa }) {
@@ -18,9 +15,9 @@ module.exports = {
             const resultado = gerarRecompensa(nd);
 
             if (!resultado) {
-                return interaction.reply({ 
-                    content: "❌ Erro ao gerar recompensa.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "❌ Erro ao gerar recompensa.",
+                    ephemeral: true
                 });
             }
 
@@ -62,10 +59,9 @@ module.exports = {
                 .setFooter({ text: footerTexto });
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no comando drop:", err);
-            
+
             const erroMsg = { content: "❌ Ocorreu um erro ao gerar o drop.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});

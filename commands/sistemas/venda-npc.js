@@ -4,23 +4,14 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("venda-npc")
         .setDescription("Vende um item para um comerciante NPC e recebe Kwanzas.")
-        .addNumberOption(option => 
-            option.setName("valor")
-                .setDescription("Valor da venda (ex: 50 ou 50.5)")
-                .setRequired(true)
+        .addNumberOption(option =>
+            option.setName("valor").setDescription("Valor da venda (ex: 50 ou 50.5)").setRequired(true)
         )
-        .addStringOption(option => 
-            option.setName("link")
-                .setDescription("Link do item que está sendo vendido")
-                .setRequired(true)
+        .addStringOption(option =>
+            option.setName("link").setDescription("Link do item que está sendo vendido").setRequired(true)
         ),
 
-    async execute({
-        interaction, 
-        prisma,
-        getPersonagemAtivo,
-        formatarMoeda
-    }) {
+    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
         const valor = interaction.options.getNumber("valor");
         const linkItem = interaction.options.getString("link");
 
@@ -62,7 +53,6 @@ module.exports = {
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no comando venda-npc:", err);
             return interaction.reply({ content: "❌ Ocorreu um erro ao registrar a venda.", ephemeral: true });

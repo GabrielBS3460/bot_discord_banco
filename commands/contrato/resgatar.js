@@ -13,20 +13,14 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("resgatar")
         .setDescription("Resgata recompensas e pontos de missões concluídas."),
-        
-    async execute({
-        interaction,
-        prisma,
-        getPersonagemAtivo,
-        CUSTO_NIVEL
-    }) {
 
+    async execute({ interaction, prisma, getPersonagemAtivo, CUSTO_NIVEL }) {
         const char = await getPersonagemAtivo(interaction.user.id);
 
         if (!char) {
-            return interaction.reply({ 
-                content: "🚫 Sem personagem ativo.", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "🚫 Sem personagem ativo.",
+                ephemeral: true
             });
         }
 
@@ -41,9 +35,9 @@ module.exports = {
         });
 
         if (inscricoesPendentes.length === 0) {
-            return interaction.reply({ 
-                content: "🚫 Você não tem recompensas pendentes de missões concluídas.", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "🚫 Você não tem recompensas pendentes de missões concluídas.",
+                ephemeral: true
             });
         }
 
@@ -65,8 +59,8 @@ module.exports = {
         const msg = await interaction.reply({
             content: "💰 **Recompensas Disponíveis:**",
             components: [row],
-            ephemeral: true, 
-            fetchReply: true 
+            ephemeral: true,
+            fetchReply: true
         });
 
         const collector = msg.createMessageComponentCollector({
@@ -106,9 +100,9 @@ module.exports = {
 
                 const checkInscricao = await prisma.inscricoes.findUnique({ where: { id: inscId } });
                 if (checkInscricao.recompensa_resgatada) {
-                    return modalSubmit.reply({ 
-                        content: "🚫 Você já resgatou a recompensa desta missão!", 
-                        flags: MessageFlags.Ephemeral 
+                    return modalSubmit.reply({
+                        content: "🚫 Você já resgatou a recompensa desta missão!",
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
@@ -126,7 +120,7 @@ module.exports = {
                 const charAtual = await getPersonagemAtivo(modalSubmit.user.id);
 
                 const pontosAtuais = parseFloat(charAtual.pontos_missao) || 0;
-                
+
                 let novosPontos = pontosAtuais + pontosGanhos;
                 let novoNivel = charAtual.nivel_personagem;
                 let niveisGanhos = 0;
@@ -171,7 +165,6 @@ module.exports = {
                     content: `✅ **Recompensa Resgatada!**\n💰 **Kwanzas:** +K$ ${ouroGanho}\n📈 **Pontos:** +${pontosGanhos} (Total: ${novosPontos})${msgUpar}`,
                     components: []
                 });
-
             } catch (err) {
                 if (err.code !== 10062) console.error("Erro no resgate:", err);
             }

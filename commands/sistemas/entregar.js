@@ -11,10 +11,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("entregar")
         .setDescription("Entrega um item para o personagem de outro jogador.")
-        .addUserOption(option => 
-            option.setName("destinatario")
-                .setDescription("O jogador que vai receber o item")
-                .setRequired(true)
+        .addUserOption(option =>
+            option.setName("destinatario").setDescription("O jogador que vai receber o item").setRequired(true)
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo }) {
@@ -22,9 +20,9 @@ module.exports = {
             const destinatarioUser = interaction.options.getUser("destinatario");
 
             if (destinatarioUser.bot) {
-                return interaction.reply({ 
-                    content: "🚫 Você não pode entregar itens para um bot.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "🚫 Você não pode entregar itens para um bot.",
+                    ephemeral: true
                 });
             }
 
@@ -38,9 +36,7 @@ module.exports = {
             }
 
             const modalId = `modal_entregar_${interaction.id}`;
-            const modal = new ModalBuilder()
-                .setCustomId(modalId)
-                .setTitle(`Entrega para ${charDestinatario.nome}`);
+            const modal = new ModalBuilder().setCustomId(modalId).setTitle(`Entrega para ${charDestinatario.nome}`);
 
             modal.addComponents(
                 new ActionRowBuilder().addComponents(
@@ -61,10 +57,12 @@ module.exports = {
 
             await interaction.showModal(modal);
 
-            const modalSubmit = await interaction.awaitModalSubmit({
-                filter: i => i.customId === modalId && i.user.id === interaction.user.id,
-                time: 120000
-            }).catch(() => null);
+            const modalSubmit = await interaction
+                .awaitModalSubmit({
+                    filter: i => i.customId === modalId && i.user.id === interaction.user.id,
+                    time: 120000
+                })
+                .catch(() => null);
 
             if (!modalSubmit) return;
 
@@ -76,9 +74,7 @@ module.exports = {
                 .map(l => l.trim())
                 .filter(l => l.length > 0);
 
-            const linksFormatados = listaLinks
-                .map(l => `🔗 ${l}`)
-                .join("\n");
+            const linksFormatados = listaLinks.map(l => `🔗 ${l}`).join("\n");
 
             await prisma.transacao.create({
                 data: {
@@ -94,22 +90,20 @@ module.exports = {
                 .setColor("#9B59B6")
                 .setTitle("🎁 Item Entregue!")
                 .setDescription(`**${interaction.user.username}** entregou um item para **${charDestinatario.nome}**.`)
-                .addFields(
-                    { name: "📦 Item", value: nomeItem },
-                    { name: "🔗 Links", value: linksFormatados }
-                )
+                .addFields({ name: "📦 Item", value: nomeItem }, { name: "🔗 Links", value: linksFormatados })
                 .setTimestamp();
 
             await modalSubmit.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no comando entregar:", err);
 
             if (interaction.isRepliable() && !interaction.replied) {
-                await interaction.reply({ 
-                    content: "❌ Ocorreu um erro ao entregar o item.", 
-                    ephemeral: true 
-                }).catch(()=>{});
+                await interaction
+                    .reply({
+                        content: "❌ Ocorreu um erro ao entregar o item.",
+                        ephemeral: true
+                    })
+                    .catch(() => {});
             }
         }
     }

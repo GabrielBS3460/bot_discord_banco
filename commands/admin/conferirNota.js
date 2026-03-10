@@ -4,10 +4,8 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("conferirnota")
         .setDescription("Verifica as avaliações e a nota média de um Mestre (Apenas Admins).")
-        .addUserOption(option => 
-            option.setName("mestre")
-                .setDescription("O Mestre que você deseja analisar")
-                .setRequired(true)
+        .addUserOption(option =>
+            option.setName("mestre").setDescription("O Mestre que você deseja analisar").setRequired(true)
         ),
 
     async execute({ interaction, prisma, ID_CARGO_ADMIN }) {
@@ -84,15 +82,14 @@ module.exports = {
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });
-
         } catch (err) {
             console.error("Erro no comando conferirnota:", err);
-            
+
             const erroMsg = { content: "❌ Ocorreu um erro ao buscar avaliações.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

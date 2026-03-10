@@ -12,15 +12,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("avaliar")
         .setDescription("Avalia o desempenho de um Mestre em uma missão.")
-        .addUserOption(option => 
-            option.setName("mestre")
-                .setDescription("O mestre que narrou a missão")
-                .setRequired(true)
+        .addUserOption(option =>
+            option.setName("mestre").setDescription("O mestre que narrou a missão").setRequired(true)
         )
-        .addStringOption(option => 
-            option.setName("link")
-                .setDescription("Link da mensagem ou documento do contrato")
-                .setRequired(true)
+        .addStringOption(option =>
+            option.setName("link").setDescription("Link da mensagem ou documento do contrato").setRequired(true)
         ),
 
     async execute({ interaction, prisma }) {
@@ -28,16 +24,16 @@ module.exports = {
         const linkMissao = interaction.options.getString("link");
 
         if (!linkMissao.startsWith("http")) {
-            return interaction.reply({ 
-                content: "⚠️ Forneça um link válido do Contrato (deve começar com http).", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "⚠️ Forneça um link válido do Contrato (deve começar com http).",
+                ephemeral: true
             });
         }
 
         if (mestreUser.id === interaction.user.id) {
-            return interaction.reply({ 
-                content: "🚫 Autoavaliação não permitida.", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "🚫 Autoavaliação não permitida.",
+                ephemeral: true
             });
         }
 
@@ -94,7 +90,9 @@ module.exports = {
                 new ActionRowBuilder().addComponents(
                     new StringSelectMenuBuilder()
                         .setCustomId("menu_conhecimento")
-                        .setPlaceholder(respostas.conhecimento ? `Sistema: ${respostas.conhecimento}` : "Conhecimento de Sistema")
+                        .setPlaceholder(
+                            respostas.conhecimento ? `Sistema: ${respostas.conhecimento}` : "Conhecimento de Sistema"
+                        )
                         .addOptions(gerarOpcoes())
                 ),
                 new ActionRowBuilder().addComponents(
@@ -104,10 +102,7 @@ module.exports = {
                         .addOptions(gerarOpcoes())
                 ),
                 new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId("btn_voltar")
-                        .setLabel("⬅️ Voltar")
-                        .setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder().setCustomId("btn_voltar").setLabel("⬅️ Voltar").setStyle(ButtonStyle.Secondary),
                     new ButtonBuilder()
                         .setCustomId("btn_finalizar")
                         .setLabel("Enviar Avaliação")
@@ -124,7 +119,7 @@ module.exports = {
         });
 
         const collectorForm = response.createMessageComponentCollector({
-            time: 300000 
+            time: 300000
         });
 
         let telaAtual = 1;
@@ -178,7 +173,6 @@ module.exports = {
                             content: `✅ **Avaliação registrada com sucesso!**\n\n🧙‍♂️ Mestre: ${mestreUser.username}\n⭐ Média: **${media.toFixed(1)}**`,
                             components: []
                         });
-
                     } catch (err) {
                         console.error("Erro ao registrar avaliação:", err);
                         await iForm.update({ content: "❌ Ocorreu um erro ao salvar sua avaliação.", components: [] });

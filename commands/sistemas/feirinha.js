@@ -16,9 +16,9 @@ module.exports = {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
-                return interaction.reply({ 
-                    content: "🚫 Você não tem um personagem ativo.", 
-                    ephemeral: true 
+                return interaction.reply({
+                    content: "🚫 Você não tem um personagem ativo.",
+                    ephemeral: true
                 });
             }
 
@@ -26,7 +26,8 @@ module.exports = {
 
             if (!listaPericias.includes("Ofício Cozinheiro")) {
                 return interaction.reply({
-                    content: "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para escolher os ingredientes mais frescos!",
+                    content:
+                        "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para escolher os ingredientes mais frescos!",
                     ephemeral: true
                 });
             }
@@ -80,7 +81,10 @@ module.exports = {
             };
 
             const estoque = char.estoque_ingredientes || {};
-            const listaEstoque = Object.entries(estoque).map(([k, v]) => `${k}: ${v}`).join(", ") || "Vazio";
+            const listaEstoque =
+                Object.entries(estoque)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join(", ") || "Vazio";
 
             const rowInicial = montarMenu(itensLoja);
             const componentsInicial = rowInicial ? [rowInicial] : [];
@@ -90,19 +94,18 @@ module.exports = {
                   `💰 **Seu Saldo:** K$ ${char.saldo}\n` +
                   `🎒 **Seu Estoque:** ${listaEstoque}\n\n` +
                   `*Selecione abaixo para comprar:*`
-                : `🥦 **Feirinha da Semana**\n` +
-                  `🚫 **Estoque Esgotado!** Volte na próxima semana.`;
+                : `🥦 **Feirinha da Semana**\n` + `🚫 **Estoque Esgotado!** Volte na próxima semana.`;
 
             const msg = await interaction.reply({
                 content: contentInicial,
                 components: componentsInicial,
-                ephemeral: true, 
+                ephemeral: true,
                 fetchReply: true
             });
 
             const collector = msg.createMessageComponentCollector({
                 filter: i => i.user.id === interaction.user.id && i.customId === "menu_comprar_ingrediente",
-                time: 60000 
+                time: 60000
             });
 
             collector.on("collect", async i => {
@@ -131,7 +134,7 @@ module.exports = {
 
                 const novoEstoque = charAtual.estoque_ingredientes || {};
                 if (!novoEstoque[nome]) novoEstoque[nome] = 0;
-                
+
                 novoEstoque[nome] += 1;
                 listaAtual.splice(index, 1);
 
@@ -157,30 +160,30 @@ module.exports = {
                 const novoRow = montarMenu(listaAtual);
                 const novosComponents = novoRow ? [novoRow] : [];
 
-                const estoqueFormatado = Object.entries(novoEstoque).map(([k, v]) => `${k}: ${v}`).join(", ");
+                const estoqueFormatado = Object.entries(novoEstoque)
+                    .map(([k, v]) => `${k}: ${v}`)
+                    .join(", ");
 
                 const novoConteudo = novoRow
                     ? `✅ Comprou **${nome}**!\n` +
                       `💰 **Saldo:** K$ ${(charAtual.saldo - preco).toFixed(2)}\n` +
                       `🎒 **Estoque:** ${estoqueFormatado}\n\n` +
                       `*Continue comprando:*`
-                    : `✅ Comprou **${nome}**!\n` +
-                      `🚫 **Estoque da Feirinha acabou!**`;
+                    : `✅ Comprou **${nome}**!\n` + `🚫 **Estoque da Feirinha acabou!**`;
 
                 await i.update({
                     content: novoConteudo,
                     components: novosComponents
                 });
             });
-
         } catch (err) {
             console.error("Erro no comando feirinha:", err);
-            
+
             const erroMsg = { content: "❌ Ocorreu um erro ao visitar a feirinha.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

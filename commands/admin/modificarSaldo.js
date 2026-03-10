@@ -4,30 +4,24 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("modificar-saldo")
         .setDescription("Adiciona ou remove saldo de um jogador (Apenas Admins/Mods).")
-        .addUserOption(option => 
-            option.setName("jogador")
-                .setDescription("O jogador que terá o saldo modificado")
-                .setRequired(true)
+        .addUserOption(option =>
+            option.setName("jogador").setDescription("O jogador que terá o saldo modificado").setRequired(true)
         )
-        .addNumberOption(option => 
-            option.setName("valor")
+        .addNumberOption(option =>
+            option
+                .setName("valor")
                 .setDescription("Valor a adicionar (positivo) ou remover (com sinal negativo, ex: -50)")
                 .setRequired(true)
         )
-        .addStringOption(option => 
-            option.setName("motivo")
-                .setDescription("Motivo da modificação no extrato")
-                .setRequired(false) 
+        .addStringOption(option =>
+            option.setName("motivo").setDescription("Motivo da modificação no extrato").setRequired(false)
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
-        if (
-            !interaction.member.roles.cache.has(ID_CARGO_ADMIN) &&
-            !interaction.member.roles.cache.has(ID_CARGO_MOD)
-        ) {
-            return interaction.reply({ 
-                content: "🚫 Você não tem permissão para usar este comando.", 
-                ephemeral: true 
+        if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN) && !interaction.member.roles.cache.has(ID_CARGO_MOD)) {
+            return interaction.reply({
+                content: "🚫 Você não tem permissão para usar este comando.",
+                ephemeral: true
             });
         }
 
@@ -36,9 +30,9 @@ module.exports = {
         const motivo = interaction.options.getString("motivo") || "Modificação administrativa";
 
         if (alvo.bot) {
-            return interaction.reply({ 
-                content: "🚫 Bots não possuem saldo.", 
-                ephemeral: true 
+            return interaction.reply({
+                content: "🚫 Bots não possuem saldo.",
+                ephemeral: true
             });
         }
 
@@ -99,15 +93,14 @@ module.exports = {
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no modificar-saldo:", err);
 
             const erroMsg = { content: "❌ Ocorreu um erro ao modificar o saldo.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(()=>{});
+                await interaction.followUp(erroMsg).catch(() => {});
             } else {
-                await interaction.reply(erroMsg).catch(()=>{});
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }
