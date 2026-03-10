@@ -42,7 +42,7 @@ module.exports = {
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply();
 
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
