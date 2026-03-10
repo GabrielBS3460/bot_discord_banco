@@ -99,7 +99,7 @@ module.exports = {
                     CUSTO_NIVEL
                 );
 
-                let msgFinal = `🎊 **RECOMPENSA RESGATADA!** 🎊\n👤 **Aventureiro:** ${interaction.user}\n💰 **Kwanzas:** +K$ ${resultado.ouroGanho}\n📈 **Pontos de Missão:** +${pontosGanhos} (Total: ${resultado.novosPontos})`;
+                let msgFinal = `🎊 **RECOMPENSA RESGATADA!** 🎊\n👤 **Mercenário:** ${interaction.user}\n💰 **Kwanzas:** +K$ ${resultado.ouroGanho}\n📈 **Pontos de Missão:** +${pontosGanhos} (Total: ${resultado.novosPontos})`;
 
                 if (resultado.niveisGanhos > 0)
                     msgFinal += `\n\n⏫ **LEVEL UP!** O personagem subiu para o nível **${resultado.novoNivel}**!`;
