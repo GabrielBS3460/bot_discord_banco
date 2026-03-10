@@ -8,23 +8,19 @@ const {
     TextInputBuilder,
     TextInputStyle
 } = require("discord.js");
+const ContratoService = require("../../services/ContratoService.js");
+const prisma = require("../../database.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("resgatar")
         .setDescription("Resgata recompensas e pontos de missões concluídas."),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, CUSTO_NIVEL }) {
+    async execute({ interaction, getPersonagemAtivo, CUSTO_NIVEL }) {
         const char = await getPersonagemAtivo(interaction.user.id);
+        if (!char) return interaction.reply({ content: "🚫 Sem personagem ativo.", flags: MessageFlags.Ephemeral });
 
-        if (!char) {
-            return interaction.reply({
-                content: "🚫 Sem personagem ativo.",
-                ephemeral: true
-            });
-        }
-
-        const inscricoesPendentes = await prisma.inscricoes.findMany({
+        const pendentes = await prisma.inscricoes.findMany({
             where: {
                 personagem_id: char.id,
                 selecionado: true,
@@ -34,18 +30,18 @@ module.exports = {
             include: { missao: true }
         });
 
-        if (inscricoesPendentes.length === 0) {
+        if (pendentes.length === 0) {
             return interaction.reply({
-                content: "🚫 Você não tem recompensas pendentes de missões concluídas.",
-                ephemeral: true
+                content: "🚫 Você não tem recompensas pendentes.",
+                flags: MessageFlags.Ephemeral
             });
         }
 
         const menu = new StringSelectMenuBuilder()
-            .setCustomId("menu_resgate_missao")
+            .setCustomId("menu_resgate")
             .setPlaceholder("Selecione a missão para resgatar");
 
-        inscricoesPendentes.forEach(insc => {
+        pendentes.forEach(insc => {
             menu.addOptions(
                 new StringSelectMenuOptionBuilder()
                     .setLabel(`${insc.missao.nome} (ND ${insc.missao.nd})`)
@@ -54,119 +50,71 @@ module.exports = {
             );
         });
 
-        const row = new ActionRowBuilder().addComponents(menu);
-
         const msg = await interaction.reply({
             content: "💰 **Recompensas Disponíveis:**",
-            components: [row],
-            ephemeral: true,
+            components: [new ActionRowBuilder().addComponents(menu)],
+            flags: MessageFlags.Ephemeral,
             fetchReply: true
         });
 
-        const collector = msg.createMessageComponentCollector({
-            filter: i => i.user.id === interaction.user.id && i.customId === "menu_resgate_missao",
-            time: 60000
-        });
+        const collector = msg.createMessageComponentCollector({ time: 60000 });
 
         collector.on("collect", async i => {
-            if (!i.isStringSelectMenu()) return;
-
-            const [inscricaoId, ndStr] = i.values[0].split("_");
-            const inscId = parseInt(inscricaoId);
-            const nd = parseInt(ndStr);
+            const [inscId, nd] = i.values[0].split("_").map(Number);
 
             const modal = new ModalBuilder()
-                .setCustomId(`modal_pontos_${inscId}_${nd}`)
-                .setTitle("Relatório da Missão");
-
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId("inp_pontos")
-                        .setLabel("Quantos Pontos de Missão você ganhou?")
-                        .setStyle(TextInputStyle.Short)
-                        .setPlaceholder("Ex: 1 ou 1.5")
-                        .setRequired(true)
-                )
-            );
+                .setCustomId(`mod_resgate_${inscId}`)
+                .setTitle("Relatório da Missão")
+                .addComponents(
+                    new ActionRowBuilder().addComponents(
+                        new TextInputBuilder()
+                            .setCustomId("pontos")
+                            .setLabel("Pontos de Missão ganhos?")
+                            .setStyle(TextInputStyle.Short)
+                            .setPlaceholder("Ex: 1 ou 1.5")
+                            .setRequired(true)
+                    )
+                );
 
             await i.showModal(modal);
 
+            const sub = await i.awaitModalSubmit({ time: 60000 }).catch(() => null);
+            if (!sub) return;
+
+            await sub.deferReply();
+
+            const pontosGanhos = parseFloat(sub.fields.getTextInputValue("pontos").replace(",", "."));
+            if (isNaN(pontosGanhos) || pontosGanhos < 0) {
+                return sub.editReply({ content: "🚫 Valor inválido.", flags: MessageFlags.Ephemeral });
+            }
+
             try {
-                const modalSubmit = await i.awaitModalSubmit({
-                    filter: m => m.customId === `modal_pontos_${inscId}_${nd}` && m.user.id === i.user.id,
-                    time: 120000
-                });
+                const charAtual = await getPersonagemAtivo(interaction.user.id);
 
-                const checkInscricao = await prisma.inscricoes.findUnique({ where: { id: inscId } });
-                if (checkInscricao.recompensa_resgatada) {
-                    return modalSubmit.reply({
-                        content: "🚫 Você já resgatou a recompensa desta missão!",
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
+                const resultado = await ContratoService.processarResgateMissao(
+                    charAtual,
+                    inscId,
+                    nd,
+                    pontosGanhos,
+                    CUSTO_NIVEL
+                );
 
-                let pontosInput = modalSubmit.fields.getTextInputValue("inp_pontos").replace(",", ".").trim();
-                const pontosGanhos = parseFloat(pontosInput);
+                let msgFinal = `🎊 **RECOMPENSA RESGATADA!** 🎊\n👤 **Mercenário:** ${interaction.user}\n💰 **Kwanzas:** +K$ ${resultado.ouroGanho}\n📈 **Pontos de Missão:** +${pontosGanhos} (Total: ${resultado.novosPontos})`;
 
-                if (isNaN(pontosGanhos) || pontosGanhos < 0) {
-                    return modalSubmit.reply({
-                        content: "Valor inválido. Use números (ex: 3 ou 3.5).",
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
+                if (resultado.niveisGanhos > 0)
+                    msgFinal += `\n\n⏫ **LEVEL UP!** O personagem subiu para o nível **${resultado.novoNivel}**!`;
 
-                const ouroGanho = nd * 100;
-                const charAtual = await getPersonagemAtivo(modalSubmit.user.id);
-
-                const pontosAtuais = parseFloat(charAtual.pontos_missao) || 0;
-
-                let novosPontos = pontosAtuais + pontosGanhos;
-                let novoNivel = charAtual.nivel_personagem;
-                let niveisGanhos = 0;
-
-                while (CUSTO_NIVEL[novoNivel] && novosPontos >= CUSTO_NIVEL[novoNivel]) {
-                    novosPontos -= CUSTO_NIVEL[novoNivel];
-                    novoNivel++;
-                    niveisGanhos++;
-                }
-
-                novosPontos = Math.round(novosPontos * 10) / 10;
-
-                let msgUpar = "";
-                if (niveisGanhos > 0) {
-                    msgUpar = `\n⏫ **LEVEL UP!** Você alcançou o nível **${novoNivel}**!`;
-                }
-
-                await prisma.$transaction([
-                    prisma.personagens.update({
-                        where: { id: charAtual.id },
-                        data: {
-                            saldo: { increment: ouroGanho },
-                            pontos_missao: novosPontos,
-                            nivel_personagem: novoNivel
-                        }
-                    }),
-                    prisma.inscricoes.update({
-                        where: { id: inscId },
-                        data: { recompensa_resgatada: true }
-                    }),
-                    prisma.transacao.create({
-                        data: {
-                            personagem_id: charAtual.id,
-                            descricao: `Recompensa Missão (ND ${nd})`,
-                            valor: ouroGanho,
-                            tipo: "GANHO"
-                        }
-                    })
-                ]);
-
-                await modalSubmit.update({
-                    content: `✅ **Recompensa Resgatada!**\n💰 **Kwanzas:** +K$ ${ouroGanho}\n📈 **Pontos:** +${pontosGanhos} (Total: ${novosPontos})${msgUpar}`,
+                await sub.editReply({
+                    content: msgFinal,
                     components: []
                 });
+
+                await interaction
+                    .editReply({ content: "✅ Resgate processado com sucesso.", components: [] })
+                    .catch(() => {});
             } catch (err) {
-                if (err.code !== 10062) console.error("Erro no resgate:", err);
+                console.error(err);
+                await sub.editReply({ content: "❌ Erro ao processar resgate.", flags: MessageFlags.Ephemeral });
             }
         });
     }

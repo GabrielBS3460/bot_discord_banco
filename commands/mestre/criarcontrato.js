@@ -1,4 +1,5 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const ContratoService = require("../../services/ContratoService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -18,21 +19,14 @@ module.exports = {
                 .setMinValue(1)
         ),
 
-    async execute({ interaction, prisma }) {
-        try {
-            const nomeMissao = interaction.options.getString("nome");
-            const nd = interaction.options.getInteger("nd");
-            const vagas = interaction.options.getInteger("vagas");
+    async execute({ interaction }) {
+        const nomeMissao = interaction.options.getString("nome");
+        const nd = interaction.options.getInteger("nd");
+        const vagas = interaction.options.getInteger("vagas");
+        const criadorId = interaction.user.id;
 
-            await prisma.missoes.create({
-                data: {
-                    nome: nomeMissao,
-                    nd: nd,
-                    vagas: vagas,
-                    criador_id: interaction.user.id,
-                    status: "ABERTA"
-                }
-            });
+        try {
+            await ContratoService.criarNovoContrato(nomeMissao, nd, vagas, criadorId);
 
             await interaction.reply({
                 content:
@@ -42,16 +36,16 @@ module.exports = {
                     `Jogadores, usem \`/inscrever missao:${nomeMissao}\` para participar!`
             });
         } catch (err) {
-            if (err.code === "P2002") {
+            if (err.message === "CONTRATO_DUPLICADO") {
                 return interaction.reply({
                     content: "⚠️ Já existe um contrato com esse nome. Por favor, escolha um nome diferente.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             console.error("Erro no comando criarcontrato:", err);
 
-            const erroMsg = { content: "❌ Ocorreu um erro ao criar o contrato.", ephemeral: true };
+            const erroMsg = { content: "❌ Ocorreu um erro ao criar o contrato.", flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {

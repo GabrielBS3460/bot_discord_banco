@@ -1,514 +1,209 @@
 const {
     SlashCommandBuilder,
-    MessageFlags,
+    EmbedBuilder,
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    EmbedBuilder,
+    MessageFlags,
+    UserSelectMenuBuilder,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
-    UserSelectMenuBuilder,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle
 } = require("discord.js");
+const ContratoService = require("../../services/ContratoService.js");
+const ContratoRepository = require("../../repositories/ContratoRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("painelcontrato")
-        .setDescription("Abre o painel de gerenciamento de um contrato/missão (Apenas Mestre Criador).")
-        .addStringOption(option =>
-            option.setName("nome").setDescription("Nome exato do contrato/missão").setRequired(true)
-        ),
+        .setDescription("Gerencia um contrato (Apenas Mestre Criador).")
+        .addStringOption(opt => opt.setName("nome").setDescription("Nome exato do contrato").setRequired(true)),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, ID_CARGO_ADMIN }) {
+    async execute({ interaction, getPersonagemAtivo, ID_CARGO_ADMIN }) {
         const nomeMissao = interaction.options.getString("nome").trim();
+        let missao = await ContratoRepository.buscarPorNomeCompleto(nomeMissao);
 
-        const missao = await prisma.missoes.findUnique({
-            where: { nome: nomeMissao },
-            include: {
-                inscricoes: {
-                    include: { personagem: true }
-                }
-            }
-        });
+        if (!missao)
+            return interaction.reply({ content: "🚫 Contrato não encontrado.", flags: MessageFlags.Ephemeral });
 
-        if (!missao) {
-            return interaction.reply({
-                content: "🚫 Contrato não encontrado. Verifique se o nome foi digitado corretamente.",
-                ephemeral: true
-            });
+        const eAdmin = interaction.member.roles.cache.has(ID_CARGO_ADMIN);
+        if (missao.criador_id !== interaction.user.id && !eAdmin) {
+            return interaction.reply({ content: "🚫 Sem permissão.", flags: MessageFlags.Ephemeral });
         }
 
-        if (missao.criador_id !== interaction.user.id && !interaction.member.roles.cache.has(ID_CARGO_ADMIN)) {
-            return interaction.reply({
-                content: "🚫 Apenas o Mestre criador da missão (ou um Admin) pode gerenciar este contrato.",
-                ephemeral: true
-            });
-        }
+        const atualizarInterface = async it => {
+            missao = await ContratoRepository.buscarPorNomeCompleto(nomeMissao); // Refresh dados
+            const selecionados = missao.inscricoes.filter(i => i.selecionado);
+            const fila = missao.inscricoes.filter(i => !i.selecionado);
 
-        const shuffle = array => [...array].sort(() => Math.random() - 0.5);
-
-        const montarPainel = m => {
-            const selecionados = m.inscricoes.filter(i => i.selecionado);
-            const fila = shuffle(m.inscricoes.filter(i => !i.selecionado));
-
-            const txtSelecionados =
-                selecionados
-                    .map(i => `✅ **${i.personagem.nome}** (Nvl ${i.personagem.nivel_personagem})`)
-                    .join("\n") || "Ninguém selecionado.";
-
-            const txtFila = fila.map(i => `⏳ **${i.personagem.nome}**`).join("\n") || "Fila vazia.";
-
-            return new EmbedBuilder()
-                .setColor(m.status === "CONCLUIDA" ? "#00FF00" : "#FFA500")
-                .setTitle(`🛡️ Gestão: ${m.nome}`)
-                .setDescription(`**ND:** ${m.nd} | **Vagas:** ${m.vagas}\n**Status:** ${m.status}`)
+            const embed = new EmbedBuilder()
+                .setColor(missao.status === "CONCLUIDA" ? "#00FF00" : "#FFA500")
+                .setTitle(`🛡️ Gestão: ${missao.nome}`)
+                .setDescription(`**ND:** ${missao.nd} | **Vagas:** ${missao.vagas} | **Status:** ${missao.status}`)
                 .addFields(
                     {
-                        name: `Equipe (${selecionados.length}/${m.vagas})`,
-                        value: txtSelecionados,
+                        name: `Equipe (${selecionados.length}/${missao.vagas})`,
+                        value: selecionados.map(i => `✅ **${i.personagem.nome}**`).join("\n") || "Vazia",
                         inline: true
                     },
                     {
-                        name: "Fila de Espera",
-                        value: txtFila,
+                        name: "Fila",
+                        value: fila.map(i => `⏳ ${i.personagem.nome}`).join("\n") || "Vazia",
                         inline: true
                     }
                 );
-        };
 
-        const montarBotoes = m => {
-            const row1 = new ActionRowBuilder().addComponents(
+            const buttons1 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId("ms_sortear")
                     .setLabel("Sortear Equipe")
                     .setStyle(ButtonStyle.Primary)
-                    .setDisabled(m.status !== "ABERTA"),
+                    .setDisabled(missao.status !== "ABERTA"),
                 new ButtonBuilder()
                     .setCustomId("ms_add_player")
-                    .setLabel("Add Player")
+                    .setLabel("Adicionar Player")
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji("➕")
-                    .setDisabled(m.status === "CONCLUIDA"),
+                    .setDisabled(missao.status === "CONCLUIDA"),
                 new ButtonBuilder()
                     .setCustomId("ms_gerenciar")
-                    .setLabel("Remover")
+                    .setLabel("Remover player")
                     .setStyle(ButtonStyle.Secondary)
-                    .setEmoji("👥")
-                    .setDisabled(m.status === "CONCLUIDA")
+                    .setEmoji("❌")
+                    .setDisabled(missao.status === "CONCLUIDA")
             );
 
-            const row2 = new ActionRowBuilder().addComponents(
+            const buttons2 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId("ms_iniciar")
-                    .setLabel("Iniciar Missão")
+                    .setLabel("Iniciar Contrato")
                     .setStyle(ButtonStyle.Success)
-                    .setDisabled(m.status !== "ABERTA"),
+                    .setDisabled(missao.status !== "ABERTA"),
                 new ButtonBuilder()
                     .setCustomId("ms_concluir")
-                    .setLabel("Concluir Missão")
+                    .setLabel("Concluir Contrato")
                     .setStyle(ButtonStyle.Danger)
-                    .setDisabled(m.status === "CONCLUIDA"),
+                    .setDisabled(missao.status === "CONCLUIDA"),
                 new ButtonBuilder()
-                    .setCustomId("ms_alterar_vagas")
-                    .setLabel("Vagas")
+                    .setCustomId("ms_vagas")
+                    .setLabel("Modificar Vagas")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("🔢")
-                    .setDisabled(m.status === "CONCLUIDA"),
-                new ButtonBuilder().setCustomId("ms_atualizar").setLabel("🔄 Atualizar").setStyle(ButtonStyle.Secondary)
+                    .setDisabled(missao.status === "CONCLUIDA")
             );
 
-            return [row1, row2];
+            const payload = { embeds: [embed], components: [buttons1, buttons2] };
+            return it.replied ? it.editReply(payload) : it.reply(payload);
         };
 
-        const msg = await interaction.reply({
-            embeds: [montarPainel(missao)],
-            components: montarBotoes(missao),
-            fetchReply: true
-        });
-
+        await atualizarInterface(interaction);
+        const msg = await interaction.fetchReply();
         const collector = msg.createMessageComponentCollector({
             filter: i => i.user.id === interaction.user.id,
-            time: 3600000,
-            idle: 300000
+            time: 600000
         });
 
-        collector.on("collect", async iBtn => {
-            if (!iBtn.isButton() && !iBtn.isUserSelectMenu() && !iBtn.isStringSelectMenu()) return;
-
+        collector.on("collect", async i => {
             try {
-                if (iBtn.customId === "ms_add_player") {
+                if (i.customId === "ms_sortear") {
+                    await i.deferUpdate();
+                    await ContratoService.sortearEquipe(missao);
+                    return atualizarInterface(interaction);
+                }
+
+                if (i.customId === "ms_iniciar") {
+                    await i.deferUpdate();
+                    await ContratoRepository.atualizarStatus(missao.id, "EM_ANDAMENTO");
+                    return atualizarInterface(interaction);
+                }
+
+                if (i.customId === "ms_concluir") {
+                    await i.deferUpdate();
+                    const mestreChar = await getPersonagemAtivo(missao.criador_id);
+                    await ContratoService.concluirMissao(missao.id, mestreChar?.id);
+                    await interaction.channel.send({ content: `🏆 **Contrato "${missao.nome}" Concluído!**` });
+                    return atualizarInterface(interaction);
+                }
+
+                if (i.customId === "ms_add_player") {
                     const userMenu = new UserSelectMenuBuilder()
-                        .setCustomId("menu_pesquisa_player")
-                        .setPlaceholder("Pesquise e selecione o jogador...")
-                        .setMinValues(1)
-                        .setMaxValues(1);
-
-                    const rowUser = new ActionRowBuilder().addComponents(userMenu);
-
-                    const menuMsg = await iBtn.reply({
-                        content: "👥 **Selecione abaixo o jogador que deseja adicionar à missão:**",
-                        components: [rowUser],
+                        .setCustomId("sel_add")
+                        .setPlaceholder("Selecione o jogador...");
+                    const row = new ActionRowBuilder().addComponents(userMenu);
+                    const prompt = await i.reply({
+                        content: "👥 Escolha quem adicionar:",
+                        components: [row],
                         flags: MessageFlags.Ephemeral,
-                        withResponse: true
+                        fetchReply: true
                     });
 
-                    const selectCollector = menuMsg.resource.message.createMessageComponentCollector({
-                        filter: i => i.user.id === interaction.user.id,
-                        time: 60000
-                    });
-
-                    selectCollector.on("collect", async iSelect => {
-                        await iSelect.deferUpdate();
-                        const targetId = iSelect.values[0];
-
-                        const targetChar = await getPersonagemAtivo(targetId);
-                        if (!targetChar) {
-                            return iSelect.followUp({
-                                content: "⚠️ O jogador selecionado não possui um personagem ativo.",
-                                flags: MessageFlags.Ephemeral
-                            });
+                    const sel = await prompt.awaitMessageComponent({ time: 30000 }).catch(() => null);
+                    if (sel) {
+                        await sel.deferUpdate();
+                        const targetChar = await getPersonagemAtivo(sel.values[0]);
+                        if (targetChar) {
+                            await ContratoService.adicionarJogadorManual(missao.id, targetChar.id);
+                            await i.editReply({ content: `✅ ${targetChar.nome} adicionado!`, components: [] });
+                            return atualizarInterface(interaction);
                         }
-
-                        const jaInscrito = await prisma.inscricoes.findFirst({
-                            where: { missao_id: missao.id, personagem_id: targetChar.id }
-                        });
-
-                        if (jaInscrito) {
-                            if (!jaInscrito.selecionado) {
-                                await prisma.inscricoes.update({
-                                    where: { id: jaInscrito.id },
-                                    data: { selecionado: true }
-                                });
-                            } else {
-                                return iSelect.followUp({
-                                    content: "⚠️ Esse jogador já está na equipe selecionada.",
-                                    flags: MessageFlags.Ephemeral
-                                });
-                            }
-                        } else {
-                            await prisma.inscricoes.create({
-                                data: {
-                                    missao_id: missao.id,
-                                    personagem_id: targetChar.id,
-                                    selecionado: true,
-                                    recompensa_resgatada: false
-                                }
-                            });
-                        }
-
-                        const mNova = await prisma.missoes.findUnique({
-                            where: { id: missao.id },
-                            include: { inscricoes: { include: { personagem: true } } }
-                        });
-                        await interaction.editReply({ embeds: [montarPainel(mNova)], components: montarBotoes(mNova) });
-
-                        await iSelect.editReply({
-                            content: `✅ **${targetChar.nome}** foi adicionado à equipe com sucesso!`,
-                            components: []
-                        });
-                        selectCollector.stop();
-                    });
-                    return;
+                    }
                 }
 
-                if (iBtn.customId === "ms_sortear") {
-                    await iBtn.deferUpdate();
+                if (i.customId === "ms_gerenciar") {
+                    const selecionados = missao.inscricoes.filter(insc => insc.selecionado);
+                    if (selecionados.length === 0)
+                        return i.reply({ content: "Equipe vazia.", flags: MessageFlags.Ephemeral });
 
-                    const mAtual = await prisma.missoes.findUnique({
-                        where: { id: missao.id },
-                        include: { inscricoes: { include: { personagem: true } } }
-                    });
-
-                    let vagasRestantes = mAtual.vagas - mAtual.inscricoes.filter(insc => insc.selecionado).length;
-
-                    if (vagasRestantes <= 0) {
-                        return iBtn.followUp({ content: "🚫 A equipe já está cheia.", flags: MessageFlags.Ephemeral });
-                    }
-
-                    const candidatos = mAtual.inscricoes.filter(insc => !insc.selecionado);
-
-                    let candidatosSorteados = shuffle(candidatos);
-
-                    candidatosSorteados.sort((a, b) => {
-                        const dataA = a.personagem.ultima_missao ? new Date(a.personagem.ultima_missao).getTime() : 0;
-                        const dataB = b.personagem.ultima_missao ? new Date(b.personagem.ultima_missao).getTime() : 0;
-                        return dataA - dataB;
-                    });
-
-                    const sorteados = candidatosSorteados.slice(0, vagasRestantes);
-
-                    if (sorteados.length > 0) {
-                        await prisma.inscricoes.updateMany({
-                            where: { id: { in: sorteados.map(s => s.id) } },
-                            data: { selecionado: true }
-                        });
-                    }
-
-                    const mNova = await prisma.missoes.findUnique({
-                        where: { id: missao.id },
-                        include: { inscricoes: { include: { personagem: true } } }
-                    });
-
-                    await interaction.editReply({
-                        embeds: [montarPainel(mNova)],
-                        components: montarBotoes(mNova)
-                    });
-                    return;
-                }
-
-                if (iBtn.customId === "ms_gerenciar") {
-                    const mAtual = await prisma.missoes.findUnique({
-                        where: { id: missao.id },
-                        include: { inscricoes: { include: { personagem: true } } }
-                    });
-
-                    const selecionados = mAtual.inscricoes.filter(insc => insc.selecionado);
-
-                    if (selecionados.length === 0) {
-                        return iBtn.reply({
-                            content: "🚫 Ninguém na equipe para remover.",
-                            flags: MessageFlags.Ephemeral
-                        });
-                    }
-
-                    const menu = new StringSelectMenuBuilder()
-                        .setCustomId("menu_remover_jogador")
-                        .setPlaceholder("Selecione quem VAI SAIR do contrato")
-                        .setMinValues(1)
-                        .setMaxValues(1);
-
-                    selecionados.forEach(insc => {
+                    const menu = new StringSelectMenuBuilder().setCustomId("sel_rem").setPlaceholder("Quem remover?");
+                    selecionados.forEach(s =>
                         menu.addOptions(
-                            new StringSelectMenuOptionBuilder()
-                                .setLabel(insc.personagem.nome)
-                                .setValue(String(insc.id))
-                                .setEmoji("❌")
-                        );
+                            new StringSelectMenuOptionBuilder().setLabel(s.personagem.nome).setValue(String(s.id))
+                        )
+                    );
+
+                    const row = new ActionRowBuilder().addComponents(menu);
+                    const prompt = await i.reply({
+                        content: "❌ Selecione quem sai (o próximo da fila entrará):",
+                        components: [row],
+                        flags: MessageFlags.Ephemeral,
+                        fetchReply: true
                     });
 
-                    const rowMenu = new ActionRowBuilder().addComponents(menu);
-
-                    await iBtn.reply({
-                        content: "Quem deve ser removido? O próximo da fila entrará automaticamente.",
-                        components: [rowMenu],
-                        ephemeral: true
-                    });
-
-                    const replyMsg = await iBtn.fetchReply();
-
-                    const menuCollector = replyMsg.createMessageComponentCollector({
-                        filter: i => i.user.id === iBtn.user.id && i.customId === "menu_remover_jogador",
-                        time: 60000,
-                        max: 1
-                    });
-
-                    menuCollector.on("collect", async iMenu => {
-                        try {
-                            await iMenu.deferUpdate();
-
-                            const idRemover = parseInt(iMenu.values[0]);
-
-                            await prisma.$transaction(async tx => {
-                                await tx.inscricoes.delete({ where: { id: idRemover } });
-
-                                const fila = await tx.inscricoes.findMany({
-                                    where: { missao_id: missao.id, selecionado: false }
-                                });
-
-                                let filaSorteada = shuffle(fila);
-
-                                const proximoFila = filaSorteada[0];
-
-                                if (proximoFila) {
-                                    await tx.inscricoes.update({
-                                        where: { id: proximoFila.id },
-                                        data: { selecionado: true }
-                                    });
-                                }
-                            });
-
-                            const mFinal = await prisma.missoes.findUnique({
-                                where: { id: missao.id },
-                                include: { inscricoes: { include: { personagem: true } } }
-                            });
-
-                            await interaction.editReply({
-                                embeds: [montarPainel(mFinal)],
-                                components: montarBotoes(mFinal)
-                            });
-
-                            await iMenu.editReply({
-                                content: "✅ Jogador removido com sucesso. Painel atualizado.",
-                                components: []
-                            });
-                        } catch (erroDB) {
-                            console.error("Erro ao remover jogador da missão:", erroDB);
-                            await iMenu
-                                .editReply({
-                                    content: "❌ Erro ao remover o jogador. Verifique o terminal para mais detalhes.",
-                                    components: []
-                                })
-                                .catch(() => {});
-                        }
-                    });
-
-                    return;
+                    const sel = await prompt.awaitMessageComponent({ time: 30000 }).catch(() => null);
+                    if (sel) {
+                        await sel.deferUpdate();
+                        await ContratoService.removerJogadorComPromocao(missao.id, parseInt(sel.values[0]));
+                        await i.editReply({ content: "✅ Jogador removido e fila atualizada.", components: [] });
+                        return atualizarInterface(interaction);
+                    }
                 }
 
-                if (iBtn.customId === "ms_alterar_vagas") {
-                    const mAtual = await prisma.missoes.findUnique({ where: { id: missao.id } });
-
-                    const modalCustomId = `modal_vagas_${missao.id}_${Date.now()}`;
+                if (i.customId === "ms_vagas") {
                     const modal = new ModalBuilder()
-                        .setCustomId(modalCustomId)
-                        .setTitle("Alterar Número de Vagas")
+                        .setCustomId("mod_vagas")
+                        .setTitle("Vagas")
                         .addComponents(
                             new ActionRowBuilder().addComponents(
                                 new TextInputBuilder()
-                                    .setCustomId("inp_vagas")
-                                    .setLabel("Novo limite de jogadores")
+                                    .setCustomId("v")
+                                    .setLabel("Total")
                                     .setStyle(TextInputStyle.Short)
-                                    .setRequired(true)
-                                    .setValue(String(mAtual.vagas))
+                                    .setValue(String(missao.vagas))
                             )
                         );
-
-                    await iBtn.showModal(modal);
-
-                    try {
-                        const modalSubmit = await iBtn.awaitModalSubmit({
-                            filter: i => i.customId === modalCustomId && i.user.id === interaction.user.id,
-                            time: 60000
-                        });
-
-                        await modalSubmit.deferUpdate();
-
-                        const novasVagas = parseInt(modalSubmit.fields.getTextInputValue("inp_vagas"));
-
-                        if (isNaN(novasVagas) || novasVagas <= 0) {
-                            return modalSubmit.followUp({
-                                content: "🚫 Valor inválido. Digite um número maior que zero.",
-                                ephemeral: true
-                            });
-                        }
-
-                        await prisma.missoes.update({
-                            where: { id: missao.id },
-                            data: { vagas: novasVagas }
-                        });
-
-                        const mFinal = await prisma.missoes.findUnique({
-                            where: { id: missao.id },
-                            include: { inscricoes: { include: { personagem: true } } }
-                        });
-
-                        await interaction.editReply({
-                            embeds: [montarPainel(mFinal)],
-                            components: montarBotoes(mFinal)
-                        });
-
-                        await modalSubmit.followUp({
-                            content: `✅ Limite de vagas alterado para **${novasVagas}** com sucesso!`,
-                            ephemeral: true
-                        });
-                    } catch (err) {
-                        console.error("Erro ao alterar vagas:", err);
+                    await i.showModal(modal);
+                    const sub = await i.awaitModalSubmit({ time: 30000 }).catch(() => null);
+                    if (sub) {
+                        await sub.deferUpdate();
+                        await ContratoRepository.atualizarVagas(missao.id, parseInt(sub.fields.getTextInputValue("v")));
+                        return atualizarInterface(interaction);
                     }
-                    return;
-                }
-
-                if (iBtn.customId === "ms_atualizar") {
-                    const mNova = await prisma.missoes.findUnique({
-                        where: { id: missao.id },
-                        include: { inscricoes: { include: { personagem: true } } }
-                    });
-
-                    return iBtn.update({
-                        embeds: [montarPainel(mNova)],
-                        components: montarBotoes(mNova)
-                    });
-                }
-
-                if (iBtn.customId === "ms_iniciar") {
-                    await prisma.missoes.update({
-                        where: { id: missao.id },
-                        data: { status: "EM_ANDAMENTO" }
-                    });
-
-                    const mNova = await prisma.missoes.findUnique({
-                        where: { id: missao.id },
-                        include: { inscricoes: { include: { personagem: true } } }
-                    });
-
-                    return iBtn.update({
-                        embeds: [montarPainel(mNova)],
-                        components: montarBotoes(mNova)
-                    });
-                }
-
-                if (iBtn.customId === "ms_concluir") {
-                    await iBtn.deferUpdate();
-
-                    const dmChar = await getPersonagemAtivo(missao.criador_id);
-
-                    if (dmChar) {
-                        const jaInscrito = await prisma.inscricoes.findFirst({
-                            where: { missao_id: missao.id, personagem_id: dmChar.id }
-                        });
-
-                        if (!jaInscrito) {
-                            await prisma.inscricoes.create({
-                                data: {
-                                    missao_id: missao.id,
-                                    personagem_id: dmChar.id,
-                                    selecionado: true,
-                                    recompensa_resgatada: false
-                                }
-                            });
-                        } else if (!jaInscrito.selecionado) {
-                            await prisma.inscricoes.update({
-                                where: { id: jaInscrito.id },
-                                data: { selecionado: true }
-                            });
-                        }
-                    }
-
-                    await prisma.missoes.update({
-                        where: { id: missao.id },
-                        data: { status: "CONCLUIDA" }
-                    });
-
-                    const inscritosSelecionados = await prisma.inscricoes.findMany({
-                        where: { missao_id: missao.id, selecionado: true }
-                    });
-
-                    if (inscritosSelecionados.length > 0) {
-                        await prisma.personagens.updateMany({
-                            where: { id: { in: inscritosSelecionados.map(i => i.personagem_id) } },
-                            data: { ultima_missao: new Date() }
-                        });
-                    }
-
-                    const mNova = await prisma.missoes.findUnique({
-                        where: { id: missao.id },
-                        include: { inscricoes: { include: { personagem: true } } }
-                    });
-
-                    await interaction
-                        .editReply({
-                            embeds: [montarPainel(mNova)],
-                            components: montarBotoes(mNova)
-                        })
-                        .catch(() => {});
-
-                    await interaction.channel.send({
-                        content: `🏆 **Contrato "${mNova.nome}" Concluído!**\nEquipe e Mestre, utilizem \`/resgatar contrato:${mNova.nome}\` para pegar suas recompensas e os pontos de progressão.`
-                    });
                 }
             } catch (err) {
-                if (err.code !== 10062) console.error("Erro painel contrato:", err);
+                console.error(err);
+                if (!i.replied) await i.reply({ content: "❌ Erro na operação.", flags: MessageFlags.Ephemeral });
             }
         });
     }

@@ -1,90 +1,43 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const ContratoService = require("../../services/ContratoService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("inscrever")
         .setDescription("Inscreve seu personagem em uma missão/contrato aberto.")
-        .addStringOption(option =>
-            option
-                .setName("missao")
-                .setDescription("Nome exato do contrato/missão que deseja participar")
-                .setRequired(true)
-        ),
+        .addStringOption(option => option.setName("missao").setDescription("Nome exato do contrato").setRequired(true)),
 
-    async execute({ interaction, prisma, getPersonagemAtivo }) {
+    async execute({ interaction, getPersonagemAtivo }) {
+        const nomeMissao = interaction.options.getString("missao");
+
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            const nomeMissao = interaction.options.getString("missao");
+            await ContratoService.inscreverPersonagem(char, nomeMissao);
 
-            const missao = await prisma.missoes.findUnique({
-                where: { nome: nomeMissao }
-            });
-
-            if (!missao) {
-                return interaction.reply({
-                    content: "🚫 Missão não encontrada. Verifique se o nome foi digitado corretamente.",
-                    ephemeral: true
-                });
-            }
-
-            if (missao.status !== "ABERTA") {
-                return interaction.reply({
-                    content: "🚫 Esta missão não está aceitando inscrições no momento.",
-                    ephemeral: true
-                });
-            }
-
-            const nivelMin = missao.nd - 2;
-            const nivelMax = missao.nd + 2;
-
-            if (char.nivel_personagem < nivelMin || char.nivel_personagem > nivelMax) {
-                return interaction.reply({
-                    content: `🚫 Nível incompatível! Seu nível (${char.nivel_personagem}) deve estar entre ${nivelMin} e ${nivelMax}.`,
-                    ephemeral: true
-                });
-            }
-
-            await prisma.inscricoes.create({
-                data: {
-                    missao_id: missao.id,
-                    personagem_id: char.id
-                }
-            });
-
-            await interaction.reply({
-                content: `✅ **${char.nome}** se inscreveu na missão **${missao.nome}**!`
+            return interaction.reply({
+                content: `✅ **${char.nome}** se inscreveu na missão **${nomeMissao}**!\n*Aguarde o sorteio pelo mestre no painel da missão.*`
             });
         } catch (err) {
-            if (err.code === "P2002") {
-                return interaction.reply({
-                    content: "⚠️ Você já está inscrito nesta missão.",
-                    ephemeral: true
-                });
+            let msg = "❌ Ocorreu um erro ao se inscrever.";
+
+            if (err.message === "MISSAO_NAO_ENCONTRADA") msg = "🚫 Missão não encontrada. Verifique o nome.";
+            if (err.message === "MISSAO_FECHADA") msg = "🚫 Esta missão não está aceitando inscrições.";
+            if (err.message === "JA_INSCRITO") msg = "⚠️ Você já está inscrito nesta missão.";
+
+            if (err.message === "NIVEL_INCOMPATIVEL") {
+                const { min, max, atual } = err.cause;
+                msg = `🚫 Nível incompatível! Seu nível (**${atual}**) deve estar entre **${min}** e **${max}**.`;
             }
 
-            if (err.message === "SEM_VAGAS") {
-                return interaction.reply({
-                    content: "🚫 Todas as vagas desta missão já foram preenchidas.",
-                    ephemeral: true
-                });
-            }
-
-            console.error("Erro no comando inscrever:", err);
-
-            const erroMsg = { content: "❌ Ocorreu um erro ao se inscrever na missão.", ephemeral: true };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
-            }
+            return interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
         }
     }
 };

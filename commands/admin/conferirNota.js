@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const MestreService = require("../../services/MestreService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -8,89 +9,52 @@ module.exports = {
             option.setName("mestre").setDescription("O Mestre que você deseja analisar").setRequired(true)
         ),
 
-    async execute({ interaction, prisma, ID_CARGO_ADMIN }) {
+    async execute({ interaction, ID_CARGO_ADMIN }) {
         if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN)) {
             return interaction.reply({
                 content: "🚫 **Acesso Negado:** Apenas administradores podem conferir avaliações.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
         const targetUser = interaction.options.getUser("mestre");
-
-        if (targetUser.bot) {
-            return interaction.reply({
-                content: "🚫 Bots não narram missões (ainda).",
-                ephemeral: true
-            });
-        }
+        if (targetUser.bot)
+            return interaction.reply({ content: "🚫 Bots não narram missões.", flags: MessageFlags.Ephemeral });
 
         try {
-            const avaliacoes = await prisma.avaliacao.findMany({
-                where: { mestre_id: targetUser.id }
-            });
+            const relatorio = await MestreService.gerarRelatorioDesempenho(targetUser.id);
 
-            if (avaliacoes.length === 0) {
+            if (!relatorio) {
                 return interaction.reply({
                     content: `ℹ️ O mestre **${targetUser.username}** ainda não possui avaliações registradas.`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            let totalRitmo = 0;
-            let totalImersao = 0;
-            let totalPreparo = 0;
-            let totalConhecimento = 0;
-            let totalGeral = 0;
-
-            for (const av of avaliacoes) {
-                totalRitmo += av.nota_ritmo;
-                totalImersao += av.nota_imersao;
-                totalPreparo += av.nota_preparo;
-                totalConhecimento += av.nota_conhecimento;
-                totalGeral += av.nota_geral;
-            }
-
-            const qtd = avaliacoes.length;
-
-            const mediaRitmo = totalRitmo / qtd;
-            const mediaImersao = totalImersao / qtd;
-            const mediaPreparo = totalPreparo / qtd;
-            const mediaConhecimento = totalConhecimento / qtd;
-            const mediaGeral = totalGeral / qtd;
-
-            const notaFinal = (mediaRitmo + mediaImersao + mediaPreparo + mediaConhecimento + mediaGeral) / 5;
-
             let corEmbed = "#00FF00";
-            if (notaFinal < 4) corEmbed = "#FFA500";
-            if (notaFinal < 2.5) corEmbed = "#FF0000";
-
+            if (relatorio.notaFinal < 4) corEmbed = "#FFA500";
+            if (relatorio.notaFinal < 2.5) corEmbed = "#FF0000";
             const embed = new EmbedBuilder()
                 .setTitle(`📊 Relatório de Desempenho`)
-                .setDescription(`**Mestre:** ${targetUser.username}\nBaseado em **${qtd}** sessões avaliadas`)
+                .setDescription(`**Mestre:** ${targetUser.username}\nBaseado em **${relatorio.qtd}** sessões avaliadas`)
                 .setColor(corEmbed)
                 .setThumbnail(targetUser.displayAvatarURL())
                 .addFields(
-                    { name: "⏱️ Ritmo", value: `⭐ ${mediaRitmo.toFixed(2)}`, inline: true },
-                    { name: "🎭 Imersão", value: `⭐ ${mediaImersao.toFixed(2)}`, inline: true },
-                    { name: "📚 Preparo", value: `⭐ ${mediaPreparo.toFixed(2)}`, inline: true },
-                    { name: "🧠 Sistema", value: `⭐ ${mediaConhecimento.toFixed(2)}`, inline: true },
-                    { name: "😊 Satisfação", value: `⭐ ${mediaGeral.toFixed(2)}`, inline: true },
-                    { name: "🏆 Média Global", value: `🌟 **${notaFinal.toFixed(2)} / 5.0**` }
+                    { name: "⏱️ Ritmo", value: `⭐ ${relatorio.ritmo.toFixed(2)}`, inline: true },
+                    { name: "🎭 Imersão", value: `⭐ ${relatorio.imersao.toFixed(2)}`, inline: true },
+                    { name: "📚 Preparo", value: `⭐ ${relatorio.preparo.toFixed(2)}`, inline: true },
+                    { name: "🧠 Sistema", value: `⭐ ${relatorio.conhecimento.toFixed(2)}`, inline: true },
+                    { name: "😊 Satisfação", value: `⭐ ${relatorio.geral.toFixed(2)}`, inline: true },
+                    { name: "🏆 Média Global", value: `🌟 **${relatorio.notaFinal.toFixed(2)} / 5.0**` }
                 )
                 .setFooter({ text: `Relatório gerado por ${interaction.user.username}` })
                 .setTimestamp();
 
-            return interaction.reply({ embeds: [embed], ephemeral: true });
+            return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         } catch (err) {
             console.error("Erro no comando conferirnota:", err);
-
-            const erroMsg = { content: "❌ Ocorreu um erro ao buscar avaliações.", ephemeral: true };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
-            }
+            const erroMsg = { content: "❌ Ocorreu um erro ao buscar avaliações.", flags: MessageFlags.Ephemeral };
+            interaction.replied ? await interaction.followUp(erroMsg) : await interaction.reply(erroMsg);
         }
     }
 };

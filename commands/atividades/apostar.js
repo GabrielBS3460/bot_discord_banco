@@ -1,16 +1,17 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const ApostaService = require("../../services/ApostasService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("apostar")
         .setDescription("Faça sua aposta no Jogo do Bicho do Herdeiros das Cinzas!")
-        .addNumberOption(option =>
-            option.setName("valor").setDescription("Valor da aposta em Kwanzas").setRequired(true).setMinValue(0.1)
+        .addNumberOption(opt =>
+            opt.setName("valor").setDescription("Valor em Kwanzas").setRequired(true).setMinValue(0.1)
         )
-        .addStringOption(option =>
-            option
+        .addStringOption(opt =>
+            opt
                 .setName("tipo")
-                .setDescription("O tipo da sua aposta")
+                .setDescription("Tipo da aposta")
                 .setRequired(true)
                 .addChoices(
                     { name: "Dezena (2 dígitos)", value: "DEZENA" },
@@ -18,16 +19,11 @@ module.exports = {
                     { name: "Milhar (4 dígitos)", value: "MILHAR" }
                 )
         )
-        .addStringOption(option =>
-            option
-                .setName("numero")
-                .setDescription("Número apostado (Ex: 00 para dezena, 123 para centena)")
-                .setRequired(true)
-        )
-        .addStringOption(option =>
-            option
+        .addStringOption(opt => opt.setName("numero").setDescription("Número apostado").setRequired(true))
+        .addStringOption(opt =>
+            opt
                 .setName("posicao")
-                .setDescription("Posição do prêmio que deseja concorrer")
+                .setDescription("Posição do prêmio")
                 .setRequired(true)
                 .addChoices(
                     { name: "1º Prêmio (Cabeça)", value: "1" },
@@ -39,105 +35,53 @@ module.exports = {
                 )
         ),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, BICHOS_T20 }) {
+    async execute({ interaction, getPersonagemAtivo, BICHOS_T20 }) {
         const char = await getPersonagemAtivo(interaction.user.id);
-
-        if (!char) {
-            return interaction.reply({
-                content: "🚫 Você não tem um personagem ativo.",
-                ephemeral: true
-            });
-        }
+        if (!char) return interaction.reply({ content: "🚫 Sem personagem ativo.", flags: MessageFlags.Ephemeral });
 
         const valor = interaction.options.getNumber("valor");
         const tipo = interaction.options.getString("tipo");
         let numero = interaction.options.getString("numero");
         const posicaoBanco = interaction.options.getString("posicao");
 
-        if (char.saldo < valor) {
-            return interaction.reply({
-                content: `💸 Saldo insuficiente. Você possui apenas K$ ${char.saldo.toFixed(2)}.`,
-                ephemeral: true
-            });
-        }
-
         if (!/^\d+$/.test(numero)) {
-            return interaction.reply({
-                content: "🔢 Número inválido. Digite apenas números, sem letras ou símbolos.",
-                ephemeral: true
-            });
+            return interaction.reply({ content: "🔢 Digite apenas números.", flags: MessageFlags.Ephemeral });
         }
 
         if (tipo === "DEZENA") {
-            if (numero.length > 2) {
-                return interaction.reply({
-                    content: "⚠️ Para **Dezena** use apenas 2 dígitos (00-99).",
-                    ephemeral: true
-                });
-            }
+            if (numero.length > 2)
+                return interaction.reply({ content: "⚠️ Use 2 dígitos.", flags: MessageFlags.Ephemeral });
             numero = numero.padStart(2, "0");
-
-            if (!BICHOS_T20[numero]) {
-                return interaction.reply({ content: "⚠️ Bicho inválido (00-99).", ephemeral: true });
-            }
+            if (!BICHOS_T20[numero])
+                return interaction.reply({ content: "⚠️ Bicho inválido.", flags: MessageFlags.Ephemeral });
         } else if (tipo === "CENTENA") {
-            if (numero.length > 3) {
-                return interaction.reply({ content: "⚠️ Para **Centena** use até 3 dígitos.", ephemeral: true });
-            }
+            if (numero.length > 3)
+                return interaction.reply({ content: "⚠️ Use até 3 dígitos.", flags: MessageFlags.Ephemeral });
             numero = numero.padStart(3, "0");
         } else if (tipo === "MILHAR") {
-            if (numero.length > 4) {
-                return interaction.reply({ content: "⚠️ Para **Milhar** use até 4 dígitos.", ephemeral: true });
-            }
+            if (numero.length > 4)
+                return interaction.reply({ content: "⚠️ Use até 4 dígitos.", flags: MessageFlags.Ephemeral });
             numero = numero.padStart(4, "0");
         }
 
         try {
-            await prisma.$transaction([
-                prisma.personagens.update({
-                    where: { id: char.id },
-                    data: { saldo: { decrement: valor } }
-                }),
-                prisma.apostasBicho.create({
-                    data: {
-                        personagem_id: char.id,
-                        tipo: tipo,
-                        numero: numero,
-                        posicao: posicaoBanco,
-                        valor: valor,
-                        status: "PENDENTE"
-                    }
-                }),
-                prisma.transacao.create({
-                    data: {
-                        personagem_id: char.id,
-                        descricao: `Jogo do Bicho: ${tipo} ${numero}`,
-                        valor: valor,
-                        tipo: "GASTO"
-                    }
-                })
-            ]);
+            await ApostaService.registrarApostaBicho(char, { valor, tipo, numero, posicao: posicaoBanco });
 
             const nomeBicho = tipo === "DEZENA" ? `(${BICHOS_T20[numero]})` : "";
             const posicaoTexto = posicaoBanco === "TODAS" ? "1º ao 5º" : `${posicaoBanco}º prêmio`;
 
             return interaction.reply({
-                content:
-                    `🎫 **Aposta Registrada!**\n` +
-                    `👤 Apostador: ${char.nome}\n` +
-                    `💰 Valor: K$ ${valor}\n` +
-                    `🎲 Jogo: ${tipo} **${numero}** ${nomeBicho}\n` +
-                    `📍 Posição: ${posicaoTexto}`
+                content: `🎫 **Aposta Registrada!**\n👤 Apostador: ${char.nome}\n💰 Valor: K$ ${valor}\n🎲 Jogo: ${tipo} **${numero}** ${nomeBicho}\n📍 Posição: ${posicaoTexto}`
             });
         } catch (err) {
-            console.error("Erro no comando apostar:", err);
-
-            const erroMsg = { content: "❌ Ocorreu um erro ao registrar sua aposta.", ephemeral: true };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
+            if (err.message === "SALDO_INSUFICIENTE") {
+                return interaction.reply({
+                    content: `💸 Saldo insuficiente (K$ ${char.saldo.toFixed(2)}).`,
+                    flags: MessageFlags.Ephemeral
+                });
             }
+            console.error(err);
+            interaction.reply({ content: "❌ Erro ao registrar aposta.", flags: MessageFlags.Ephemeral });
         }
     }
 };

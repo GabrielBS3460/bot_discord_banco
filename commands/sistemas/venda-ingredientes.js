@@ -11,6 +11,8 @@ const {
     ButtonStyle
 } = require("discord.js");
 
+const TransacaoService = require("../../services/TransacaoService.js");
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("venda-ingredientes")
@@ -22,37 +24,45 @@ module.exports = {
                 .setRequired(true)
         ),
 
-    async execute({ interaction, prisma, getPersonagemAtivo }) {
+    async execute({ interaction, getPersonagemAtivo }) {
         try {
             const compradorUser = interaction.options.getUser("comprador");
 
             if (compradorUser.id === interaction.user.id) {
-                return interaction.reply({ content: "🚫 Você não pode vender para si mesmo.", ephemeral: true });
+                return interaction.reply({
+                    content: "🚫 Você não pode vender para si mesmo.",
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
             if (compradorUser.bot) {
-                return interaction.reply({ content: "🚫 Bots não compram itens.", ephemeral: true });
+                return interaction.reply({ content: "🚫 Bots não compram itens.", flags: MessageFlags.Ephemeral });
             }
 
-            const vendedorChar = await getPersonagemAtivo(interaction.user.id);
-            const compradorChar = await getPersonagemAtivo(compradorUser.id);
+            const [vendedorChar, compradorChar] = await Promise.all([
+                getPersonagemAtivo(interaction.user.id),
+                getPersonagemAtivo(compradorUser.id)
+            ]);
 
-            if (!vendedorChar) {
-                return interaction.reply({ content: "🚫 Você não tem personagem ativo.", ephemeral: true });
-            }
-
-            if (!compradorChar) {
+            if (!vendedorChar)
+                return interaction.reply({
+                    content: "🚫 Você não tem personagem ativo.",
+                    flags: MessageFlags.Ephemeral
+                });
+            if (!compradorChar)
                 return interaction.reply({
                     content: `🚫 **${compradorUser.username}** não tem personagem ativo.`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
-            }
 
             const estoque = vendedorChar.estoque_ingredientes || {};
             const itensDisponiveis = Object.keys(estoque).filter(k => estoque[k] > 0);
 
             if (itensDisponiveis.length === 0) {
-                return interaction.reply({ content: "🎒 Seu inventário de ingredientes está vazio.", ephemeral: true });
+                return interaction.reply({
+                    content: "🎒 Seu inventário de ingredientes está vazio.",
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
             const menu = new StringSelectMenuBuilder()
@@ -68,12 +78,10 @@ module.exports = {
                 );
             });
 
-            const row = new ActionRowBuilder().addComponents(menu);
-
             const msg = await interaction.reply({
                 content: `🤝 **Preparando Venda para ${compradorChar.nome}**\nSelecione o item do seu estoque:`,
-                components: [row],
-                ephemeral: true,
+                components: [new ActionRowBuilder().addComponents(menu)],
+                flags: MessageFlags.Ephemeral,
                 fetchReply: true
             });
 
@@ -90,24 +98,23 @@ module.exports = {
 
                 const modal = new ModalBuilder()
                     .setCustomId(`modal_venda_p2p_${interaction.id}`)
-                    .setTitle(`Vender ${itemSelecionado.substring(0, 30)}`);
-
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId("inp_qtd")
-                            .setLabel(`Quantidade (máx ${qtdMax})`)
-                            .setStyle(TextInputStyle.Short)
-                            .setRequired(true)
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId("inp_preco")
-                            .setLabel("Preço total da venda (K$)")
-                            .setStyle(TextInputStyle.Short)
-                            .setRequired(true)
-                    )
-                );
+                    .setTitle(`Vender ${itemSelecionado.substring(0, 30)}`)
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("inp_qtd")
+                                .setLabel(`Quantidade (máx ${qtdMax})`)
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("inp_preco")
+                                .setLabel("Preço total da venda (K$)")
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                        )
+                    );
 
                 await i.showModal(modal);
 
@@ -119,16 +126,12 @@ module.exports = {
                     });
 
                     const qtdVenda = parseInt(modalSubmit.fields.getTextInputValue("inp_qtd"));
-                    const precoString = modalSubmit.fields.getTextInputValue("inp_preco").replace(",", ".");
-                    const precoVenda = parseFloat(precoString);
+                    const precoVenda = parseFloat(modalSubmit.fields.getTextInputValue("inp_preco").replace(",", "."));
 
-                    if (isNaN(qtdVenda) || qtdVenda <= 0 || qtdVenda > qtdMax) {
+                    if (isNaN(qtdVenda) || qtdVenda <= 0 || qtdVenda > qtdMax)
                         return modalSubmit.reply({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
-                    }
-
-                    if (isNaN(precoVenda) || precoVenda < 0) {
+                    if (isNaN(precoVenda) || precoVenda < 0)
                         return modalSubmit.reply({ content: "🚫 Preço inválido.", flags: MessageFlags.Ephemeral });
-                    }
 
                     await modalSubmit.update({
                         content: "✅ Oferta enviada para o canal! Aguarde o comprador aceitar.",
@@ -148,12 +151,7 @@ module.exports = {
                     );
 
                     const ofertaMsg = await interaction.channel.send({
-                        content:
-                            `📣 **Oferta de Venda P2P**\n\n` +
-                            `👤 Vendedor: ${vendedorChar.nome} (<@${interaction.user.id}>)\n` +
-                            `👤 Comprador: ${compradorChar.nome} (<@${compradorUser.id}>)\n\n` +
-                            `📦 Item: ${qtdVenda}x ${itemSelecionado}\n` +
-                            `💰 Valor: K$ ${precoVenda}`,
+                        content: `📣 **Oferta de Venda P2P**\n\n👤 Vendedor: ${vendedorChar.nome} (<@${interaction.user.id}>)\n👤 Comprador: ${compradorChar.nome} (<@${compradorUser.id}>)\n\n📦 Item: ${qtdVenda}x ${itemSelecionado}\n💰 Valor: K$ ${precoVenda}`,
                         components: [rowConfirm]
                     });
 
@@ -165,10 +163,7 @@ module.exports = {
                     confirmCollector.on("collect", async iBtn => {
                         try {
                             if (iBtn.user.id === interaction.user.id && iBtn.customId === "btn_recusar_venda") {
-                                await iBtn.update({
-                                    content: "❌ Venda cancelada pelo vendedor.",
-                                    components: []
-                                });
+                                await iBtn.update({ content: "❌ Venda cancelada pelo vendedor.", components: [] });
                                 return confirmCollector.stop();
                             }
 
@@ -180,123 +175,72 @@ module.exports = {
                             }
 
                             if (iBtn.customId === "btn_recusar_venda") {
-                                await iBtn.update({
-                                    content: "❌ Venda recusada pelo comprador.",
-                                    components: []
-                                });
+                                await iBtn.update({ content: "❌ Venda recusada pelo comprador.", components: [] });
                                 return confirmCollector.stop();
                             }
 
                             if (iBtn.customId === "btn_aceitar_venda") {
                                 await iBtn.deferUpdate();
 
-                                const vFinal = await prisma.personagens.findUnique({ where: { id: vendedorChar.id } });
-                                const cFinal = await prisma.personagens.findUnique({ where: { id: compradorChar.id } });
-
-                                const estoqueV = vFinal.estoque_ingredientes || {};
-
-                                if (!estoqueV[itemSelecionado] || estoqueV[itemSelecionado] < qtdVenda) {
-                                    return iBtn.editReply({
-                                        content:
-                                            "🚫 O vendedor não tem mais a quantidade exigida desse item no estoque.",
-                                        components: []
-                                    });
-                                }
-
-                                if (cFinal.saldo < precoVenda) {
-                                    return iBtn.editReply({
-                                        content: "🚫 O comprador não tem saldo suficiente para finalizar a compra.",
-                                        components: []
-                                    });
-                                }
-
-                                estoqueV[itemSelecionado] -= qtdVenda;
-                                if (estoqueV[itemSelecionado] <= 0) delete estoqueV[itemSelecionado];
-
-                                const estoqueC = cFinal.estoque_ingredientes || {};
-                                estoqueC[itemSelecionado] = (estoqueC[itemSelecionado] || 0) + qtdVenda;
-
-                                await prisma.$transaction([
-                                    prisma.personagens.update({
-                                        where: { id: vFinal.id },
-                                        data: {
-                                            estoque_ingredientes: estoqueV,
-                                            saldo: { increment: precoVenda }
-                                        }
-                                    }),
-                                    prisma.personagens.update({
-                                        where: { id: cFinal.id },
-                                        data: {
-                                            estoque_ingredientes: estoqueC,
-                                            saldo: { decrement: precoVenda }
-                                        }
-                                    }),
-                                    prisma.transacao.create({
-                                        data: {
-                                            personagem_id: vFinal.id,
-                                            descricao: `Vendeu ${qtdVenda}x ${itemSelecionado} para ${cFinal.nome}`,
-                                            valor: precoVenda,
-                                            tipo: "RECOMPENSA"
-                                        }
-                                    }),
-                                    prisma.transacao.create({
-                                        data: {
-                                            personagem_id: cFinal.id,
-                                            descricao: `Comprou ${qtdVenda}x ${itemSelecionado} de ${vFinal.nome}`,
-                                            valor: precoVenda,
-                                            tipo: "GASTO"
-                                        }
-                                    })
-                                ]);
+                                const { vendedorAtualizado, compradorAtualizado } =
+                                    await TransacaoService.executarVendaIngrediente(
+                                        vendedorChar.id,
+                                        compradorChar.id,
+                                        itemSelecionado,
+                                        qtdVenda,
+                                        precoVenda
+                                    );
 
                                 await iBtn.editReply({
-                                    content:
-                                        `✅ **Negócio Fechado!**\n\n` +
-                                        `**${vFinal.nome}** vendeu **${qtdVenda}x ${itemSelecionado}**\n` +
-                                        `**${cFinal.nome}** pagou **K$ ${precoVenda}**`,
+                                    content: `✅ **Negócio Fechado!**\n\n**${vendedorAtualizado.nome}** vendeu **${qtdVenda}x ${itemSelecionado}**\n**${compradorAtualizado.nome}** pagou **K$ ${precoVenda}**`,
                                     components: []
                                 });
 
                                 confirmCollector.stop();
                             }
                         } catch (err) {
-                            console.error("Erro na confirmação da venda:", err);
-                            try {
-                                await iBtn.editReply({
-                                    content: "❌ Erro ao processar a venda no banco de dados.",
+                            if (err.message === "ESTOQUE_VENDEDOR_INSUFICIENTE") {
+                                return iBtn.editReply({
+                                    content: "🚫 O vendedor não tem mais a quantidade exigida desse item no estoque.",
                                     components: []
                                 });
-                            } catch {
-                                /* empty */
                             }
+                            if (err.message === "SALDO_COMPRADOR_INSUFICIENTE") {
+                                return iBtn.editReply({
+                                    content: "🚫 O comprador não tem saldo suficiente para finalizar a compra.",
+                                    components: []
+                                });
+                            }
+
+                            console.error("Erro na confirmação da venda:", err);
+                            await iBtn
+                                .editReply({
+                                    content: "❌ Erro ao processar a venda no banco de dados.",
+                                    components: []
+                                })
+                                .catch(() => {});
                         }
                     });
 
                     confirmCollector.on("end", async collected => {
                         if (collected.size === 0) {
-                            try {
-                                await ofertaMsg.edit({
-                                    content: "⏱️ A oferta expirou por falta de resposta.",
-                                    components: []
-                                });
-                            } catch {
-                                /* empty */
-                            }
+                            await ofertaMsg
+                                .edit({ content: "⏱️ A oferta expirou por falta de resposta.", components: [] })
+                                .catch(() => {});
                         }
                     });
+
                     // eslint-disable-next-line no-unused-vars
                 } catch (err) {
-                    console.log("Modal da venda expirou ou deu erro.");
+                    console.log("Modal da venda expirou.");
                 }
             });
         } catch (err) {
             console.error("Erro no comando venda-ingredientes:", err);
-            const erroMsg = { content: "❌ Ocorreu um erro ao iniciar a venda.", ephemeral: true };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
-            }
+            const erroMsg = { content: "❌ Ocorreu um erro ao iniciar a venda.", flags: MessageFlags.Ephemeral };
+            interaction.replied
+                ? await interaction.followUp(erroMsg).catch(() => {})
+                : await interaction.reply(erroMsg).catch(() => {});
         }
     }
 };

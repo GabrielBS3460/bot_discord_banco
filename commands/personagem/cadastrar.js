@@ -1,4 +1,5 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const PersonagemService = require("../../services/PersonagemService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -6,41 +7,17 @@ module.exports = {
         .setDescription("Cadastra um novo personagem no sistema.")
         .addStringOption(option => option.setName("nome").setDescription("O nome do seu personagem").setRequired(true)),
 
-    async execute({ interaction, prisma }) {
+    async execute({ interaction }) {
         const nomePersonagem = interaction.options.getString("nome");
+        const discordId = interaction.user.id;
 
         try {
-            await prisma.usuarios.upsert({
-                where: { discord_id: interaction.user.id },
-                update: {},
-                create: { discord_id: interaction.user.id }
-            });
+            const { novoPersonagem, ativadoAutomaticamente } = await PersonagemService.criarNovoPersonagem(
+                discordId,
+                nomePersonagem
+            );
 
-            const contagem = await prisma.personagens.count({
-                where: { usuario_id: interaction.user.id }
-            });
-
-            if (contagem >= 3) {
-                return interaction.reply({
-                    content: "🚫 Você já atingiu o limite de 3 personagens!",
-                    ephemeral: true
-                });
-            }
-
-            const novoPersonagem = await prisma.personagens.create({
-                data: {
-                    nome: nomePersonagem,
-                    usuario_id: interaction.user.id,
-                    saldo: 0
-                }
-            });
-
-            if (contagem === 0) {
-                await prisma.usuarios.update({
-                    where: { discord_id: interaction.user.id },
-                    data: { personagem_ativo_id: novoPersonagem.id }
-                });
-
+            if (ativadoAutomaticamente) {
                 return interaction.reply({
                     content: `✅ Personagem **${novoPersonagem.nome}** criado e selecionado como ativo!`
                 });
@@ -50,16 +27,22 @@ module.exports = {
                 });
             }
         } catch (err) {
-            if (err.code === "P2002") {
+            if (err.message === "LIMITE_PERSONAGENS") {
+                return interaction.reply({
+                    content: "🚫 Você já atingiu o limite de **3 personagens**!",
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+
+            if (err.message === "NOME_DUPLICADO") {
                 return interaction.reply({
                     content: "⚠️ Já existe um personagem com este nome no servidor. Por favor, escolha outro.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             console.error("Erro ao cadastrar:", err);
-
-            const erroMsg = { content: "❌ Ocorreu um erro ao criar o personagem.", ephemeral: true };
+            const erroMsg = { content: "❌ Ocorreu um erro ao criar o personagem.", flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {

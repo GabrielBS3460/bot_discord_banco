@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -12,7 +12,7 @@ module.exports = {
             if (!personagem) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo. Use `/cadastrar` ou `/personagem trocar`.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -25,7 +25,8 @@ module.exports = {
         } catch (err) {
             console.error("Erro no comando saldo:", err);
 
-            const erroMsg = { content: "❌ Ocorreu um erro ao buscar o seu saldo.", ephemeral: true };
+            const erroMsg = { content: "❌ Ocorreu um erro ao buscar o seu saldo.", flags: MessageFlags.Ephemeral };
+
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {

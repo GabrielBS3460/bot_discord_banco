@@ -1,4 +1,5 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const ForjaService = require("../../services/ForjaService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -12,7 +13,7 @@ module.exports = {
                 .setMinValue(0)
         ),
 
-    async execute({ interaction, prisma, getPersonagemAtivo }) {
+    async execute({ interaction, getPersonagemAtivo }) {
         const poderesFabricacao = interaction.options.getInteger("poderes");
 
         try {
@@ -21,33 +22,14 @@ module.exports = {
             if (!char) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            const pericias = char.pericias || [];
-
-            const OFICIOS_VALIDOS = [
-                "Ofício Armeiro",
-                "Ofício Artesão",
-                "Ofício Alquimista",
-                "Ofício Cozinheiro",
-                "Ofício Alfaiate",
-                "Ofício Escriba",
-                "Ofício Tatuador"
-            ];
-
-            const oficiosTreinados = pericias.filter(p => OFICIOS_VALIDOS.includes(p));
-            const quantidadeOficios = oficiosTreinados.length;
-
-            const limiteForja = (poderesFabricacao + 1) * quantidadeOficios * 2;
-
-            await prisma.personagens.update({
-                where: { id: char.id },
-                data: {
-                    pontos_forja_max: limiteForja
-                }
-            });
+            const { oficiosTreinados, quantidadeOficios, limiteForja } = await ForjaService.configurarForja(
+                char,
+                poderesFabricacao
+            );
 
             const oficiosTexto = quantidadeOficios > 0 ? oficiosTreinados.join(", ") : "Nenhum";
 
@@ -63,7 +45,10 @@ module.exports = {
         } catch (err) {
             console.error("Erro no comando setforja:", err);
 
-            const erroMsg = { content: "❌ Ocorreu um erro ao salvar seu limite de forja.", ephemeral: true };
+            const erroMsg = {
+                content: "❌ Ocorreu um erro ao salvar seu limite de forja.",
+                flags: MessageFlags.Ephemeral
+            };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {

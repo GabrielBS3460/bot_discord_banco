@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const TransacaoService = require("../../services/TransacaoService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -18,7 +19,7 @@ module.exports = {
         .addUserOption(option => option.setName("fiel5").setDescription("Fiel pagante 5").setRequired(false))
         .addUserOption(option => option.setName("fiel6").setDescription("Fiel pagante 6").setRequired(false)),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+    async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         const valorTotal = interaction.options.getNumber("valor_total");
 
         const fiéisUsers = [];
@@ -34,7 +35,7 @@ module.exports = {
         if (fiéisUsers.length === 0) {
             return interaction.reply({
                 content: "🚫 Você precisa informar pelo menos 1 fiel válido (bots e você mesmo são ignorados).",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -47,7 +48,7 @@ module.exports = {
             if (!charClerigo) {
                 return interaction.reply({
                     content: "🚫 Você (Clérigo) não tem um personagem ativo.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -60,55 +61,27 @@ module.exports = {
                 if (!char) {
                     return interaction.reply({
                         content: `🚫 O usuário **${userDiscord.username}** não tem um personagem ativo.`,
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
                 if (char.saldo < custoIndividual) {
                     return interaction.reply({
                         content: `💸 **${char.nome}** (de ${userDiscord.username}) não tem saldo suficiente para pagar a parte dele (K$ ${custoIndividual.toFixed(2)}).`,
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
                 charsPagantes.push(char);
             }
 
-            const operacoes = [];
-
-            operacoes.push(
-                prisma.personagens.update({
-                    where: { id: charClerigo.id },
-                    data: { saldo: { increment: valorTotal } }
-                }),
-                prisma.transacao.create({
-                    data: {
-                        personagem_id: charClerigo.id,
-                        descricao: `Realizou Missa`,
-                        valor: valorTotal,
-                        tipo: "VENDA"
-                    }
-                })
+            await TransacaoService.processarMissa(
+                charClerigo.id,
+                charClerigo.nome,
+                charsPagantes,
+                valorTotal,
+                custoIndividual
             );
-
-            for (const fiel of charsPagantes) {
-                operacoes.push(
-                    prisma.personagens.update({
-                        where: { id: fiel.id },
-                        data: { saldo: { decrement: custoIndividual } }
-                    }),
-                    prisma.transacao.create({
-                        data: {
-                            personagem_id: fiel.id,
-                            descricao: `Pagou Missa para ${charClerigo.nome}`,
-                            valor: custoIndividual,
-                            tipo: "GASTO"
-                        }
-                    })
-                );
-            }
-
-            await prisma.$transaction(operacoes);
 
             const lista = charsPagantes.map(p => `• ${p.nome}`).join("\n");
 
@@ -126,7 +99,7 @@ module.exports = {
         } catch (err) {
             console.error("Erro no comando missa:", err);
 
-            const erroMsg = { content: "❌ Ocorreu um erro ao processar a missa.", ephemeral: true };
+            const erroMsg = { content: "❌ Ocorreu um erro ao processar a missa.", flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {
