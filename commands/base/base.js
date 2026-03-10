@@ -42,6 +42,8 @@ module.exports = {
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
             if (!char)
@@ -626,10 +628,10 @@ module.exports = {
                 });
             }
         } catch (err) {
-            console.error("Erro no base:", err);
-            interaction
-                .reply({ content: "❌ Ocorreu um erro no sistema de bases.", flags: MessageFlags.Ephemeral })
-                .catch(() => {});
+            console.error("Erro crítico no comando base:", err);
+            if (interaction.deferred) {
+                await interaction.editReply({ content: "❌ Ocorreu um erro no sistema de bases." });
+            }
         }
     }
 };
