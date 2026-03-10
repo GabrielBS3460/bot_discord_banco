@@ -23,6 +23,22 @@ module.exports = {
         )
         .addSubcommand(sub =>
             sub.setName("mobiliar").setDescription("Compra mobílias e instalações para seus cômodos.")
+        )
+        .addSubcommand(sub =>
+            sub
+                .setName("morador-add")
+                .setDescription("Adiciona um novo residente à sua base.")
+                .addUserOption(option =>
+                    option.setName("jogador").setDescription("O jogador que você deseja convidar").setRequired(true)
+                )
+        )
+        .addSubcommand(sub =>
+            sub
+                .setName("morador-remover")
+                .setDescription("Remove um residente da sua base.")
+                .addUserOption(option =>
+                    option.setName("jogador").setDescription("O jogador que você deseja expulsar").setRequired(true)
+                )
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
@@ -84,8 +100,7 @@ module.exports = {
                     components: [
                         new ActionRowBuilder().addComponents(menuA_L),
                         new ActionRowBuilder().addComponents(menuM_Z)
-                    ],
-                    flags: MessageFlags.Ephemeral
+                    ]
                 });
 
                 const replyMsg = await interaction.fetchReply();
@@ -191,7 +206,6 @@ module.exports = {
                     const replyConfirm = await iSelect.followUp({
                         content: `**Item:** ${escolhido} (K$ ${dadosMob.custo})\nSelecione em qual cômodo deseja instalá-lo:`,
                         components: [new ActionRowBuilder().addComponents(menuInstalar)],
-                        flags: MessageFlags.Ephemeral,
                         withResponse: true
                     });
 
@@ -298,8 +312,7 @@ module.exports = {
                     components: [
                         new ActionRowBuilder().addComponents(menuA_L),
                         new ActionRowBuilder().addComponents(menuM_Z)
-                    ],
-                    flags: MessageFlags.Ephemeral
+                    ]
                 });
 
                 const replyMsg = await interaction.fetchReply();
@@ -386,8 +399,7 @@ module.exports = {
 
                 await interaction.reply({
                     content: `🏰 **Fundação**\nEscolha o Porte:`,
-                    components: [new ActionRowBuilder().addComponents(menuPorte)],
-                    flags: MessageFlags.Ephemeral
+                    components: [new ActionRowBuilder().addComponents(menuPorte)]
                 });
                 const replyMsg = await interaction.fetchReply();
                 const collector = replyMsg.createMessageComponentCollector({
@@ -521,7 +533,97 @@ module.exports = {
                     return embed;
                 };
 
-                await interaction.reply({ embeds: [montarEmbedPainel(base)], flags: MessageFlags.Ephemeral });
+                await interaction.reply({ embeds: [montarEmbedPainel(base)] });
+            }
+
+            if (subcomando === "morador-add") {
+                const base = await prisma.base.findFirst({
+                    where: { dono_id: char.id },
+                    include: { residentes: true }
+                });
+
+                if (!base) {
+                    return interaction.reply({
+                        content: "🚫 Apenas o **Dono da Base** pode gerenciar moradores.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                const alvoUser = interaction.options.getUser("jogador");
+                const alvoChar = await getPersonagemAtivo(alvoUser.id);
+
+                if (!alvoChar) {
+                    return interaction.reply({
+                        content: "🚫 O jogador selecionado não possui um personagem ativo.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                const jaPossuiResidencia = await prisma.base.findFirst({
+                    where: {
+                        OR: [{ dono_id: alvoChar.id }, { residentes: { some: { personagem_id: alvoChar.id } } }]
+                    }
+                });
+
+                if (jaPossuiResidencia) {
+                    return interaction.reply({
+                        content: `🚫 **${alvoChar.nome}** já possui uma residência fixa.`,
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                if (base.residentes.length >= 4) {
+                    return interaction.reply({
+                        content: "🚫 Sua base já atingiu o limite máximo de 4 residentes.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                await prisma.baseResidente.create({
+                    data: {
+                        base_id: base.id,
+                        personagem_id: alvoChar.id
+                    }
+                });
+
+                return interaction.reply({
+                    content: `✅ **${alvoChar.nome}** agora é oficialmente um residente de **${base.nome}**!`
+                });
+            }
+
+            if (subcomando === "morador-remover") {
+                const base = await prisma.base.findFirst({
+                    where: { dono_id: char.id }
+                });
+
+                if (!base) {
+                    return interaction.reply({
+                        content: "🚫 Apenas o **Dono da Base** pode remover moradores.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                const alvoUser = interaction.options.getUser("jogador");
+                const alvoChar = await getPersonagemAtivo(alvoUser.id);
+
+                const deleteResult = await prisma.baseResidente.deleteMany({
+                    where: {
+                        base_id: base.id,
+                        personagem_id: alvoChar ? alvoChar.id : undefined,
+                        personagem: alvoChar ? undefined : { usuario_id: alvoUser.id }
+                    }
+                });
+
+                if (deleteResult.count === 0) {
+                    return interaction.reply({
+                        content: "⚠️ Este jogador não consta na lista de residentes da sua base.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                return interaction.reply({
+                    content: `👢 **${alvoChar?.nome || alvoUser.username}** foi removido da base **${base.nome}**.`
+                });
             }
         } catch (err) {
             console.error("Erro no base:", err);
