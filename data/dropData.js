@@ -25,8 +25,7 @@ module.exports = {
     CATEGORIAS: [
         { max: 70, tipo: "ARMAS" },
         { max: 115, tipo: "ARMADURAS" },
-        { max: 140, tipo: "ESOTERICOS" },
-        { max: 175, tipo: "ACESSORIOS" },
+        { max: 160, tipo: "ESOTERICOS" },
         { max: 200, tipo: "CONSUMIVEIS" }
     ],
 
