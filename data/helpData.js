@@ -36,9 +36,20 @@ module.exports = {
         descricao: "Sistema de propriedades e moradia do grupo.",
         comandos: [
             { cmd: "/base fundar", desc: "Compra e funda uma nova base.", syntax: "/base fundar" },
-            { cmd: "/base painel", desc: "Abre o painel de gerenciamento da sua base.", syntax: "/base painel" },
+            { cmd: "/base painel", desc: "Painel de gerenciamento, estrutura e moradores.", syntax: "/base painel" },
             { cmd: "/base construir", desc: "Constrói um novo cômodo (K$ 1.000).", syntax: "/base construir" },
-            { cmd: "/base mobiliar", desc: "Compra mobílias para os seus cômodos.", syntax: "/base mobiliar" }
+            { cmd: "/base mobiliar", desc: "Compra mobílias para os seus cômodos.", syntax: "/base mobiliar" },
+            {
+                cmd: "/base morador-add",
+                desc: "Convida um jogador para morar na base.",
+                syntax: "/base morador-add jogador:@usuario"
+            },
+            {
+                cmd: "/base morador-remover",
+                desc: "Remove um morador da base.",
+                syntax: "/base morador-remover jogador:@usuario"
+            },
+            { cmd: "/base reparar", desc: "Conserta cômodos danificados (K$ 500).", syntax: "/base reparar" }
         ]
     },
     agenda: {

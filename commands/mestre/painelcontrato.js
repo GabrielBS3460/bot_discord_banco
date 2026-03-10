@@ -58,18 +58,18 @@ module.exports = {
             const buttons1 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId("ms_sortear")
-                    .setLabel("Sortear")
+                    .setLabel("Sortear Equipe")
                     .setStyle(ButtonStyle.Primary)
                     .setDisabled(missao.status !== "ABERTA"),
                 new ButtonBuilder()
                     .setCustomId("ms_add_player")
-                    .setLabel("Add")
+                    .setLabel("Adicionar Player")
                     .setStyle(ButtonStyle.Primary)
                     .setEmoji("➕")
                     .setDisabled(missao.status === "CONCLUIDA"),
                 new ButtonBuilder()
                     .setCustomId("ms_gerenciar")
-                    .setLabel("Remover")
+                    .setLabel("Remover player")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("❌")
                     .setDisabled(missao.status === "CONCLUIDA")
@@ -78,17 +78,17 @@ module.exports = {
             const buttons2 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId("ms_iniciar")
-                    .setLabel("Iniciar")
+                    .setLabel("Iniciar Contrato")
                     .setStyle(ButtonStyle.Success)
                     .setDisabled(missao.status !== "ABERTA"),
                 new ButtonBuilder()
                     .setCustomId("ms_concluir")
-                    .setLabel("Concluir")
+                    .setLabel("Concluir Contrato")
                     .setStyle(ButtonStyle.Danger)
                     .setDisabled(missao.status === "CONCLUIDA"),
                 new ButtonBuilder()
                     .setCustomId("ms_vagas")
-                    .setLabel("Vagas")
+                    .setLabel("Modificar Vagas")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("🔢")
                     .setDisabled(missao.status === "CONCLUIDA")
