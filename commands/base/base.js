@@ -404,8 +404,10 @@ module.exports = {
                 });
 
                 if (baseExistente) {
-                    return interaction.editReply({
-                        content: `🚫 Você já pertence a uma base.`
+                    const respMetodo = interaction.deferred ? "editReply" : "reply";
+                    return interaction[respMetodo]({
+                        content: `🚫 Você já pertence a uma base.`,
+                        flags: MessageFlags.Ephemeral
                     });
                 }
 
@@ -422,7 +424,8 @@ module.exports = {
                     )
                 );
 
-                const response = await interaction.editReply({
+                const metodoInicial = interaction.deferred ? "editReply" : "reply";
+                const response = await interaction[metodoInicial]({
                     content: `🏰 **Fundação**\nEscolha o Porte:`,
                     components: [new ActionRowBuilder().addComponents(menuPorte)],
                     withResponse: true
@@ -437,6 +440,7 @@ module.exports = {
                 collector.on("collect", async i => {
                     if (i.customId.startsWith("sel_porte_")) {
                         pEscolha = i.values[0];
+
                         if (char.saldo < PORTES[pEscolha].custo) {
                             return i.reply({ content: `💸 Saldo Insuficiente.`, flags: MessageFlags.Ephemeral });
                         }
@@ -452,7 +456,7 @@ module.exports = {
                         );
 
                         await i.update({
-                            content: `🏰 **Passo 2:** Especialidade`,
+                            content: `🏰 **Passo 2:** Especialidade para porte **${pEscolha}**`,
                             components: [new ActionRowBuilder().addComponents(menuTipo)]
                         });
                     }
@@ -476,18 +480,19 @@ module.exports = {
 
                         try {
                             const mSub = await i.awaitModalSubmit({
-                                filter: m =>
-                                    m.customId === `mod_nome_${interaction.id}` && m.user.id === interaction.user.id,
+                                filter: m => m.customId === `mod_nome_${interaction.id}`,
                                 time: 60000
                             });
 
-                            await mSub.deferUpdate();
+                            await mSub.deferReply();
+
                             const nome = mSub.fields.getTextInputValue("inp_nome").trim();
                             const custo = PORTES[pEscolha].custo;
 
                             const check = await prisma.personagens.findUnique({ where: { id: char.id } });
+
                             if (check.saldo < custo) {
-                                return interaction.editReply({ content: "❌ Saldo insuficiente.", components: [] });
+                                return mSub.editReply({ content: "❌ Saldo insuficiente no momento da criação." });
                             }
 
                             await prisma.$transaction([
@@ -506,14 +511,17 @@ module.exports = {
                                 })
                             ]);
 
-                            await interaction.editReply({
-                                content: `🎉 Base **${nome}** criada com sucesso!`,
+                            await mSub.editReply({
+                                content: `🎉 Base **${nome}** fundada com sucesso!`,
                                 components: []
                             });
+
+                            await interaction
+                                .editReply({ content: `✅ Processo de fundação concluído.`, components: [] })
+                                .catch(() => {});
                             collector.stop();
-                            // eslint-disable-next-line no-unused-vars
                         } catch (err) {
-                            // Erro de timeout do modal ou banco
+                            console.error("Erro no submit do modal:", err);
                         }
                     }
                 });
@@ -657,26 +665,14 @@ module.exports = {
             }
 
             if (subcomando === "empreendimento") {
-                const base = await prisma.base.findFirst({
-                    where: { OR: [{ dono_id: char.id }, { residentes: { some: { personagem_id: char.id } } }] },
-                    include: { residentes: { include: { personagem: true } }, dono: true }
-                });
-
-                if (!base) return interaction.reply({ content: "🚫 Sem base.", flags: MessageFlags.Ephemeral });
-                if (base.tipo !== "Empreendimento")
-                    return interaction.reply({
-                        content: `🚫 Sua base não é um Empreendimento.`,
-                        flags: MessageFlags.Ephemeral
-                    });
-
                 const modal = new ModalBuilder()
                     .setCustomId(`mod_empreend_${interaction.id}`)
-                    .setTitle(`Gestão de Negócio: ${base.nome}`)
+                    .setTitle(`Gestão de Empreendimento`)
                     .addComponents(
                         new ActionRowBuilder().addComponents(
                             new TextInputBuilder()
                                 .setCustomId("int_valor")
-                                .setLabel("Modificador de Inteligência")
+                                .setLabel("Seu Modificador de Inteligência")
                                 .setPlaceholder("Ex: 4")
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true)
@@ -693,6 +689,18 @@ module.exports = {
 
                     await mSub.deferReply();
 
+                    const char = await getPersonagemAtivo(interaction.user.id);
+                    const base = await prisma.base.findFirst({
+                        where: { OR: [{ dono_id: char?.id }, { residentes: { some: { personagem_id: char?.id } } }] },
+                        include: { residentes: { include: { personagem: true } }, dono: true }
+                    });
+
+                    if (!char) return mSub.editReply({ content: "🚫 Você não tem um personagem ativo." });
+                    if (!base) return mSub.editReply({ content: "🚫 Você não pertence a uma base." });
+                    if (base.tipo !== "Empreendimento") {
+                        return mSub.editReply({ content: `🚫 Sua base (${base.tipo}) não é um Empreendimento.` });
+                    }
+
                     const modInt = parseInt(mSub.fields.getTextInputValue("int_valor")) || 0;
                     const dado = Math.floor(Math.random() * 20) + 1;
                     const bonusPorte = PORTES[base.porte].comodos;
@@ -707,10 +715,7 @@ module.exports = {
 
                     await prisma.$transaction([
                         ...todosResidentes.map(id =>
-                            prisma.personagens.update({
-                                where: { id },
-                                data: { saldo: { increment: lucroPorCada } }
-                            })
+                            prisma.personagens.update({ where: { id }, data: { saldo: { increment: lucroPorCada } } })
                         ),
                         prisma.transacao.create({
                             data: {
@@ -725,21 +730,21 @@ module.exports = {
                     const embedResult = new EmbedBuilder()
                         .setTitle(`💰 Resultado do Empreendimento: ${base.nome}`)
                         .setColor(ehDono ? "#FFD700" : "#C0C0C0")
-                        .setDescription(`**${char.nome}** administrou o negócio este Mês!`)
+                        .setDescription(`**${char.nome}** administrou os negócios!`)
                         .addFields(
                             {
                                 name: "🎲 Teste",
                                 value: `d20(${dado}) + Int(${modInt}) + Bônus(${bonusPorte}) = **${resultadoTeste}**`,
-                                inline: false
+                                inline: true
                             },
-                            { name: "📊 Gestor", value: ehDono ? "👑 Dono (x20)" : "👥 Morador (x10)", inline: true },
+                            { name: "📊 Cargo", value: ehDono ? "👑 Dono (x20)" : "👥 Morador (x10)", inline: true },
                             { name: "💵 Lucro Total", value: `**K$ ${totalLucro}**`, inline: true },
                             { name: "👥 Divisão", value: `Cada um recebeu **K$ ${lucroPorCada}**`, inline: false }
                         );
 
                     return mSub.editReply({ embeds: [embedResult] });
                 } catch (err) {
-                    console.error(err);
+                    console.error("Erro no modal de empreendimento:", err);
                 }
             }
         } catch (err) {
