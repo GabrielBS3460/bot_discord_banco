@@ -5,22 +5,25 @@ const {
     StringSelectMenuOptionBuilder,
     ModalBuilder,
     TextInputBuilder,
-    TextInputStyle
+    TextInputStyle,
+    MessageFlags
 } = require("discord.js");
+
+const ForjaService = require("../../services/ForjaService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("forjar")
         .setDescription("Abre a oficina para forjar ou fabricar novos itens."),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda, CUSTO_FORJA }) {
+    async execute({ interaction, getPersonagemAtivo, formatarMoeda, CUSTO_FORJA }) {
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
                 return interaction.reply({
                     content: "🚫 Sem personagem ativo. Use `/cadastrar` ou `/personagem trocar`.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -34,16 +37,10 @@ module.exports = {
                 );
             }
 
-            const row = new ActionRowBuilder().addComponents(menu);
-
             const msg = await interaction.reply({
-                content:
-                    `🔨 **Oficina de Forja**\n` +
-                    `💰 Saldo: ${formatarMoeda(char.saldo)}\n` +
-                    `🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\n\n` +
-                    `Selecione o **TIPO** de item que deseja criar:`,
-                components: [row],
-                ephemeral: true,
+                content: `🔨 **Oficina de Forja**\n💰 Saldo: ${formatarMoeda(char.saldo)}\n🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\n\nSelecione o **TIPO** de item que deseja criar:`,
+                components: [new ActionRowBuilder().addComponents(menu)],
+                flags: MessageFlags.Ephemeral,
                 fetchReply: true
             });
 
@@ -56,36 +53,35 @@ module.exports = {
                 if (!i.isStringSelectMenu()) return;
 
                 const tipoSelecionado = i.values[0];
-
                 const modalId = `modal_forja_${tipoSelecionado.replace(/\s+/g, "")}_${i.id}`;
+
                 const modal = new ModalBuilder()
                     .setCustomId(modalId)
-                    .setTitle(`Forjar: ${tipoSelecionado.substring(0, 30)}`);
-
-                modal.addComponents(
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId("inp_nome")
-                            .setLabel("Nome do Item")
-                            .setStyle(TextInputStyle.Short)
-                            .setRequired(true)
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId("inp_qtd")
-                            .setLabel("Quantidade")
-                            .setStyle(TextInputStyle.Short)
-                            .setValue("1")
-                            .setRequired(true)
-                    ),
-                    new ActionRowBuilder().addComponents(
-                        new TextInputBuilder()
-                            .setCustomId("inp_ouro")
-                            .setLabel("Custo TOTAL em Kwanzas (K$)")
-                            .setStyle(TextInputStyle.Short)
-                            .setRequired(true)
-                    )
-                );
+                    .setTitle(`Forjar: ${tipoSelecionado.substring(0, 30)}`)
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("inp_nome")
+                                .setLabel("Nome do Item")
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("inp_qtd")
+                                .setLabel("Quantidade")
+                                .setStyle(TextInputStyle.Short)
+                                .setValue("1")
+                                .setRequired(true)
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("inp_ouro")
+                                .setLabel("Custo TOTAL em Kwanzas (K$)")
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                        )
+                    );
 
                 await i.showModal(modal);
 
@@ -95,84 +91,58 @@ module.exports = {
                         time: 120000
                     });
 
-                    const tipo = tipoSelecionado;
                     const nomeItem = submit.fields.getTextInputValue("inp_nome");
                     const qtd = parseInt(submit.fields.getTextInputValue("inp_qtd"));
+                    const custoOuro = parseFloat(submit.fields.getTextInputValue("inp_ouro").replace(",", "."));
+                    const custoPontosUnit = CUSTO_FORJA[tipoSelecionado];
 
-                    const custoString = submit.fields.getTextInputValue("inp_ouro").replace(",", ".");
-                    const custoOuro = parseFloat(custoString);
-
-                    const custoPontosUnit = CUSTO_FORJA[tipo];
-
-                    if (isNaN(qtd) || qtd <= 0) {
-                        return submit.reply({ content: "🚫 Quantidade inválida.", ephemeral: true });
-                    }
-
-                    if (isNaN(custoOuro) || custoOuro < 0) {
-                        return submit.reply({ content: "🚫 Valor em Kwanzas inválido.", ephemeral: true });
-                    }
-
-                    const custoPontosTotal = parseFloat((custoPontosUnit * qtd).toFixed(2));
-
-                    const charAtual = await getPersonagemAtivo(interaction.user.id);
-
-                    if (charAtual.saldo < custoOuro) {
+                    if (isNaN(qtd) || qtd <= 0)
+                        return submit.reply({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
+                    if (isNaN(custoOuro) || custoOuro < 0)
                         return submit.reply({
-                            content: `🚫 Kwanzas insuficientes! Você tem ${formatarMoeda(charAtual.saldo)}.`,
-                            ephemeral: true
+                            content: "🚫 Valor em Kwanzas inválido.",
+                            flags: MessageFlags.Ephemeral
                         });
-                    }
 
-                    if (charAtual.pontos_forja_atual < custoPontosTotal) {
-                        return submit.reply({
-                            content: `🚫 Pontos de Forja insuficientes!\nCusta ${custoPontosTotal}, você tem ${charAtual.pontos_forja_atual.toFixed(1)}.`,
-                            ephemeral: true
-                        });
-                    }
-
-                    await prisma.$transaction([
-                        prisma.personagens.update({
-                            where: { id: charAtual.id },
-                            data: {
-                                saldo: { decrement: custoOuro },
-                                pontos_forja_atual: { decrement: custoPontosTotal }
-                            }
-                        }),
-                        prisma.transacao.create({
-                            data: {
-                                personagem_id: charAtual.id,
-                                descricao: `Forjou ${qtd}x ${nomeItem} (${tipo})`,
-                                valor: custoOuro,
-                                tipo: "GASTO"
-                            }
-                        })
-                    ]);
+                    const { saldoAtualizado, pontosAtualizados, custoPontosTotal } = await ForjaService.executarForja(
+                        char.id,
+                        tipoSelecionado,
+                        nomeItem,
+                        qtd,
+                        custoOuro,
+                        custoPontosUnit
+                    );
 
                     await submit.reply({
-                        content:
-                            `✅ **Item Forjado com Sucesso!**\n\n` +
-                            `📦 **Item:** ${qtd}x ${nomeItem}\n` +
-                            `📑 **Tipo:** ${tipo}\n` +
-                            `💰 **Kwanzas Gastos:** ${formatarMoeda(custoOuro)}\n` +
-                            `🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n` +
-                            `*Saldo Restante: ${formatarMoeda(charAtual.saldo - custoOuro)} | ` +
-                            `Pts: ${(charAtual.pontos_forja_atual - custoPontosTotal).toFixed(1)}*`
+                        content: `✅ **Item Forjado com Sucesso!**\n\n📦 **Item:** ${qtd}x ${nomeItem}\n📑 **Tipo:** ${tipoSelecionado}\n💰 **Kwanzas Gastos:** ${formatarMoeda(custoOuro)}\n🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n*Saldo Restante: ${formatarMoeda(saldoAtualizado)} | Pts: ${pontosAtualizados.toFixed(1)}*`,
+                        flags: MessageFlags.Ephemeral
                     });
 
                     await msg.edit({ components: [] }).catch(() => {});
+                    collector.stop();
                 } catch (err) {
+                    if (err.message === "SALDO_INSUFICIENTE") {
+                        return msg
+                            .edit({ content: "🚫 Kwanzas insuficientes para concluir a forja.", components: [] })
+                            .catch(() => {});
+                    }
+                    if (err.message === "PONTOS_INSUFICIENTES") {
+                        return msg
+                            .edit({
+                                content: "🚫 Pontos de Forja insuficientes para concluir a forja.",
+                                components: []
+                            })
+                            .catch(() => {});
+                    }
                     console.log("Tempo de modal expirado ou erro:", err);
                 }
             });
         } catch (err) {
             console.error("Erro no comando forjar:", err);
-
-            const erroMsg = { content: "❌ Ocorreu um erro ao abrir a forja.", ephemeral: true };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
-            }
+            const erroMsg = { content: "❌ Ocorreu um erro ao abrir a forja.", flags: MessageFlags.Ephemeral };
+            interaction.replied
+                ? await interaction.followUp(erroMsg).catch(() => {})
+                : await interaction.reply(erroMsg).catch(() => {});
         }
     }
 };

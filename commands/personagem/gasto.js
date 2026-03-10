@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const TransacaoService = require("../../services/TransacaoService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,7 +10,7 @@ module.exports = {
         )
         .addStringOption(option => option.setName("motivo").setDescription("O motivo do gasto").setRequired(true)),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+    async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         const valorGasto = interaction.options.getNumber("valor");
         const motivo = interaction.options.getString("motivo");
 
@@ -19,31 +20,11 @@ module.exports = {
             if (!personagem) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo. Use `/cadastrar` ou `/personagem trocar`.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            if (personagem.saldo < valorGasto) {
-                return interaction.reply({
-                    content: `❌ Você não tem saldo suficiente! Saldo de **${personagem.nome}**: **${formatarMoeda(personagem.saldo)}**.`,
-                    ephemeral: true
-                });
-            }
-
-            const [updatedPersonagem] = await prisma.$transaction([
-                prisma.personagens.update({
-                    where: { id: personagem.id },
-                    data: { saldo: { decrement: valorGasto } }
-                }),
-                prisma.transacao.create({
-                    data: {
-                        personagem_id: personagem.id,
-                        descricao: motivo,
-                        valor: valorGasto,
-                        tipo: "GASTO"
-                    }
-                })
-            ]);
+            const personagemAtualizado = await TransacaoService.registrarGasto(personagem, valorGasto, motivo);
 
             const gastoEmbed = new EmbedBuilder()
                 .setColor("#FF0000")
@@ -51,16 +32,26 @@ module.exports = {
                 .addFields(
                     { name: "Personagem", value: personagem.nome, inline: true },
                     { name: "Valor", value: `- ${formatarMoeda(valorGasto)}`, inline: true },
-                    { name: "Novo Saldo", value: `**${formatarMoeda(updatedPersonagem.saldo)}**` },
+                    { name: "Novo Saldo", value: `**${formatarMoeda(personagemAtualizado.saldo)}**` },
                     { name: "Motivo", value: motivo }
                 )
                 .setTimestamp();
 
             return interaction.reply({ embeds: [gastoEmbed] });
         } catch (err) {
+            if (err.message === "SALDO_INSUFICIENTE") {
+                return interaction.reply({
+                    content: `❌ Você não tem saldo suficiente!`,
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+
             console.error("Erro no comando gasto:", err);
 
-            const erroMsg = { content: "❌ Ocorreu um erro ao tentar registrar seu gasto.", ephemeral: true };
+            const erroMsg = {
+                content: "❌ Ocorreu um erro ao tentar registrar seu gasto.",
+                flags: MessageFlags.Ephemeral
+            };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {

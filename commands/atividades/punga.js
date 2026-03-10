@@ -1,4 +1,5 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const TransacaoService = require("../../services/TransacaoService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -20,60 +21,47 @@ module.exports = {
                 .setMaxValue(20)
         ),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, PungaSystem }) {
+    async execute({ interaction, getPersonagemAtivo, PungaSystem }) {
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
                 return interaction.reply({
                     content: "🚫 Você precisa de um personagem ativo para pungar.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             const tipo = interaction.options.getString("alvo");
             const nd = interaction.options.getInteger("nd");
 
-            let resultado = "";
+            let resultadoMsg = "";
 
             if (tipo === "Dinheiro") {
                 const valor = PungaSystem.processarDinheiro(nd);
 
-                await prisma.$transaction([
-                    prisma.personagens.update({
-                        where: { id: char.id },
-                        data: { saldo: { increment: valor } }
-                    }),
-                    prisma.transacao.create({
-                        data: {
-                            personagem_id: char.id,
-                            descricao: `Punga (Alvo ND ${nd})`,
-                            valor: valor,
-                            tipo: "GANHO"
-                        }
-                    })
-                ]);
+                if (valor > 0) {
+                    const charAtualizado = await TransacaoService.registrarPungaDinheiro(char.id, valor, nd);
 
-                const charAtualizado = await getPersonagemAtivo(interaction.user.id);
-
-                resultado = `💰 Você pungou **K$ ${valor}**!\n✅ *Valor depositado na conta.*\n💰 **Saldo Atual:** K$ ${charAtualizado.saldo}`;
+                    resultadoMsg = `💰 Você pungou **K$ ${valor}**!\n✅ *Valor depositado na conta.*\n💰 **Saldo Atual:** K$ ${charAtualizado.saldo}`;
+                } else {
+                    resultadoMsg = "🍃 Você tentou pungar, mas os bolsos do alvo estavam vazios!";
+                }
             } else {
                 const item = PungaSystem.processarPunga(nd);
-                resultado = `🎁 Você pungou: **${item}**`;
+                resultadoMsg = `🎁 Você pungou: **${item}**`;
             }
 
             await interaction.reply({
-                content: `🥷 **Punga Realizada por ${char.nome}**\n✅ **Resultado (Alvo ND ${nd}):**\n${resultado}`
+                content: `🥷 **Punga Realizada por ${char.nome}**\n✅ **Resultado (Alvo ND ${nd}):**\n${resultadoMsg}`
             });
         } catch (err) {
             console.error("Erro no comando punga:", err);
+            const erroMsg = { content: "❌ Ocorreu um erro ao processar a punga.", flags: MessageFlags.Ephemeral };
 
-            const erroMsg = { content: "❌ Ocorreu um erro ao processar a punga.", ephemeral: true };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
-            }
+            interaction.replied
+                ? await interaction.followUp(erroMsg).catch(() => {})
+                : await interaction.reply(erroMsg).catch(() => {});
         }
     }
 };

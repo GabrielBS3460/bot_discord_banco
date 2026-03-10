@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const PersonagemService = require("../../services/PersonagemService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,8 +12,11 @@ module.exports = {
             option.setName("nome").setDescription("O nome exato do personagem que ficará ativo").setRequired(true)
         ),
 
-    async execute({ interaction, prisma, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
-        if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN) && !interaction.member.roles.cache.has(ID_CARGO_MOD)) {
+    async execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
+        const temPermissao =
+            interaction.member.roles.cache.has(ID_CARGO_ADMIN) || interaction.member.roles.cache.has(ID_CARGO_MOD);
+
+        if (!temPermissao) {
             return interaction.reply({
                 content: "🚫 Você não tem permissão para usar este comando.",
                 flags: MessageFlags.Ephemeral
@@ -30,42 +34,26 @@ module.exports = {
         }
 
         try {
-            await interaction.deferReply();
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-            const personagemAlvo = await prisma.personagens.findFirst({
-                where: {
-                    nome: { equals: nomeAlvo, mode: "insensitive" },
-                    usuario_id: alvo.id
-                }
+            const personagemAtivado = await PersonagemService.adminTrocarPersonagemAtivo(alvo.id, nomeAlvo);
+
+            return interaction.editReply({
+                content: `🔄 Sucesso! O personagem ativo de ${alvo} foi alterado para **${personagemAtivado.nome}**.`
             });
-
-            if (!personagemAlvo) {
+        } catch (err) {
+            if (err.message === "PERSONAGEM_NAO_ENCONTRADO") {
                 return interaction.editReply({
                     content: `🚫 O jogador **${alvo.username}** não possui nenhum personagem com o nome "${nomeAlvo}".`
                 });
             }
 
-            await prisma.usuarios.update({
-                where: { discord_id: alvo.id },
-                data: { personagem_ativo_id: personagemAlvo.id }
-            });
-
-            return interaction.editReply({
-                content: `🔄 Sucesso! O personagem ativo de ${alvo} foi alterado para **${personagemAlvo.nome}**.`
-            });
-        } catch (err) {
             console.error("Erro no admin-trocar:", err);
-
             const erroMsg = { content: "❌ Ocorreu um erro ao trocar o personagem do jogador." };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.editReply(erroMsg).catch(() => {
-                    /* ignora */
-                });
-            } else {
-                await interaction.reply({ ...erroMsg, flags: MessageFlags.Ephemeral }).catch(() => {
-                    /* ignora */
-                });
-            }
+
+            interaction.deferred
+                ? await interaction.editReply(erroMsg)
+                : await interaction.reply({ ...erroMsg, flags: MessageFlags.Ephemeral });
         }
     }
 };

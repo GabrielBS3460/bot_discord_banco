@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const TransacaoService = require("../../services/TransacaoService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,14 +16,14 @@ module.exports = {
                 .setMinValue(0.1)
         ),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+    async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         const destinatarioUser = interaction.options.getUser("jogador");
         const valor = interaction.options.getNumber("valor");
 
         if (destinatarioUser.bot) {
             return interaction.reply({
                 content: "🚫 Você não pode enviar loot para um bot.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -32,26 +33,11 @@ module.exports = {
             if (!charDestinatario) {
                 return interaction.reply({
                     content: `🚫 O usuário **${destinatarioUser.username}** não tem um personagem ativo.`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            await prisma.$transaction([
-                prisma.personagens.update({
-                    where: { id: charDestinatario.id },
-                    data: {
-                        saldo: { increment: valor }
-                    }
-                }),
-                prisma.transacao.create({
-                    data: {
-                        personagem_id: charDestinatario.id,
-                        descricao: "Loot recebido do Mestre",
-                        valor: valor,
-                        tipo: "RECOMPENSA"
-                    }
-                })
-            ]);
+            await TransacaoService.registrarLootMestre(charDestinatario.id, valor, interaction.user.username);
 
             const embed = new EmbedBuilder()
                 .setColor("#F1C40F")
@@ -77,7 +63,7 @@ module.exports = {
         } catch (err) {
             console.error("Erro no comando loot:", err);
 
-            const erroMsg = { content: "❌ Ocorreu um erro ao conceder o loot.", ephemeral: true };
+            const erroMsg = { content: "❌ Ocorreu um erro ao conceder o loot.", flags: MessageFlags.Ephemeral };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {

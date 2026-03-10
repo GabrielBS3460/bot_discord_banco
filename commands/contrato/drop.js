@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const TransacaoService = require("../../services/TransacaoService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -8,7 +9,7 @@ module.exports = {
             option.setName("nd").setDescription("O Nível de Desafio (ND) do drop").setRequired(true).setMinValue(1)
         ),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, gerarRecompensa }) {
+    async execute({ interaction, getPersonagemAtivo, gerarRecompensa }) {
         try {
             const nd = interaction.options.getInteger("nd");
 
@@ -17,7 +18,7 @@ module.exports = {
             if (!resultado) {
                 return interaction.reply({
                     content: "❌ Erro ao gerar recompensa.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -28,22 +29,7 @@ module.exports = {
                 const char = await getPersonagemAtivo(interaction.user.id);
 
                 if (char) {
-                    await prisma.$transaction([
-                        prisma.personagens.update({
-                            where: { id: char.id },
-                            data: {
-                                saldo: { increment: resultado.valor }
-                            }
-                        }),
-                        prisma.transacao.create({
-                            data: {
-                                personagem_id: char.id,
-                                descricao: `Drop ND ${nd}`,
-                                valor: resultado.valor,
-                                tipo: "GANHO"
-                            }
-                        })
-                    ]);
+                    await TransacaoService.processarDropRecompensa(char.id, resultado.valor, nd);
 
                     footerTexto = `✅ K$ ${resultado.valor} creditados para ${char.nome}`;
                     corEmbed = "#F1C40F";
@@ -61,8 +47,8 @@ module.exports = {
             return interaction.reply({ embeds: [embed] });
         } catch (err) {
             console.error("Erro no comando drop:", err);
+            const erroMsg = { content: "❌ Ocorreu um erro ao gerar o drop.", flags: MessageFlags.Ephemeral };
 
-            const erroMsg = { content: "❌ Ocorreu um erro ao gerar o drop.", ephemeral: true };
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
             } else {

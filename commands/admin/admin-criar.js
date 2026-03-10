@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const PersonagemService = require("../../services/PersonagemService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -9,11 +10,14 @@ module.exports = {
         )
         .addStringOption(option => option.setName("nome").setDescription("O nome do personagem").setRequired(true)),
 
-    async execute({ interaction, prisma, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
-        if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN) && !interaction.member.roles.cache.has(ID_CARGO_MOD)) {
+    async execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
+        const temPermissao =
+            interaction.member.roles.cache.has(ID_CARGO_ADMIN) || interaction.member.roles.cache.has(ID_CARGO_MOD);
+
+        if (!temPermissao) {
             return interaction.reply({
                 content: "🚫 Você não tem permissão para usar este comando.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
@@ -23,94 +27,43 @@ module.exports = {
         if (alvo.bot) {
             return interaction.reply({
                 content: "🚫 Bots não podem possuir personagens.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
 
         try {
-            const resultado = await prisma.$transaction(async tx => {
-                await tx.usuarios.upsert({
-                    where: { discord_id: alvo.id },
-                    update: {},
-                    create: { discord_id: alvo.id }
-                });
-
-                const contagem = await tx.personagens.count({
-                    where: { usuario_id: alvo.id }
-                });
-
-                if (contagem >= 3) {
-                    throw new Error("LIMITE_PERSONAGENS");
-                }
-
-                const novoPersonagem = await tx.personagens.create({
-                    data: {
-                        nome: nomePersonagem,
-                        usuario_id: alvo.id,
-                        saldo: 0
-                    }
-                });
-
-                let statusMsg = "Criado com sucesso.";
-
-                if (contagem === 0) {
-                    await tx.usuarios.update({
-                        where: { discord_id: alvo.id },
-                        data: { personagem_ativo_id: novoPersonagem.id }
-                    });
-
-                    statusMsg = "Criado e definido como **ATIVO** automaticamente.";
-                }
-
-                return { novoPersonagem, statusMsg };
-            });
+            const { novoPersonagem, statusMsg } = await PersonagemService.adminCriarPersonagem(alvo.id, nomePersonagem);
 
             const embed = new EmbedBuilder()
                 .setColor("#F1C40F")
                 .setTitle("👤 Personagem Criado (Admin)")
                 .setDescription(`O administrador **${interaction.user.username}** criou um personagem para ${alvo}.`)
                 .addFields(
-                    {
-                        name: "Nome do Personagem",
-                        value: resultado.novoPersonagem.nome,
-                        inline: true
-                    },
-                    {
-                        name: "Jogador",
-                        value: alvo.username,
-                        inline: true
-                    },
-                    {
-                        name: "Status",
-                        value: resultado.statusMsg
-                    }
+                    { name: "Nome do Personagem", value: novoPersonagem.nome, inline: true },
+                    { name: "Jogador", value: alvo.username, inline: true },
+                    { name: "Status", value: statusMsg }
                 )
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed] });
         } catch (err) {
-            if (err.message === "LIMITE_PERSONAGENS") {
+            if (err.message === "LIMITE_EXCEDIDO") {
                 return interaction.reply({
-                    content: `⚠️ O usuário **${alvo.username}** já atingiu o limite de **2 personagens**.`,
-                    ephemeral: true
+                    content: `⚠️ O usuário **${alvo.username}** já atingiu o limite de personagens.`,
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             if (err.code === "P2002") {
                 return interaction.reply({
                     content: `❌ O nome **"${nomePersonagem}"** já está em uso no servidor.`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             console.error("Erro no admin-criar:", err);
-
-            const erroMsg = { content: "❌ Ocorreu um erro ao criar o personagem.", ephemeral: true };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
-            }
+            const msgErro = { content: "❌ Ocorreu um erro ao criar o personagem.", flags: MessageFlags.Ephemeral };
+            interaction.replied ? await interaction.followUp(msgErro) : await interaction.reply(msgErro);
         }
     }
 };

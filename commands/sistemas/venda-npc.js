@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const TransacaoService = require("../../services/TransacaoService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,35 +12,28 @@ module.exports = {
             option.setName("link").setDescription("Link do item que está sendo vendido").setRequired(true)
         ),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
+    async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         const valor = interaction.options.getNumber("valor");
         const linkItem = interaction.options.getString("link");
 
-        const char = await getPersonagemAtivo(interaction.user.id);
-
-        if (!char) {
-            return interaction.reply({ content: "🚫 Você não tem personagem ativo.", ephemeral: true });
-        }
-
-        if (!linkItem.startsWith("http")) {
-            return interaction.reply({ content: "🚫 Você precisa enviar um link válido do item.", ephemeral: true });
-        }
-
         try {
-            await prisma.$transaction([
-                prisma.personagens.update({
-                    where: { id: char.id },
-                    data: { saldo: { increment: valor } }
-                }),
-                prisma.transacao.create({
-                    data: {
-                        personagem_id: char.id,
-                        descricao: `Venda para NPC`,
-                        valor: valor,
-                        tipo: "GANHO"
-                    }
-                })
-            ]);
+            const char = await getPersonagemAtivo(interaction.user.id);
+
+            if (!char) {
+                return interaction.reply({
+                    content: "🚫 Você não tem personagem ativo.",
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+
+            if (!linkItem.startsWith("http")) {
+                return interaction.reply({
+                    content: "🚫 Você precisa enviar um link válido do item.",
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+
+            await TransacaoService.registrarVendaNpc(char.id, valor);
 
             const embed = new EmbedBuilder()
                 .setColor("#2ECC71")
@@ -55,7 +49,13 @@ module.exports = {
             return interaction.reply({ embeds: [embed] });
         } catch (err) {
             console.error("Erro no comando venda-npc:", err);
-            return interaction.reply({ content: "❌ Ocorreu um erro ao registrar a venda.", ephemeral: true });
+
+            const erroMsg = { content: "❌ Ocorreu um erro ao registrar a venda.", flags: MessageFlags.Ephemeral };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(erroMsg).catch(() => {});
+            } else {
+                await interaction.reply(erroMsg).catch(() => {});
+            }
         }
     }
 };

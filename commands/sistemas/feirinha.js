@@ -6,60 +6,36 @@ const {
     ActionRowBuilder
 } = require("discord.js");
 
+const CulinariaService = require("../../services/CulinariaService.js");
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("feirinha")
         .setDescription("Visite a feirinha da semana para comprar ingredientes frescos (Requer Ofício Cozinheiro)."),
 
-    async execute({ interaction, prisma, getPersonagemAtivo, DB_CULINARIA }) {
+    async execute({ interaction, getPersonagemAtivo, DB_CULINARIA }) {
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            const listaPericias = char.pericias || [];
-
-            if (!listaPericias.includes("Ofício Cozinheiro")) {
+            try {
+                CulinariaService.verificarPericia(char);
+                // eslint-disable-next-line no-unused-vars
+            } catch (e) {
                 return interaction.reply({
                     content:
                         "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para escolher os ingredientes mais frescos!",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
-            const agora = new Date();
-            const ultimaGeracao = char.feira_data_geracao ? new Date(char.feira_data_geracao) : new Date(0);
-            const diffDias = (agora - ultimaGeracao) / (1000 * 60 * 60 * 24);
-
-            let itensLoja = char.feira_itens || [];
-
-            if (diffDias >= 7 || !itensLoja || itensLoja.length === 0) {
-                const todosIngredientes = Object.keys(DB_CULINARIA.INGREDIENTES);
-                const sorteados = [];
-
-                for (let i = 0; i < 15; i++) {
-                    const nome = todosIngredientes[Math.floor(Math.random() * todosIngredientes.length)];
-                    sorteados.push({
-                        nome: nome,
-                        preco: DB_CULINARIA.INGREDIENTES[nome]
-                    });
-                }
-
-                itensLoja = sorteados;
-
-                await prisma.personagens.update({
-                    where: { id: char.id },
-                    data: {
-                        feira_itens: itensLoja,
-                        feira_data_geracao: agora
-                    }
-                });
-            }
+            const { itensLoja, diffDias } = await CulinariaService.atualizarFeirinhaSeNecessario(char, DB_CULINARIA);
 
             const montarMenu = lista => {
                 if (lista.length === 0) return null;
@@ -90,16 +66,13 @@ module.exports = {
             const componentsInicial = rowInicial ? [rowInicial] : [];
 
             const contentInicial = rowInicial
-                ? `🥦 **Feirinha da Semana** (Reseta em: ${7 - Math.floor(diffDias)} dias)\n` +
-                  `💰 **Seu Saldo:** K$ ${char.saldo}\n` +
-                  `🎒 **Seu Estoque:** ${listaEstoque}\n\n` +
-                  `*Selecione abaixo para comprar:*`
-                : `🥦 **Feirinha da Semana**\n` + `🚫 **Estoque Esgotado!** Volte na próxima semana.`;
+                ? `🥦 **Feirinha da Semana** (Reseta em: ${7 - Math.floor(diffDias)} dias)\n💰 **Seu Saldo:** K$ ${char.saldo}\n🎒 **Seu Estoque:** ${listaEstoque}\n\n*Selecione abaixo para comprar:*`
+                : `🥦 **Feirinha da Semana**\n🚫 **Estoque Esgotado!** Volte na próxima semana.`;
 
             const msg = await interaction.reply({
                 content: contentInicial,
                 components: componentsInicial,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
                 fetchReply: true
             });
 
@@ -112,79 +85,47 @@ module.exports = {
                 if (!i.isStringSelectMenu()) return;
 
                 const charAtual = await getPersonagemAtivo(interaction.user.id);
-                const listaAtual = charAtual.feira_itens || [];
-
                 const [indexStr, nome, precoStr] = i.values[0].split("_");
                 const index = parseInt(indexStr);
                 const preco = parseFloat(precoStr);
 
-                if (!listaAtual[index] || listaAtual[index].nome !== nome) {
-                    return i.reply({
-                        content: "🚫 Este item já foi vendido ou a lista mudou.",
-                        flags: MessageFlags.Ephemeral
+                try {
+                    const { novoEstoque, listaAtual, saldoAtualizado } =
+                        await CulinariaService.comprarIngredienteNaFeira(charAtual, index, nome, preco);
+
+                    const novoRow = montarMenu(listaAtual);
+                    const novosComponents = novoRow ? [novoRow] : [];
+                    const estoqueFormatado = Object.entries(novoEstoque)
+                        .map(([k, v]) => `${k}: ${v}`)
+                        .join(", ");
+
+                    const novoConteudo = novoRow
+                        ? `✅ Comprou **${nome}**!\n💰 **Saldo:** K$ ${saldoAtualizado.toFixed(2)}\n🎒 **Estoque:** ${estoqueFormatado}\n\n*Continue comprando:*`
+                        : `✅ Comprou **${nome}**!\n🚫 **Estoque da Feirinha acabou!**`;
+
+                    await i.update({
+                        content: novoConteudo,
+                        components: novosComponents
                     });
+                } catch (err) {
+                    if (err.message === "ITEM_INVALIDO") {
+                        return i.reply({
+                            content: "🚫 Este item já foi vendido ou a lista mudou.",
+                            flags: MessageFlags.Ephemeral
+                        });
+                    }
+                    if (err.message === "SALDO_INSUFICIENTE") {
+                        return i.reply({ content: "💸 Dinheiro insuficiente!", flags: MessageFlags.Ephemeral });
+                    }
+                    console.error("Erro na compra:", err);
                 }
-
-                if (charAtual.saldo < preco) {
-                    return i.reply({
-                        content: "💸 Dinheiro insuficiente!",
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
-
-                const novoEstoque = charAtual.estoque_ingredientes || {};
-                if (!novoEstoque[nome]) novoEstoque[nome] = 0;
-
-                novoEstoque[nome] += 1;
-                listaAtual.splice(index, 1);
-
-                await prisma.$transaction([
-                    prisma.personagens.update({
-                        where: { id: charAtual.id },
-                        data: {
-                            saldo: { decrement: preco },
-                            estoque_ingredientes: novoEstoque,
-                            feira_itens: listaAtual
-                        }
-                    }),
-                    prisma.transacao.create({
-                        data: {
-                            personagem_id: charAtual.id,
-                            descricao: `Comprou ${nome}`,
-                            valor: preco,
-                            tipo: "GASTO"
-                        }
-                    })
-                ]);
-
-                const novoRow = montarMenu(listaAtual);
-                const novosComponents = novoRow ? [novoRow] : [];
-
-                const estoqueFormatado = Object.entries(novoEstoque)
-                    .map(([k, v]) => `${k}: ${v}`)
-                    .join(", ");
-
-                const novoConteudo = novoRow
-                    ? `✅ Comprou **${nome}**!\n` +
-                      `💰 **Saldo:** K$ ${(charAtual.saldo - preco).toFixed(2)}\n` +
-                      `🎒 **Estoque:** ${estoqueFormatado}\n\n` +
-                      `*Continue comprando:*`
-                    : `✅ Comprou **${nome}**!\n` + `🚫 **Estoque da Feirinha acabou!**`;
-
-                await i.update({
-                    content: novoConteudo,
-                    components: novosComponents
-                });
             });
         } catch (err) {
             console.error("Erro no comando feirinha:", err);
-
-            const erroMsg = { content: "❌ Ocorreu um erro ao visitar a feirinha.", ephemeral: true };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
-            }
+            const erroMsg = { content: "❌ Ocorreu um erro ao visitar a feirinha.", flags: MessageFlags.Ephemeral };
+            interaction.replied
+                ? await interaction.followUp(erroMsg).catch(() => {})
+                : await interaction.reply(erroMsg).catch(() => {});
         }
     }
 };
