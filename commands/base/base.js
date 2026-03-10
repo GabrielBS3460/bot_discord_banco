@@ -61,14 +61,14 @@ module.exports = {
                 });
 
                 if (!base) {
-                    return interaction.reply({
-                        content: "🚫 Apenas o **Dono da Base** pode mobiliar cômodos.",
-                        flags: MessageFlags.Ephemeral
+                    return interaction.editReply({
+                        content: "🚫 Apenas o **Dono da Base** pode mobiliar cômodos."
                     });
                 }
 
                 const mobiliasArray = Object.entries(MOBILIAS).sort((a, b) => a[0].localeCompare(b[0]));
                 const half = Math.ceil(mobiliasArray.length / 2);
+
                 const menuA_L = new StringSelectMenuBuilder()
                     .setCustomId(`menu_mob_1_${interaction.id}`)
                     .setPlaceholder("Mobílias (A - L)");
@@ -82,7 +82,7 @@ module.exports = {
                         menuA_L.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(`${nome} (K$ ${d.custo})`)
-                                .setDescription(d.desc)
+                                .setDescription(d.desc.substring(0, 100))
                                 .setValue(nome)
                         )
                     );
@@ -92,21 +92,21 @@ module.exports = {
                         menuM_Z.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(`${nome} (K$ ${d.custo})`)
-                                .setDescription(d.desc)
+                                .setDescription(d.desc.substring(0, 100))
                                 .setValue(nome)
                         )
                     );
 
-                await interaction.reply({
+                const response = await interaction.editReply({
                     content: `🛋️ **Loja de Mobílias**\n**Base:** ${base.nome} | **Seu Saldo:** ${formatarMoeda(char.saldo)}\n\n*Selecione o item que deseja comprar:*`,
                     components: [
                         new ActionRowBuilder().addComponents(menuA_L),
                         new ActionRowBuilder().addComponents(menuM_Z)
-                    ]
+                    ],
+                    withResponse: true
                 });
 
-                const replyMsg = await interaction.fetchReply();
-                const collector = replyMsg.createMessageComponentCollector({
+                const collector = response.createMessageComponentCollector({
                     filter: i => i.user.id === interaction.user.id,
                     time: 120000
                 });
@@ -156,7 +156,7 @@ module.exports = {
                                 }
                             }),
                             prisma.baseMobilia.create({ data: { base_id: base.id, nome_item: escolhido } }),
-                            prisma.base.update({ where: { id: base.id }, data: { seguranca: { increment: 2 } } }) // Aplica +2 de seguranca
+                            prisma.base.update({ where: { id: base.id }, data: { seguranca: { increment: 2 } } })
                         ]);
 
                         await interaction.editReply({
@@ -168,7 +168,7 @@ module.exports = {
 
                     if (base.comodos.length === 0) {
                         return iSelect.followUp({
-                            content: "🚫 Sua base não tem nenhum cômodo construído para abrigar mobílias.",
+                            content: "🚫 Sua base não tem nenhum cômodo construído.",
                             flags: MessageFlags.Ephemeral
                         });
                     }
@@ -176,10 +176,8 @@ module.exports = {
                     const comodosValidos = base.comodos.filter(c => {
                         if (dadosMob.reqComodos.length > 0 && !dadosMob.reqComodos.includes(c.nome_comodo))
                             return false;
-
                         const qtdNoComodo = base.mobilias.filter(m => m.comodo_id === c.id).length;
                         const capacidade = c.nome_comodo === "Sala de estar" ? 3 : 1;
-
                         return qtdNoComodo < capacidade;
                     });
 
@@ -199,19 +197,19 @@ module.exports = {
                         const cap = c.nome_comodo === "Sala de estar" ? 3 : 1;
                         menuInstalar.addOptions(
                             new StringSelectMenuOptionBuilder()
-                                .setLabel(`${c.nome_comodo} (ID: ${c.id})`)
+                                .setLabel(`${c.nome_comodo}`)
                                 .setDescription(`Espaço: ${qtdAtual}/${cap}`)
                                 .setValue(String(c.id))
                         );
                     });
 
-                    const replyConfirm = await iSelect.followUp({
-                        content: `**Item:** ${escolhido} (K$ ${dadosMob.custo})\nSelecione em qual cômodo deseja instalá-lo:`,
+                    const msgConfirm = await iSelect.followUp({
+                        content: `**Item:** ${escolhido} (K$ ${dadosMob.custo})\nSelecione o cômodo de destino:`,
                         components: [new ActionRowBuilder().addComponents(menuInstalar)],
+                        flags: MessageFlags.Ephemeral,
                         withResponse: true
                     });
 
-                    const msgConfirm = replyConfirm.resource ? replyConfirm.resource.message : replyConfirm;
                     const instCollector = msgConfirm.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
                         time: 60000
@@ -222,11 +220,9 @@ module.exports = {
                         const comodoId = parseInt(iInst.values[0]);
 
                         const charNaHora = await prisma.personagens.findUnique({ where: { id: char.id } });
-                        if (charNaHora.saldo < dadosMob.custo)
-                            return iInst.followUp({
-                                content: "💸 Saldo insuficiente no momento da confirmação.",
-                                flags: MessageFlags.Ephemeral
-                            });
+                        if (charNaHora.saldo < dadosMob.custo) {
+                            return iInst.followUp({ content: "💸 Saldo insuficiente.", flags: MessageFlags.Ephemeral });
+                        }
 
                         await prisma.$transaction([
                             prisma.personagens.update({
@@ -250,6 +246,7 @@ module.exports = {
                             content: `✅ **${escolhido}** instalada com sucesso! K$ ${dadosMob.custo} deduzidos.`,
                             components: []
                         });
+
                         instCollector.stop();
                         collector.stop();
                     });
@@ -262,36 +259,39 @@ module.exports = {
                     include: { comodos: true }
                 });
 
-                if (!base)
-                    return interaction.reply({
-                        content: "🚫 Apenas o Dono da Base pode construir.",
-                        flags: MessageFlags.Ephemeral
+                if (!base) {
+                    return interaction.editReply({
+                        content: "🚫 Apenas o Dono da Base pode construir."
                     });
+                }
 
                 const limiteComodos = PORTES[base.porte].comodos;
-                if (base.comodos.length >= limiteComodos)
-                    return interaction.reply({
-                        content: `🚫 Sua base atingiu o limite de ${limiteComodos} cômodos.`,
-                        flags: MessageFlags.Ephemeral
+                if (base.comodos.length >= limiteComodos) {
+                    return interaction.editReply({
+                        content: `🚫 Sua base atingiu o limite de ${limiteComodos} cômodos.`
                     });
-                if (char.saldo < 1000)
-                    return interaction.reply({
-                        content: `💸 Construir custa K$ 1.000.`,
-                        flags: MessageFlags.Ephemeral
+                }
+
+                if (char.saldo < 1000) {
+                    return interaction.editReply({
+                        content: `💸 Você precisa de K$ 1.000 para construir um novo cômodo.`
                     });
+                }
 
                 const comodosArray = Object.entries(COMODOS).sort((a, b) => a[0].localeCompare(b[0]));
-                const menuA_L = new StringSelectMenuBuilder()
+                const mid = Math.ceil(comodosArray.length / 2);
+
+                const menu1 = new StringSelectMenuBuilder()
                     .setCustomId(`menu_com_1_${interaction.id}`)
                     .setPlaceholder("Cômodos (A - L)");
-                const menuM_Z = new StringSelectMenuBuilder()
+                const menu2 = new StringSelectMenuBuilder()
                     .setCustomId(`menu_com_2_${interaction.id}`)
                     .setPlaceholder("Cômodos (M - Z)");
 
                 comodosArray
-                    .slice(0, 21)
+                    .slice(0, mid)
                     .forEach(([nome, d]) =>
-                        menuA_L.addOptions(
+                        menu1.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(nome)
                                 .setDescription(d.desc.substring(0, 100))
@@ -299,9 +299,9 @@ module.exports = {
                         )
                     );
                 comodosArray
-                    .slice(21)
+                    .slice(mid)
                     .forEach(([nome, d]) =>
-                        menuM_Z.addOptions(
+                        menu2.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(nome)
                                 .setDescription(d.desc.substring(0, 100))
@@ -309,16 +309,16 @@ module.exports = {
                         )
                     );
 
-                await interaction.reply({
+                const response = await interaction.editReply({
                     content: `🔨 **Construção de Cômodos**\n**Base:** ${base.nome} | **Espaço:** ${limiteComodos - base.comodos.length}\n*Custo:* K$ 1.000`,
                     components: [
-                        new ActionRowBuilder().addComponents(menuA_L),
-                        new ActionRowBuilder().addComponents(menuM_Z)
-                    ]
+                        new ActionRowBuilder().addComponents(menu1),
+                        new ActionRowBuilder().addComponents(menu2)
+                    ],
+                    withResponse: true
                 });
 
-                const replyMsg = await interaction.fetchReply();
-                const collector = replyMsg.createMessageComponentCollector({
+                const collector = response.createMessageComponentCollector({
                     filter: i => i.user.id === interaction.user.id,
                     time: 120000
                 });
@@ -336,43 +336,58 @@ module.exports = {
                     }
                     if (dados.reqComodo && !base.comodos.some(c => c.nome_comodo === dados.reqComodo)) {
                         return iSelect.followUp({
-                            content: `🚫 Requer o cômodo: ${dados.reqComodo}.`,
+                            content: `🚫 Requer o cômodo prévio: ${dados.reqComodo}.`,
                             flags: MessageFlags.Ephemeral
                         });
                     }
                     if (escolhido !== "Suíte" && base.comodos.some(c => c.nome_comodo === escolhido)) {
                         return iSelect.followUp({
-                            content: `🚫 Você já possui este cômodo.`,
+                            content: `🚫 Você já possui este cômodo construído.`,
                             flags: MessageFlags.Ephemeral
                         });
                     }
 
-                    const charNaHora = await prisma.personagens.findUnique({ where: { id: char.id } });
-                    if (charNaHora.saldo < 1000)
+                    const charAtu = await prisma.personagens.findUnique({ where: { id: char.id } });
+                    if (charAtu.saldo < 1000) {
                         return iSelect.followUp({ content: "💸 Saldo insuficiente.", flags: MessageFlags.Ephemeral });
+                    }
 
-                    await prisma.$transaction(async tx => {
-                        await tx.personagens.update({ where: { id: char.id }, data: { saldo: { decrement: 1000 } } });
-                        await tx.transacao.create({
-                            data: {
-                                personagem_id: char.id,
-                                descricao: `Construiu: ${escolhido}`,
-                                valor: 1000,
-                                tipo: "GASTO"
+                    try {
+                        await prisma.$transaction(async tx => {
+                            await tx.personagens.update({
+                                where: { id: char.id },
+                                data: { saldo: { decrement: 1000 } }
+                            });
+                            await tx.transacao.create({
+                                data: {
+                                    personagem_id: char.id,
+                                    descricao: `Construiu: ${escolhido}`,
+                                    valor: 1000,
+                                    tipo: "GASTO"
+                                }
+                            });
+                            await tx.baseComodo.create({ data: { base_id: base.id, nome_comodo: escolhido } });
+                            if (dados.addSeguranca > 0) {
+                                await tx.base.update({
+                                    where: { id: base.id },
+                                    data: { seguranca: { increment: dados.addSeguranca } }
+                                });
                             }
                         });
-                        await tx.baseComodo.create({ data: { base_id: base.id, nome_comodo: escolhido } });
-                        if (dados.addSeguranca > 0)
-                            await tx.base.update({
-                                where: { id: base.id },
-                                data: { seguranca: { increment: dados.addSeguranca } }
-                            });
-                    });
 
-                    let bonus = `✅ **${escolhido}** construído!`;
-                    if (dados.addSeguranca > 0) bonus += `\n🛡️ Segurança +${dados.addSeguranca}!`;
-                    await interaction.editReply({ content: bonus, components: [] });
-                    collector.stop();
+                        let msgBonus = `✅ **${escolhido}** construído com sucesso!`;
+                        if (dados.addSeguranca > 0)
+                            msgBonus += `\n🛡️ Segurança da base aumentada em +${dados.addSeguranca}!`;
+
+                        await interaction.editReply({ content: msgBonus, components: [] });
+                        collector.stop();
+                        // eslint-disable-next-line no-unused-vars
+                    } catch (err) {
+                        await iSelect.followUp({
+                            content: "❌ Erro ao processar construção.",
+                            flags: MessageFlags.Ephemeral
+                        });
+                    }
                 });
             }
 
@@ -381,15 +396,16 @@ module.exports = {
                     where: { OR: [{ dono_id: char.id }, { residentes: { some: { personagem_id: char.id } } }] }
                 });
 
-                if (baseExistente)
-                    return interaction.reply({
-                        content: `🚫 Você já pertence a uma base.`,
-                        flags: MessageFlags.Ephemeral
+                if (baseExistente) {
+                    return interaction.editReply({
+                        content: `🚫 Você já pertence a uma base.`
                     });
+                }
 
                 const menuPorte = new StringSelectMenuBuilder()
                     .setCustomId(`sel_porte_${interaction.id}`)
                     .setPlaceholder("Selecione o Porte...");
+
                 Object.entries(PORTES).forEach(([n, d]) =>
                     menuPorte.addOptions(
                         new StringSelectMenuOptionBuilder()
@@ -399,12 +415,13 @@ module.exports = {
                     )
                 );
 
-                await interaction.reply({
+                const response = await interaction.editReply({
                     content: `🏰 **Fundação**\nEscolha o Porte:`,
-                    components: [new ActionRowBuilder().addComponents(menuPorte)]
+                    components: [new ActionRowBuilder().addComponents(menuPorte)],
+                    withResponse: true
                 });
-                const replyMsg = await interaction.fetchReply();
-                const collector = replyMsg.createMessageComponentCollector({
+
+                const collector = response.createMessageComponentCollector({
                     filter: i => i.user.id === interaction.user.id,
                     time: 180000
                 });
@@ -413,21 +430,26 @@ module.exports = {
                 collector.on("collect", async i => {
                     if (i.customId.startsWith("sel_porte_")) {
                         pEscolha = i.values[0];
-                        if (char.saldo < PORTES[pEscolha].custo)
+                        if (char.saldo < PORTES[pEscolha].custo) {
                             return i.reply({ content: `💸 Saldo Insuficiente.`, flags: MessageFlags.Ephemeral });
+                        }
+
                         const menuTipo = new StringSelectMenuBuilder()
                             .setCustomId(`sel_tipo_${interaction.id}`)
                             .setPlaceholder("Selecione a Especialidade...");
+
                         Object.entries(TIPOS).forEach(([n, d]) =>
                             menuTipo.addOptions(
                                 new StringSelectMenuOptionBuilder().setLabel(n).setDescription(d).setValue(n)
                             )
                         );
+
                         await i.update({
                             content: `🏰 **Passo 2:** Especialidade`,
                             components: [new ActionRowBuilder().addComponents(menuTipo)]
                         });
                     }
+
                     if (i.customId.startsWith("sel_tipo_")) {
                         const tEscolha = i.values[0];
                         const modal = new ModalBuilder()
@@ -442,19 +464,24 @@ module.exports = {
                                         .setRequired(true)
                                 )
                             );
+
                         await i.showModal(modal);
+
                         try {
                             const mSub = await i.awaitModalSubmit({
                                 filter: m =>
                                     m.customId === `mod_nome_${interaction.id}` && m.user.id === interaction.user.id,
                                 time: 60000
                             });
+
                             await mSub.deferUpdate();
                             const nome = mSub.fields.getTextInputValue("inp_nome").trim();
                             const custo = PORTES[pEscolha].custo;
+
                             const check = await prisma.personagens.findUnique({ where: { id: char.id } });
-                            if (check.saldo < custo)
+                            if (check.saldo < custo) {
                                 return interaction.editReply({ content: "❌ Saldo insuficiente.", components: [] });
+                            }
 
                             await prisma.$transaction([
                                 prisma.personagens.update({
@@ -471,11 +498,15 @@ module.exports = {
                                     }
                                 })
                             ]);
-                            await interaction.editReply({ content: `🎉 Base **${nome}** criada!`, components: [] });
+
+                            await interaction.editReply({
+                                content: `🎉 Base **${nome}** criada com sucesso!`,
+                                components: []
+                            });
                             collector.stop();
                             // eslint-disable-next-line no-unused-vars
                         } catch (err) {
-                            /* empty */
+                            // Erro de timeout do modal ou banco
                         }
                     }
                 });
@@ -494,7 +525,10 @@ module.exports = {
                     });
 
                 let base = await buscarBase();
-                if (!base) return interaction.reply({ content: "🚫 Sem base.", flags: MessageFlags.Ephemeral });
+
+                if (!base) {
+                    return interaction.editReply({ content: "🚫 Você não pertence a nenhuma base." });
+                }
 
                 const montarEmbedPainel = b => {
                     const limCom = PORTES[b.porte].comodos;
@@ -504,8 +538,8 @@ module.exports = {
                         b.comodos
                             .map(c => {
                                 const mobs = c.mobilias.map(m => m.nome_item).join(", ");
-                                let txt = c.danificado ? `~~${c.nome_comodo}~~ ⚠️` : c.nome_comodo;
-                                if (mobs) txt += ` *[${mobs}]*`;
+                                let txt = c.danificado ? `~~${c.nome_comodo}~~ ⚠️` : `**${c.nome_comodo}**`;
+                                if (mobs) txt += `\n╰ 🛋️ *${mobs}*`;
                                 return txt;
                             })
                             .join("\n") || "Nenhum.";
@@ -516,26 +550,25 @@ module.exports = {
                         .join(", ");
 
                     const embed = new EmbedBuilder()
-                        .setColor(b.manutencao_paga ? "#00AAFF" : "#FF0000")
+                        .setColor(b.manutencao_paga ? "#00AAFF" : "#ED4245")
                         .setTitle(`🏰 ${b.nome}`)
                         .setDescription(`**Dono:** ${b.dono.nome}\n**Tipo:** ${b.tipo}\n${TIPOS[b.tipo]}`)
                         .addFields(
-                            { name: "Porte", value: b.porte, inline: true },
-                            { name: "Segurança", value: `${b.seguranca}`, inline: true },
+                            { name: "🛡️ Segurança", value: `${b.seguranca}`, inline: true },
                             {
-                                name: "Manutenção",
+                                name: "💰 Manutenção",
                                 value: `K$ ${PORTES[b.porte].manutencao} ${b.manutencao_paga ? "✅" : "⚠️"}`,
                                 inline: true
                             },
-                            { name: `Equipe (${b.residentes.length}/4)`, value: res, inline: true },
-                            { name: `Cômodos (${b.comodos.length}/${limCom})`, value: coms, inline: false }
+                            { name: `👥 Equipe (${b.residentes.length}/4)`, value: res, inline: true },
+                            { name: `🏠 Estrutura (${b.comodos.length}/${limCom})`, value: coms, inline: false }
                         );
 
-                    if (ext) embed.addFields({ name: "Exterior", value: ext });
+                    if (ext) embed.addFields({ name: "🌳 Exterior", value: ext });
                     return embed;
                 };
 
-                await interaction.reply({ embeds: [montarEmbedPainel(base)] });
+                await interaction.editReply({ embeds: [montarEmbedPainel(base)] });
             }
 
             if (subcomando === "morador-add") {
@@ -545,20 +578,14 @@ module.exports = {
                 });
 
                 if (!base) {
-                    return interaction.reply({
-                        content: "🚫 Apenas o **Dono da Base** pode gerenciar moradores.",
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return interaction.editReply({ content: "🚫 Apenas o **Dono da Base** pode gerenciar moradores." });
                 }
 
                 const alvoUser = interaction.options.getUser("jogador");
                 const alvoChar = await getPersonagemAtivo(alvoUser.id);
 
                 if (!alvoChar) {
-                    return interaction.reply({
-                        content: "🚫 O jogador selecionado não possui um personagem ativo.",
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return interaction.editReply({ content: "🚫 O alvo selecionado não possui um personagem ativo." });
                 }
 
                 const jaPossuiResidencia = await prisma.base.findFirst({
@@ -568,16 +595,12 @@ module.exports = {
                 });
 
                 if (jaPossuiResidencia) {
-                    return interaction.reply({
-                        content: `🚫 **${alvoChar.nome}** já possui uma residência fixa.`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    return interaction.editReply({ content: `🚫 **${alvoChar.nome}** já possui uma residência fixa.` });
                 }
 
                 if (base.residentes.length >= 4) {
-                    return interaction.reply({
-                        content: "🚫 Sua base já atingiu o limite máximo de 4 residentes.",
-                        flags: MessageFlags.Ephemeral
+                    return interaction.editReply({
+                        content: "🚫 Sua base já atingiu o limite máximo de 4 residentes."
                     });
                 }
 
@@ -588,7 +611,7 @@ module.exports = {
                     }
                 });
 
-                return interaction.reply({
+                return interaction.editReply({
                     content: `✅ **${alvoChar.nome}** agora é oficialmente um residente de **${base.nome}**!`
                 });
             }
@@ -599,9 +622,8 @@ module.exports = {
                 });
 
                 if (!base) {
-                    return interaction.reply({
-                        content: "🚫 Apenas o **Dono da Base** pode remover moradores.",
-                        flags: MessageFlags.Ephemeral
+                    return interaction.editReply({
+                        content: "🚫 Apenas o **Dono da Base** pode remover moradores."
                     });
                 }
 
@@ -617,13 +639,12 @@ module.exports = {
                 });
 
                 if (deleteResult.count === 0) {
-                    return interaction.reply({
-                        content: "⚠️ Este jogador não consta na lista de residentes da sua base.",
-                        flags: MessageFlags.Ephemeral
+                    return interaction.editReply({
+                        content: "⚠️ Este jogador não consta na lista de residentes da sua base."
                     });
                 }
 
-                return interaction.reply({
+                return interaction.editReply({
                     content: `👢 **${alvoChar?.nome || alvoUser.username}** foi removido da base **${base.nome}**.`
                 });
             }
