@@ -23,6 +23,11 @@ const CATEGORIAS = {
                 cmd: "/admin-criar",
                 desc: "Cria um personagem para um jogador manualmente.",
                 syntax: "/admin-criar jogador:@usuario nome:<nome>"
+            },
+            {
+                cmd: "/admin-trocar",
+                desc: "Força a troca do personagem ativo de um jogador.",
+                syntax: "/admin-trocar jogador:@usuario nome:<nome>"
             }
         ]
     },

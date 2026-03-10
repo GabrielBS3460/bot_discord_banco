@@ -10,7 +10,7 @@ const {
     MessageFlags
 } = require("discord.js");
 
-const { PORTES, TIPOS, COMODOS, MOBILIAS } = require("../data/baseData.js");
+const { PORTES, TIPOS, COMODOS, MOBILIAS } = require("../../data/baseData.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
