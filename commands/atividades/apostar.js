@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require("discord.js");
-const ApostaService = require("../../services/ApostaService.js");
+const ApostaService = require("../../services/ApostasService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
