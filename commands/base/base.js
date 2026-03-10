@@ -41,21 +41,25 @@ module.exports = {
                 )
         )
         .addSubcommand(sub =>
-            sub.setName("empreendimento").setDescription("Realiza o lucro semanal da base (Teste de Inteligência).")
+            sub.setName("empreendimento").setDescription("Realiza o lucro mensal da base (Teste de Inteligência).")
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
-        await interaction.deferReply();
+        const subcomando = interaction.options.getSubcommand();
+
+        if (subcomando !== "empreendimento" && subcomando !== "fundar") {
+            await interaction.deferReply();
+        }
 
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
-            if (!char)
-                return interaction.reply({
-                    content: "🚫 Você não tem um personagem ativo.",
-                    flags: MessageFlags.Ephemeral
-                });
 
-            const subcomando = interaction.options.getSubcommand();
+            const responderErro = async msg => {
+                if (interaction.deferred) return interaction.editReply({ content: msg });
+                return interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+            };
+
+            if (!char) return responderErro("🚫 Você não tem um personagem ativo.");
 
             if (subcomando === "mobiliar") {
                 const base = await prisma.base.findFirst({
@@ -658,19 +662,12 @@ module.exports = {
                     include: { residentes: { include: { personagem: true } }, dono: true }
                 });
 
-                if (!base) {
-                    return interaction.editReply({
-                        content: "🚫 Você não pertence a uma base.",
+                if (!base) return interaction.reply({ content: "🚫 Sem base.", flags: MessageFlags.Ephemeral });
+                if (base.tipo !== "Empreendimento")
+                    return interaction.reply({
+                        content: `🚫 Sua base não é um Empreendimento.`,
                         flags: MessageFlags.Ephemeral
                     });
-                }
-
-                if (base.tipo !== "Empreendimento") {
-                    return interaction.editReply({
-                        content: `🚫 Sua base é do tipo **${base.tipo}**. Apenas bases do tipo **Empreendimento** geram lucros desta forma.`,
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
 
                 const modal = new ModalBuilder()
                     .setCustomId(`mod_empreend_${interaction.id}`)
@@ -690,18 +687,15 @@ module.exports = {
 
                 try {
                     const mSub = await interaction.awaitModalSubmit({
-                        filter: m =>
-                            m.customId === `mod_nome_${interaction.id}` ||
-                            m.customId === `mod_empreend_${interaction.id}`,
+                        filter: m => m.customId === `mod_empreend_${interaction.id}`,
                         time: 60000
                     });
 
-                    await mSub.deferUpdate();
+                    await mSub.deferReply();
 
                     const modInt = parseInt(mSub.fields.getTextInputValue("int_valor")) || 0;
                     const dado = Math.floor(Math.random() * 20) + 1;
                     const bonusPorte = PORTES[base.porte].comodos;
-
                     const resultadoTeste = dado + modInt + bonusPorte;
 
                     const ehDono = base.dono_id === char.id;
@@ -731,33 +725,21 @@ module.exports = {
                     const embedResult = new EmbedBuilder()
                         .setTitle(`💰 Resultado do Empreendimento: ${base.nome}`)
                         .setColor(ehDono ? "#FFD700" : "#C0C0C0")
-                        .setThumbnail(interaction.user.displayAvatarURL())
-                        .setDescription(`**${char.nome}** administrou o negócio esta semana!`)
+                        .setDescription(`**${char.nome}** administrou o negócio este Mês!`)
                         .addFields(
                             {
-                                name: "🎲 Teste de Inteligência",
-                                value: `d20(${dado}) + Int(${modInt}) + Bônus Porte(${bonusPorte}) = **${resultadoTeste}**`,
+                                name: "🎲 Teste",
+                                value: `d20(${dado}) + Int(${modInt}) + Bônus(${bonusPorte}) = **${resultadoTeste}**`,
                                 inline: false
                             },
-                            {
-                                name: "📊 Gestor",
-                                value: ehDono ? "👑 Dono (x20 Lucro)" : "👥 Morador (x10 Lucro)",
-                                inline: true
-                            },
+                            { name: "📊 Gestor", value: ehDono ? "👑 Dono (x20)" : "👥 Morador (x10)", inline: true },
                             { name: "💵 Lucro Total", value: `**K$ ${totalLucro}**`, inline: true },
-                            {
-                                name: "👥 Divisão",
-                                value: `Cada um dos **${todosResidentes.length}** moradores recebeu **K$ ${lucroPorCada}**`,
-                                inline: false
-                            }
-                        )
-                        .setFooter({ text: "O valor foi depositado no saldo de todos os residentes." });
+                            { name: "👥 Divisão", value: `Cada um recebeu **K$ ${lucroPorCada}**`, inline: false }
+                        );
 
-                    return interaction.editReply({ embeds: [embedResult], components: [] });
-
-                    // eslint-disable-next-line no-unused-vars
+                    return mSub.editReply({ embeds: [embedResult] });
                 } catch (err) {
-                    // Timeout ou erro silencioso
+                    console.error(err);
                 }
             }
         } catch (err) {
