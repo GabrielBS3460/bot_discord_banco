@@ -160,7 +160,10 @@ module.exports = {
                             components: []
                         });
                         collector.stop();
-                    } catch (err) {}
+                        // eslint-disable-next-line no-unused-vars
+                    } catch (err) {
+                        /* empty */
+                    }
                 });
             }
 
@@ -312,7 +315,10 @@ module.exports = {
                                 components: []
                             });
                             collector.stop();
-                        } catch (err) {}
+                            // eslint-disable-next-line no-unused-vars
+                        } catch (err) {
+                            /* empty */
+                        }
                     }
                 });
             }
@@ -381,7 +387,10 @@ module.exports = {
             console.error("Erro no comando alt:", err);
             try {
                 await interaction.editReply({ content: "❌ Ocorreu um erro no sistema de alts.", components: [] });
-            } catch (e) {}
+                // eslint-disable-next-line no-unused-vars
+            } catch (e) {
+                /* empty */
+            }
         }
     }
 };
