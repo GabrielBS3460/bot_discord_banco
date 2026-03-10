@@ -1,4 +1,4 @@
-const CATEGORIAS = require("../data/helpData.js");
+const CATEGORIAS = require("../../data/helpData.js");
 const {
     SlashCommandBuilder,
     EmbedBuilder,

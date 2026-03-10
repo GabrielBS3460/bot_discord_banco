@@ -1,5 +1,3 @@
-// Arquivo: data/helpData.js
-
 module.exports = {
     personagem: {
         emoji: "👤",

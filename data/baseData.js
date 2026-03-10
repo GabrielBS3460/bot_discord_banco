@@ -1,5 +1,3 @@
-// Arquivo: data/baseData.js
-
 const PORTES = {
     Mínima: { valor: 1, custo: 1000, comodos: 0, manutencao: 100, desc: "0 Cômodos. Ex: Quarto em estalagem." },
     Modesta: { valor: 2, custo: 3000, comodos: 3, manutencao: 300, desc: "3 Cômodos. Ex: Casebre, gruta." },
