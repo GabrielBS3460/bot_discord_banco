@@ -91,15 +91,17 @@ module.exports = {
                         time: 120000
                     });
 
+                    await submit.deferReply();
+
                     const nomeItem = submit.fields.getTextInputValue("inp_nome");
                     const qtd = parseInt(submit.fields.getTextInputValue("inp_qtd"));
                     const custoOuro = parseFloat(submit.fields.getTextInputValue("inp_ouro").replace(",", "."));
                     const custoPontosUnit = CUSTO_FORJA[tipoSelecionado];
 
                     if (isNaN(qtd) || qtd <= 0)
-                        return submit.reply({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
+                        return submit.editReply({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
                     if (isNaN(custoOuro) || custoOuro < 0)
-                        return submit.reply({
+                        return submit.editReply({
                             content: "🚫 Valor em Kwanzas inválido.",
                             flags: MessageFlags.Ephemeral
                         });
@@ -113,10 +115,16 @@ module.exports = {
                         custoPontosUnit
                     );
 
-                    await submit.reply({
-                        content: `✅ **Item Forjado com Sucesso!**\n\n📦 **Item:** ${qtd}x ${nomeItem}\n📑 **Tipo:** ${tipoSelecionado}\n💰 **Kwanzas Gastos:** ${formatarMoeda(custoOuro)}\n🔨 **Pontos Gastos:** ${custoPontosTotal}\n\n*Saldo Restante: ${formatarMoeda(saldoAtualizado)} | Pts: ${pontosAtualizados.toFixed(1)}*`,
-                        flags: MessageFlags.Ephemeral
+                    await submit.editReply({
+                        content: `⚒️ **NOVO ITEM NA FORJA!** ⚒️\n\n👤 **Ferreiro:** ${interaction.user}\n📦 **Item:** ${qtd}x **${nomeItem}**\n📑 **Tipo:** ${tipoSelecionado}\n💰 **Custo:** ${formatarMoeda(custoOuro)}\n🔨 **Esforço:** ${custoPontosTotal} pts\n\n*A oficina ferve com o som do martelo!*`
                     });
+
+                    await interaction
+                        .followUp({
+                            content: `⚙️ **Resumo Técnico:** Saldo Restante: ${formatarMoeda(saldoAtualizado)} | Pts: ${pontosAtualizados.toFixed(1)}`,
+                            flags: MessageFlags.Ephemeral
+                        })
+                        .catch(() => {});
 
                     await msg.edit({ components: [] }).catch(() => {});
                     collector.stop();
