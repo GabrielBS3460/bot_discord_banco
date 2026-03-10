@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
-const ApostaService = require("../../services/ApostaService.js");
+const ApostaService = require("../../services/ApostasService.js");
 const SorteioRepository = require("../../repositories/SorteioRepository.js");
 
 module.exports = {
