@@ -1,4 +1,4 @@
-const DADOS = require("../data/dropData.js");
+const DADOS = require("./data/dropData.js");
 
 function rolarDado(faces) {
     return Math.floor(Math.random() * faces) + 1;
