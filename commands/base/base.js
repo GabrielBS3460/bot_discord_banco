@@ -39,6 +39,9 @@ module.exports = {
                 .addUserOption(option =>
                     option.setName("jogador").setDescription("O jogador que você deseja expulsar").setRequired(true)
                 )
+        )
+        .addSubcommand(sub =>
+            sub.setName("empreendimento").setDescription("Realiza o lucro semanal da base (Teste de Inteligência).")
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
@@ -647,6 +650,115 @@ module.exports = {
                 return interaction.editReply({
                     content: `👢 **${alvoChar?.nome || alvoUser.username}** foi removido da base **${base.nome}**.`
                 });
+            }
+
+            if (subcomando === "empreendimento") {
+                const base = await prisma.base.findFirst({
+                    where: { OR: [{ dono_id: char.id }, { residentes: { some: { personagem_id: char.id } } }] },
+                    include: { residentes: { include: { personagem: true } }, dono: true }
+                });
+
+                if (!base) {
+                    return interaction.editReply({
+                        content: "🚫 Você não pertence a uma base.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                if (base.tipo !== "Empreendimento") {
+                    return interaction.editReply({
+                        content: `🚫 Sua base é do tipo **${base.tipo}**. Apenas bases do tipo **Empreendimento** geram lucros desta forma.`,
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
+                const modal = new ModalBuilder()
+                    .setCustomId(`mod_empreend_${interaction.id}`)
+                    .setTitle(`Gestão de Negócio: ${base.nome}`)
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("int_valor")
+                                .setLabel("Modificador de Inteligência")
+                                .setPlaceholder("Ex: 4")
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(true)
+                        )
+                    );
+
+                await interaction.showModal(modal);
+
+                try {
+                    const mSub = await interaction.awaitModalSubmit({
+                        filter: m =>
+                            m.customId === `mod_nome_${interaction.id}` ||
+                            m.customId === `mod_empreend_${interaction.id}`,
+                        time: 60000
+                    });
+
+                    await mSub.deferUpdate();
+
+                    const modInt = parseInt(mSub.fields.getTextInputValue("int_valor")) || 0;
+                    const dado = Math.floor(Math.random() * 20) + 1;
+                    const bonusPorte = PORTES[base.porte].comodos;
+
+                    const resultadoTeste = dado + modInt + bonusPorte;
+
+                    const ehDono = base.dono_id === char.id;
+                    const multiplicador = ehDono ? 20 : 10;
+                    const totalLucro = resultadoTeste * multiplicador;
+
+                    const todosResidentes = [base.dono_id, ...base.residentes.map(r => r.personagem_id)];
+                    const lucroPorCada = Math.floor(totalLucro / todosResidentes.length);
+
+                    await prisma.$transaction([
+                        ...todosResidentes.map(id =>
+                            prisma.personagens.update({
+                                where: { id },
+                                data: { saldo: { increment: lucroPorCada } }
+                            })
+                        ),
+                        prisma.transacao.create({
+                            data: {
+                                personagem_id: char.id,
+                                descricao: `Lucro: ${base.nome} (${ehDono ? "Dono" : "Morador"})`,
+                                valor: totalLucro,
+                                tipo: "RECOMPENSA"
+                            }
+                        })
+                    ]);
+
+                    const embedResult = new EmbedBuilder()
+                        .setTitle(`💰 Resultado do Empreendimento: ${base.nome}`)
+                        .setColor(ehDono ? "#FFD700" : "#C0C0C0")
+                        .setThumbnail(interaction.user.displayAvatarURL())
+                        .setDescription(`**${char.nome}** administrou o negócio esta semana!`)
+                        .addFields(
+                            {
+                                name: "🎲 Teste de Inteligência",
+                                value: `d20(${dado}) + Int(${modInt}) + Bônus Porte(${bonusPorte}) = **${resultadoTeste}**`,
+                                inline: false
+                            },
+                            {
+                                name: "📊 Gestor",
+                                value: ehDono ? "👑 Dono (x20 Lucro)" : "👥 Morador (x10 Lucro)",
+                                inline: true
+                            },
+                            { name: "💵 Lucro Total", value: `**K$ ${totalLucro}**`, inline: true },
+                            {
+                                name: "👥 Divisão",
+                                value: `Cada um dos **${todosResidentes.length}** moradores recebeu **K$ ${lucroPorCada}**`,
+                                inline: false
+                            }
+                        )
+                        .setFooter({ text: "O valor foi depositado no saldo de todos os residentes." });
+
+                    return interaction.editReply({ embeds: [embedResult], components: [] });
+
+                    // eslint-disable-next-line no-unused-vars
+                } catch (err) {
+                    // Timeout ou erro silencioso
+                }
             }
         } catch (err) {
             console.error("Erro crítico no comando base:", err);
