@@ -47,8 +47,10 @@ module.exports = {
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
         const subcomando = interaction.options.getSubcommand();
 
-        if (subcomando !== "empreendimento" && subcomando !== "fundar") {
-            await interaction.deferReply();
+        if (subcomando !== "empreendimento") {
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.deferReply();
+            }
         }
 
         try {
