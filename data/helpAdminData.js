@@ -50,6 +50,11 @@ const CATEGORIAS = {
                 cmd: "/sortearbicho",
                 desc: "Realiza o sorteio semanal do jogo do bicho e paga os vencedores.",
                 syntax: "/sortearbicho"
+            },
+            {
+                cmd: "/modificar-pontos-forja",
+                desc: "[ADMIN] Adiciona ou remove pontos de forja de um personagem.",
+                syntax: "/modificar-pontos-forja jogador:@usuario quantidade:<valor> [motivo:<texto>]"
             }
         ]
     }

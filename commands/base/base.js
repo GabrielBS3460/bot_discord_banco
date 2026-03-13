@@ -401,18 +401,6 @@ module.exports = {
             }
 
             if (subcomando === "fundar") {
-                const baseExistente = await prisma.base.findFirst({
-                    where: { OR: [{ dono_id: char.id }, { residentes: { some: { personagem_id: char.id } } }] }
-                });
-
-                if (baseExistente) {
-                    const respMetodo = interaction.deferred ? "editReply" : "reply";
-                    return interaction[respMetodo]({
-                        content: `🚫 Você já pertence a uma base.`,
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
-
                 const menuPorte = new StringSelectMenuBuilder()
                     .setCustomId(`sel_porte_${interaction.id}`)
                     .setPlaceholder("Selecione o Porte...");
