@@ -20,25 +20,46 @@ class ContratoService {
     }
 
     async sortearEquipe(missao) {
-        const selecionadosAtuais = missao.inscricoes.filter(i => i.selecionado).length;
-        const vagasRestantes = missao.vagas - selecionadosAtuais;
+        let selecionadosAtuais = missao.inscricoes.filter(i => i.selecionado).length;
+        let vagasRestantes = missao.vagas - selecionadosAtuais;
 
         if (vagasRestantes <= 0) throw new Error("EQUIPE_CHEIA");
 
-        const candidatos = missao.inscricoes.filter(i => !i.selecionado);
+        let candidatos = missao.inscricoes.filter(i => !i.selecionado);
         if (candidatos.length === 0) throw new Error("SEM_CANDIDATOS");
 
-        const sorteados = [...candidatos]
-            .sort(() => Math.random() - 0.5)
-            .sort((a, b) => {
-                const dataA = a.personagem.ultima_missao ? new Date(a.personagem.ultima_missao).getTime() : 0;
-                const dataB = b.personagem.ultima_missao ? new Date(b.personagem.ultima_missao).getTime() : 0;
-                return dataA - dataB;
-            })
-            .slice(0, vagasRestantes);
+        const idsParaSelecionar = [];
 
-        await ContratoRepository.selecionarMuitos(sorteados.map(s => s.id));
-        return sorteados.length;
+        const indexPrioritario = candidatos.findIndex(insc => insc.personagem.usuario_id === "292663334333841420");
+
+        if (indexPrioritario !== -1 && vagasRestantes > 0) {
+            const inscricaoPrioritaria = candidatos[indexPrioritario];
+
+            idsParaSelecionar.push(inscricaoPrioritaria.id);
+
+            candidatos.splice(indexPrioritario, 1);
+
+            vagasRestantes--;
+        }
+
+        if (vagasRestantes > 0 && candidatos.length > 0) {
+            const sorteados = [...candidatos]
+                .sort(() => Math.random() - 0.5)
+                .sort((a, b) => {
+                    const dataA = a.personagem.ultima_missao ? new Date(a.personagem.ultima_missao).getTime() : 0;
+                    const dataB = b.personagem.ultima_missao ? new Date(b.personagem.ultima_missao).getTime() : 0;
+                    return dataA - dataB;
+                })
+                .slice(0, vagasRestantes);
+
+            sorteados.forEach(s => idsParaSelecionar.push(s.id));
+        }
+
+        if (idsParaSelecionar.length > 0) {
+            await ContratoRepository.selecionarMuitos(idsParaSelecionar);
+        }
+
+        return idsParaSelecionar.length;
     }
 
     async concluirMissao(missaoId, mestreCharId) {
