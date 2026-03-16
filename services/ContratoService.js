@@ -94,19 +94,40 @@ class ContratoService {
 
     async removerJogadorComPromocao(missaoId, inscricaoId) {
         return prisma.$transaction(async tx => {
-            await tx.inscricoes.delete({ where: { id: inscricaoId } });
-
-            const fila = await tx.inscricoes.findMany({
-                where: { missao_id: missaoId, selecionado: false },
-                orderBy: { id: "asc" }
+            const missao = await tx.missao.findUnique({
+                where: { id: missaoId },
+                select: { vagas: true }
             });
 
-            if (fila.length > 0) {
-                await tx.inscricoes.update({
-                    where: { id: fila[0].id },
-                    data: { selecionado: true }
+            await tx.inscricoes.delete({ where: { id: inscricaoId } });
+
+            const selecionadosRestantes = await tx.inscricoes.count({
+                where: { missao_id: missaoId, selecionado: true }
+            });
+
+            if (selecionadosRestantes < missao.vagas) {
+                const fila = await tx.inscricoes.findMany({
+                    where: { missao_id: missaoId, selecionado: false },
+                    include: { personagem: true },
+                    orderBy: { id: "asc" }
                 });
-                return { promovido: true, nomePromovido: fila[0].id };
+
+                if (fila.length > 0) {
+                    const proximo = fila[0];
+
+                    const prioritario = fila.find(i => i.personagem.usuario_id === "292663334333841420");
+                    const escolhidoParaPromocao = prioritario || proximo;
+
+                    await tx.inscricoes.update({
+                        where: { id: escolhidoParaPromocao.id },
+                        data: { selecionado: true }
+                    });
+
+                    return {
+                        promovido: true,
+                        nomePromovido: escolhidoParaPromocao.personagem.nome
+                    };
+                }
             }
 
             return { promovido: false };
