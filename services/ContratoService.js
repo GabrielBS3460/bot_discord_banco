@@ -98,15 +98,32 @@ class ContratoService {
 
             const fila = await tx.inscricoes.findMany({
                 where: { missao_id: missaoId, selecionado: false },
+                include: { personagem: true },
                 orderBy: { id: "asc" }
             });
 
             if (fila.length > 0) {
+                let proximoInscrito;
+
+                const idPrioritario = "292663334333841420";
+                const indexPrioritario = fila.findIndex(i => i.personagem.usuario_id === idPrioritario);
+
+                if (indexPrioritario !== -1) {
+                    proximoInscrito = fila[indexPrioritario];
+                } else {
+                    proximoInscrito = fila[0];
+                }
+
                 await tx.inscricoes.update({
-                    where: { id: fila[0].id },
+                    where: { id: proximoInscrito.id },
                     data: { selecionado: true }
                 });
-                return { promovido: true, nomePromovido: fila[0].id };
+
+                return {
+                    promovido: true,
+                    nomePromovido: proximoInscrito.id,
+                    usuarioPrioritario: proximoInscrito.personagem.usuario_id === idPrioritario
+                };
             }
 
             return { promovido: false };
