@@ -135,6 +135,10 @@ module.exports = {
 
                 await AltService.transferirDinheiro(charAtivo.id, destinoId, valor, charAtivo.nome, destinoAlt.nome);
 
+                await interaction.channel.send({
+                    content: `💸 **Transferência Bancária (Alts)**\nO personagem **${charAtivo.nome}** enviou **${formatarMoeda(valor)}** para a conta de **${destinoAlt.nome}**.`
+                });
+
                 await interaction.editReply({
                     content: `✅ **Transferência Concluída!**\nVocê enviou **K$ ${valor}** de **${charAtivo.nome}** para **${destinoAlt.nome}**.`,
                     components: []
@@ -273,6 +277,10 @@ module.exports = {
                         estDestino
                     );
 
+                    await interaction.channel.send({
+                        content: `📦 **Logística de Estoque (Alts)**\nO personagem **${charAtivo.nome}** despachou **${qtdEnviar}x ${itemEscolhido}** para os pertences de **${destinoAlt.nome}**.`
+                    });
+
                     await interaction.editReply({
                         content: `✅ **Transferência Concluída!**\nVocê enviou **${qtdEnviar}x ${itemEscolhido}** de **${charAtivo.nome}** para **${destinoAlt.nome}**.`,
                         components: []
@@ -317,6 +325,7 @@ module.exports = {
             await interaction.channel.send({
                 content: `🔀 **Transferência de Equipamento (Alts)**\nO personagem **${charAtivo.nome}** guardou os pertences e enviou o item **[${nomeItem}](${linkItem})** para o inventário de **${destinoAlt.nome}**.`
             });
+
             await interaction.editReply({
                 content: `✅ Item **${nomeItem}** enviado com sucesso para **${destinoAlt.nome}**!\nUma mensagem foi enviada no canal.`,
                 components: []

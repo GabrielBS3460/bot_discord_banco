@@ -58,6 +58,29 @@ class ContratoRepository {
             where: { nome: nome }
         });
     }
+
+    async deletarMissaoCompleta(missaoId) {
+        return prisma.$transaction([
+            prisma.inscricoes.deleteMany({ where: { missao_id: missaoId } }),
+            prisma.missoes.delete({ where: { id: missaoId } })
+        ]);
+    }
+
+    async buscarAltsParaTroca(userId, idsJaInscritos) {
+        return prisma.personagens.findMany({
+            where: {
+                usuario_id: userId,
+                id: { notIn: idsJaInscritos }
+            }
+        });
+    }
+
+    async atualizarPersonagemInscricao(inscricaoId, novoPersonagemId) {
+        return prisma.inscricoes.update({
+            where: { id: inscricaoId },
+            data: { personagem_id: novoPersonagemId }
+        });
+    }
 }
 
 module.exports = new ContratoRepository();

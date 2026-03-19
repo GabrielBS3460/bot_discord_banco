@@ -80,6 +80,14 @@ module.exports = {
                                 .setLabel("Custo TOTAL em Kwanzas (K$)")
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true)
+                        ),
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("inp_link")
+                                .setLabel("Link do Item (Melhoria/Encantamento)")
+                                .setPlaceholder("Obrigatório para melhorias ou encantamentos")
+                                .setStyle(TextInputStyle.Short)
+                                .setRequired(false)
                         )
                     );
 
@@ -96,7 +104,17 @@ module.exports = {
                     const nomeItem = submit.fields.getTextInputValue("inp_nome");
                     const qtd = parseInt(submit.fields.getTextInputValue("inp_qtd"));
                     const custoOuro = parseFloat(submit.fields.getTextInputValue("inp_ouro").replace(",", "."));
+                    const linkItem = submit.fields.getTextInputValue("inp_link");
                     const custoPontosUnit = CUSTO_FORJA[tipoSelecionado];
+
+                    const tiposQueExigemLink = ["Melhorias", "Encantamentos/Mágicos"];
+
+                    if (tiposQueExigemLink.includes(tipoSelecionado) && !linkItem) {
+                        return submit.editReply({
+                            content: `🚫 Para forjar **${tipoSelecionado}**, você deve fornecer o link do item original que está sendo aprimorado.`,
+                            flags: MessageFlags.Ephemeral
+                        });
+                    }
 
                     if (isNaN(qtd) || qtd <= 0)
                         return submit.editReply({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });

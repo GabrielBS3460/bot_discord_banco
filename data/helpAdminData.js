@@ -28,6 +28,11 @@ const CATEGORIAS = {
                 cmd: "/admin-trocar",
                 desc: "Força a troca do personagem ativo de um jogador.",
                 syntax: "/admin-trocar jogador:@usuario nome:<nome>"
+            },
+            {
+                cmd: "/admin-excluir",
+                desc: "Remove permanentemente um personagem e todos os seus vínculos do banco de dados.",
+                syntax: "/admin-excluir jogador:@usuario nome:<nome_exato>"
             }
         ]
     },

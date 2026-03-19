@@ -20,46 +20,59 @@ class ContratoService {
     }
 
     async sortearEquipe(missao) {
-        let selecionadosAtuais = missao.inscricoes.filter(i => i.selecionado).length;
+        const selecionadosAtuais = missao.inscricoes.filter(i => i.selecionado).length;
         let vagasRestantes = missao.vagas - selecionadosAtuais;
 
         if (vagasRestantes <= 0) throw new Error("EQUIPE_CHEIA");
 
-        let candidatos = missao.inscricoes.filter(i => !i.selecionado);
+        const candidatos = missao.inscricoes.filter(i => !i.selecionado);
         if (candidatos.length === 0) throw new Error("SEM_CANDIDATOS");
 
-        const idsParaSelecionar = [];
+        const sorteados = [...candidatos]
+            .sort(() => Math.random() - 0.5)
+            .sort((a, b) => {
+                const dataA = a.personagem.ultima_missao ? new Date(a.personagem.ultima_missao).getTime() : 0;
+                const dataB = b.personagem.ultima_missao ? new Date(b.personagem.ultima_missao).getTime() : 0;
 
-        const indexPrioritario = candidatos.findIndex(insc => insc.personagem.usuario_id === "292663334333841420");
+                return dataA - dataB;
+            })
+            .slice(0, vagasRestantes);
 
-        if (indexPrioritario !== -1 && vagasRestantes > 0) {
-            const inscricaoPrioritaria = candidatos[indexPrioritario];
-
-            idsParaSelecionar.push(inscricaoPrioritaria.id);
-
-            candidatos.splice(indexPrioritario, 1);
-
-            vagasRestantes--;
-        }
-
-        if (vagasRestantes > 0 && candidatos.length > 0) {
-            const sorteados = [...candidatos]
-                .sort(() => Math.random() - 0.5)
-                .sort((a, b) => {
-                    const dataA = a.personagem.ultima_missao ? new Date(a.personagem.ultima_missao).getTime() : 0;
-                    const dataB = b.personagem.ultima_missao ? new Date(b.personagem.ultima_missao).getTime() : 0;
-                    return dataA - dataB;
-                })
-                .slice(0, vagasRestantes);
-
-            sorteados.forEach(s => idsParaSelecionar.push(s.id));
-        }
+        const idsParaSelecionar = sorteados.map(s => s.id);
 
         if (idsParaSelecionar.length > 0) {
             await ContratoRepository.selecionarMuitos(idsParaSelecionar);
         }
 
         return idsParaSelecionar.length;
+    }
+
+    async removerJogadorComPromocao(missaoId, inscricaoId) {
+        return prisma.$transaction(async tx => {
+            await tx.inscricoes.delete({ where: { id: inscricaoId } });
+
+            const fila = await tx.inscricoes.findMany({
+                where: { missao_id: missaoId, selecionado: false },
+                include: { personagem: true }
+            });
+
+            if (fila.length > 0) {
+                const proximoInscrito = fila[Math.floor(Math.random() * fila.length)];
+
+                await tx.inscricoes.update({
+                    where: { id: proximoInscrito.id },
+                    data: { selecionado: true }
+                });
+
+                return {
+                    promovido: true,
+                    nomePromovido: proximoInscrito.personagem.nome,
+                    idInscrito: proximoInscrito.id
+                };
+            }
+
+            return { promovido: false };
+        });
     }
 
     async concluirMissao(missaoId, mestreCharId) {
@@ -90,44 +103,6 @@ class ContratoService {
 
     async adicionarJogadorManual(missaoId, personagemId) {
         return await ContratoRepository.vincularPersonagem(missaoId, personagemId, true);
-    }
-
-    async removerJogadorComPromocao(missaoId, inscricaoId) {
-        return prisma.$transaction(async tx => {
-            await tx.inscricoes.delete({ where: { id: inscricaoId } });
-
-            const fila = await tx.inscricoes.findMany({
-                where: { missao_id: missaoId, selecionado: false },
-                include: { personagem: true },
-                orderBy: { id: "asc" }
-            });
-
-            if (fila.length > 0) {
-                let proximoInscrito;
-
-                const idPrioritario = "292663334333841420";
-                const indexPrioritario = fila.findIndex(i => i.personagem.usuario_id === idPrioritario);
-
-                if (indexPrioritario !== -1) {
-                    proximoInscrito = fila[indexPrioritario];
-                } else {
-                    proximoInscrito = fila[0];
-                }
-
-                await tx.inscricoes.update({
-                    where: { id: proximoInscrito.id },
-                    data: { selecionado: true }
-                });
-
-                return {
-                    promovido: true,
-                    nomePromovido: proximoInscrito.id,
-                    usuarioPrioritario: proximoInscrito.personagem.usuario_id === idPrioritario
-                };
-            }
-
-            return { promovido: false };
-        });
     }
 
     async inscreverPersonagem(char, missaoNome) {
@@ -199,6 +174,19 @@ class ContratoService {
             novoNivel,
             niveisGanhos
         };
+    }
+
+    async cancelarMissao(missaoId) {
+        return await ContratoRepository.deletarMissaoCompleta(missaoId);
+    }
+
+    async listarAltsDisponiveis(userId, missao) {
+        const idsInscritos = missao.inscricoes.map(i => i.personagem_id);
+        return await ContratoRepository.buscarAltsParaTroca(userId, idsInscritos);
+    }
+
+    async trocarPersonagemInscrito(inscricaoId, novoPersonagemId) {
+        return await ContratoRepository.atualizarPersonagemInscricao(inscricaoId, novoPersonagemId);
     }
 }
 

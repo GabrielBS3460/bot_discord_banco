@@ -231,7 +231,7 @@ class TransacaoService {
         ]);
     }
 
-    async registrarLootMestre(personagemId, valor, mestreNome) {
+    async registrarLootMestre(personagemId, valor, mestreNome, motivo) {
         return prisma.$transaction([
             prisma.personagens.update({
                 where: { id: personagemId },
@@ -242,7 +242,7 @@ class TransacaoService {
             prisma.transacao.create({
                 data: {
                     personagem_id: personagemId,
-                    descricao: `Loot recebido do Mestre (${mestreNome})`,
+                    descricao: `Loot: ${motivo} (Mestre: ${mestreNome})`,
                     valor: valor,
                     tipo: "RECOMPENSA"
                 }

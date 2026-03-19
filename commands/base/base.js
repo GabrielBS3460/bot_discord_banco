@@ -7,7 +7,9 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
-    MessageFlags
+    MessageFlags,
+    ButtonBuilder,
+    ButtonStyle
 } = require("discord.js");
 
 const { PORTES, TIPOS, COMODOS, MOBILIAS } = require("../../data/baseData.js");
@@ -42,6 +44,9 @@ module.exports = {
         )
         .addSubcommand(sub =>
             sub.setName("empreendimento").setDescription("Realiza o lucro mensal da base (Teste de Inteligência).")
+        )
+        .addSubcommand(sub =>
+            sub.setName("desfazer").setDescription("Exclui permanentemente sua base (não há reembolso).")
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
@@ -736,6 +741,72 @@ module.exports = {
                 } catch (err) {
                     console.error("Erro no modal de empreendimento:", err);
                 }
+            }
+
+            if (subcomando === "desfazer") {
+                const base = await prisma.base.findFirst({
+                    where: { dono_id: char.id },
+                    include: { comodos: true, residentes: true, mobilias: true }
+                });
+
+                if (!base) {
+                    return interaction.editReply({
+                        content: "🚫 Você não possui uma base para desfazer ou não é o dono oficial dela."
+                    });
+                }
+
+                const row = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`confirm_delete_${interaction.id}`)
+                        .setLabel("Confirmar Exclusão")
+                        .setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder()
+                        .setCustomId(`cancel_delete_${interaction.id}`)
+                        .setLabel("Cancelar")
+                        .setStyle(ButtonStyle.Secondary)
+                );
+
+                const response = await interaction.editReply({
+                    content: `⚠️ **ATENÇÃO:** Você está prestes a destruir a base **${base.nome}**.\nIsso removerá todos os ${base.comodos.length} cômodos e expulsará todos os moradores.\n**Não haverá reembolso de Kwanzas.** Deseja continuar?`,
+                    components: [row]
+                });
+
+                const collector = response.createMessageComponentCollector({
+                    filter: i => i.user.id === interaction.user.id,
+                    time: 30000
+                });
+
+                collector.on("collect", async i => {
+                    if (i.customId.startsWith("cancel_delete_")) {
+                        await i.update({ content: "✅ Exclusão cancelada. Sua base continua segura.", components: [] });
+                        return collector.stop();
+                    }
+
+                    if (i.customId.startsWith("confirm_delete_")) {
+                        await i.deferUpdate();
+
+                        await prisma.$transaction([
+                            prisma.baseMobilia.deleteMany({ where: { base_id: base.id } }),
+                            prisma.baseComodo.deleteMany({ where: { base_id: base.id } }),
+                            prisma.baseResidente.deleteMany({ where: { base_id: base.id } }),
+                            prisma.base.delete({ where: { id: base.id } })
+                        ]);
+
+                        await interaction.editReply({
+                            content: `💣 **${base.nome}** foi demolida com sucesso. Você agora não possui mais uma base.`,
+                            components: []
+                        });
+                        return collector.stop();
+                    }
+                });
+
+                collector.on("end", (collected, reason) => {
+                    if (reason === "time") {
+                        interaction
+                            .editReply({ content: "⏰ Tempo de confirmação expirado.", components: [] })
+                            .catch(() => {});
+                    }
+                });
             }
         } catch (err) {
             console.error("Erro crítico no comando base:", err);

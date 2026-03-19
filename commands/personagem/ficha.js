@@ -231,10 +231,11 @@ module.exports = {
                             char = resultado.charAtualizado;
 
                             await interaction.editReply({ embeds: [montarEmbedFicha(char)] });
-                            await modalSubmit.followUp({
-                                content: `✅ Descanso!\n+${resultado.curouVida} Vida | +${resultado.curouMana} Mana`,
-                                flags: MessageFlags.Ephemeral
+                            await interaction.channel.send({
+                                content: `🛏️ O personagem **${char.nome}** descansou!\n❤️ **Vida recuperada:** +${resultado.curouVida}\n✨ **Mana recuperada:** +${resultado.curouMana}`
                             });
+
+                            await modalSubmit.deleteReply().catch(() => {});
                             // eslint-disable-next-line no-unused-vars
                         } catch (err) {
                             /* ignora */

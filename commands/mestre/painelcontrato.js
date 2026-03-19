@@ -34,7 +34,7 @@ module.exports = {
         }
 
         const atualizarInterface = async it => {
-            missao = await ContratoRepository.buscarPorNomeCompleto(nomeMissao); // Refresh dados
+            missao = await ContratoRepository.buscarPorNomeCompleto(nomeMissao);
             const selecionados = missao.inscricoes.filter(i => i.selecionado);
             const fila = missao.inscricoes.filter(i => !i.selecionado);
 
@@ -72,6 +72,12 @@ module.exports = {
                     .setLabel("Remover player")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("❌")
+                    .setDisabled(missao.status === "CONCLUIDA"),
+                new ButtonBuilder()
+                    .setCustomId("ms_trocar_char")
+                    .setLabel("Trocar Char")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("🔄")
                     .setDisabled(missao.status === "CONCLUIDA")
             );
 
@@ -91,6 +97,12 @@ module.exports = {
                     .setLabel("Modificar Vagas")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("🔢")
+                    .setDisabled(missao.status === "CONCLUIDA"),
+                new ButtonBuilder()
+                    .setCustomId("ms_cancelar")
+                    .setLabel("Cancelar Missão")
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji("🗑️")
                     .setDisabled(missao.status === "CONCLUIDA")
             );
 
@@ -125,6 +137,80 @@ module.exports = {
                     await ContratoService.concluirMissao(missao.id, mestreChar?.id);
                     await interaction.channel.send({ content: `🏆 **Contrato "${missao.nome}" Concluído!**` });
                     return atualizarInterface(interaction);
+                }
+
+                if (i.customId === "ms_cancelar") {
+                    await i.deferUpdate();
+                    await ContratoService.cancelarMissao(missao.id);
+                    await interaction.editReply({
+                        content: `❌ Missão **${missao.nome}** foi cancelada e excluída.`,
+                        embeds: [],
+                        components: []
+                    });
+                    return collector.stop();
+                }
+
+                if (i.customId === "ms_trocar_char") {
+                    const selecionados = missao.inscricoes.filter(insc => insc.selecionado);
+                    if (selecionados.length === 0)
+                        return i.reply({ content: "Ninguém na equipe para trocar.", flags: MessageFlags.Ephemeral });
+
+                    const menuRem = new StringSelectMenuBuilder()
+                        .setCustomId("sel_troca_origem")
+                        .setPlaceholder("Selecione quem será substituído...");
+
+                    selecionados.forEach(s =>
+                        menuRem.addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(s.personagem.nome)
+                                .setValue(`${s.id}_${s.personagem.usuario_id}`)
+                        )
+                    );
+
+                    const p1 = await i.reply({
+                        content: "🔄 **Troca de Personagem:** Escolha o membro da equipe:",
+                        components: [new ActionRowBuilder().addComponents(menuRem)],
+                        flags: MessageFlags.Ephemeral,
+                        fetchReply: true
+                    });
+
+                    const s1 = await p1.awaitMessageComponent({ time: 30000 }).catch(() => null);
+                    if (!s1) return;
+                    await s1.deferUpdate();
+
+                    const [inscId, userId] = s1.values[0].split("_");
+
+                    const alts = await ContratoService.listarAltsDisponiveis(userId, missao);
+
+                    if (alts.length === 0) {
+                        return s1.editReply({
+                            content: "🚫 Este jogador não possui outros personagens disponíveis para troca.",
+                            components: []
+                        });
+                    }
+
+                    const menuAdd = new StringSelectMenuBuilder()
+                        .setCustomId("sel_troca_destino")
+                        .setPlaceholder("Escolha o novo personagem...");
+
+                    alts.forEach(a =>
+                        menuAdd.addOptions(new StringSelectMenuOptionBuilder().setLabel(a.nome).setValue(String(a.id)))
+                    );
+
+                    await s1.editReply({
+                        content: `🔄 Substituindo membro de <@${userId}>. Escolha o novo personagem:`,
+                        components: [new ActionRowBuilder().addComponents(menuAdd)]
+                    });
+
+                    const s2 = await p1.awaitMessageComponent({ time: 30000 }).catch(() => null);
+                    if (s2) {
+                        await s2.deferUpdate();
+
+                        await ContratoService.trocarPersonagemInscrito(parseInt(inscId), parseInt(s2.values[0]));
+
+                        await s2.editReply({ content: "✅ Personagem trocado com sucesso!", components: [] });
+                        return atualizarInterface(interaction);
+                    }
                 }
 
                 if (i.customId === "ms_add_player") {

@@ -1,4 +1,12 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const {
+    SlashCommandBuilder,
+    EmbedBuilder,
+    MessageFlags,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
+    ActionRowBuilder
+} = require("discord.js");
 const TransacaoService = require("../../services/TransacaoService.js");
 
 module.exports = {
@@ -27,48 +35,59 @@ module.exports = {
             });
         }
 
+        const charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
+        if (!charDestinatario) {
+            return interaction.reply({
+                content: `🚫 O usuário **${destinatarioUser.username}** não tem um personagem ativo.`,
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
+        const modalId = `mod_loot_${destinatarioUser.id}_${valor}_${interaction.id}`;
+        const modal = new ModalBuilder()
+            .setCustomId(modalId)
+            .setTitle(`Loot para ${charDestinatario.nome}`)
+            .addComponents(
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId("inp_motivo")
+                        .setLabel("Motivo do Loot (Ex: Missão X, Evento Y)")
+                        .setPlaceholder("Descreva brevemente o que gerou esse tesouro...")
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(true)
+                        .setMaxLength(100)
+                )
+            );
+
+        await interaction.showModal(modal);
+
         try {
-            const charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
+            const submit = await interaction.awaitModalSubmit({
+                filter: i => i.customId === modalId,
+                time: 60000
+            });
 
-            if (!charDestinatario) {
-                return interaction.reply({
-                    content: `🚫 O usuário **${destinatarioUser.username}** não tem um personagem ativo.`,
-                    flags: MessageFlags.Ephemeral
-                });
-            }
+            await submit.deferReply();
 
-            await TransacaoService.registrarLootMestre(charDestinatario.id, valor, interaction.user.username);
+            const motivo = submit.fields.getTextInputValue("inp_motivo");
+
+            await TransacaoService.registrarLootMestre(charDestinatario.id, valor, interaction.user.username, motivo);
 
             const embed = new EmbedBuilder()
                 .setColor("#F1C40F")
                 .setTitle("🏆 Loot Concedido")
+                .setDescription(`*${motivo}*`)
                 .addFields(
-                    {
-                        name: "Jogador",
-                        value: charDestinatario.nome,
-                        inline: true
-                    },
-                    {
-                        name: "Valor Recebido",
-                        value: `**${formatarMoeda(valor)}**`,
-                        inline: true
-                    }
+                    { name: "👤 Personagem", value: charDestinatario.nome, inline: true },
+                    { name: "💰 Valor", value: `**${formatarMoeda(valor)}**`, inline: true }
                 )
-                .setFooter({
-                    text: `Concedido por ${interaction.user.username}`
-                })
+                .setFooter({ text: `Concedido por ${interaction.user.username}` })
                 .setTimestamp();
 
-            return interaction.reply({ embeds: [embed] });
+            return await submit.editReply({ embeds: [embed] });
         } catch (err) {
-            console.error("Erro no comando loot:", err);
-
-            const erroMsg = { content: "❌ Ocorreu um erro ao conceder o loot.", flags: MessageFlags.Ephemeral };
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
-            } else {
-                await interaction.reply(erroMsg).catch(() => {});
-            }
+            if (err.code === "InteractionCollectorError") return;
+            console.error("Erro no processamento do loot:", err);
         }
     }
 };

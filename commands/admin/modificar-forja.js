@@ -1,11 +1,10 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const prisma = require("../../database.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("modificar-pontos-forja")
         .setDescription("[ADMIN] Adiciona ou remove pontos de forja de um jogador.")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addUserOption(opt => opt.setName("jogador").setDescription("O dono do personagem").setRequired(true))
         .addNumberOption(opt =>
             opt
@@ -15,7 +14,17 @@ module.exports = {
         )
         .addStringOption(opt => opt.setName("motivo").setDescription("O motivo da alteração").setRequired(false)),
 
-    async execute({ interaction, getPersonagemAtivo }) {
+    async execute({ interaction, getPersonagemAtivo, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
+        const temPermissao =
+            interaction.member.roles.cache.has(ID_CARGO_ADMIN) || interaction.member.roles.cache.has(ID_CARGO_MOD);
+
+        if (!temPermissao) {
+            return interaction.reply({
+                content: "🚫 Você não tem permissão para usar este comando.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
