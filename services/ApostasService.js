@@ -45,50 +45,68 @@ class ApostaService {
         const apostas = await SorteioRepository.buscarApostasPendentes();
         const ganhadores = [];
 
-        await prisma.$transaction(async tx => {
-            for (const aposta of apostas) {
-                let ganhou = false;
-                let multiplicador = this._obterMultiplicador(aposta);
+        await prisma.$transaction(
+            async tx => {
+                const promessasDeBanco = [];
 
-                for (let i = 0; i < resultados.length; i++) {
-                    const res = resultados[i];
-                    const pos = (i + 1).toString();
+                for (const aposta of apostas) {
+                    let ganhou = false;
+                    let multiplicador = this._obterMultiplicador(aposta);
 
-                    if (aposta.posicao !== "TODAS" && aposta.posicao !== pos) continue;
+                    for (let i = 0; i < resultados.length; i++) {
+                        const res = resultados[i];
+                        const pos = (i + 1).toString();
 
-                    if (aposta.tipo === "DEZENA" && res.endsWith(aposta.numero)) ganhou = true;
-                    if (aposta.tipo === "CENTENA" && res.endsWith(aposta.numero)) ganhou = true;
-                    if (aposta.tipo === "MILHAR" && res === aposta.numero) ganhou = true;
+                        if (aposta.posicao !== "TODAS" && aposta.posicao !== pos) continue;
 
-                    if (ganhou) break;
+                        if (aposta.tipo === "DEZENA" && res.endsWith(aposta.numero)) ganhou = true;
+                        if (aposta.tipo === "CENTENA" && res.endsWith(aposta.numero)) ganhou = true;
+                        if (aposta.tipo === "MILHAR" && res === aposta.numero) ganhou = true;
+
+                        if (ganhou) break;
+                    }
+
+                    if (ganhou) {
+                        const premio = aposta.valor * multiplicador;
+                        ganhadores.push({ nome: aposta.personagem.nome, valor: premio });
+
+                        promessasDeBanco.push(
+                            tx.personagens.update({
+                                where: { id: aposta.personagem_id },
+                                data: { saldo: { increment: premio } }
+                            })
+                        );
+
+                        promessasDeBanco.push(
+                            tx.transacao.create({
+                                data: {
+                                    personagem_id: aposta.personagem_id,
+                                    descricao: `Prêmio Bicho (${aposta.numero})`,
+                                    valor: premio,
+                                    tipo: "GANHO"
+                                }
+                            })
+                        );
+
+                        promessasDeBanco.push(
+                            tx.apostasBicho.update({ where: { id: aposta.id }, data: { status: "GANHOU" } })
+                        );
+                    } else {
+                        promessasDeBanco.push(
+                            tx.apostasBicho.update({ where: { id: aposta.id }, data: { status: "PERDEU" } })
+                        );
+                    }
                 }
 
-                if (ganhou) {
-                    const premio = aposta.valor * multiplicador;
-                    ganhadores.push({ nome: aposta.personagem.nome, valor: premio });
+                await Promise.all(promessasDeBanco);
 
-                    await tx.personagens.update({
-                        where: { id: aposta.personagem_id },
-                        data: { saldo: { increment: premio } }
-                    });
-
-                    await tx.transacao.create({
-                        data: {
-                            personagem_id: aposta.personagem_id,
-                            descricao: `Prêmio Bicho (${aposta.numero})`,
-                            valor: premio,
-                            tipo: "GANHO"
-                        }
-                    });
-
-                    await tx.apostasBicho.update({ where: { id: aposta.id }, data: { status: "GANHOU" } });
-                } else {
-                    await tx.apostasBicho.update({ where: { id: aposta.id }, data: { status: "PERDEU" } });
-                }
+                await SorteioRepository.registrarSorteio(resultados, tx);
+            },
+            {
+                maxWait: 5000,
+                timeout: 20000
             }
-
-            await SorteioRepository.registrarSorteio(resultados, tx);
-        });
+        );
 
         return ganhadores;
     }
