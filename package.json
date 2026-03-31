@@ -33,5 +33,8 @@
         "globals": "^17.4.0",
         "prettier": "^3.8.1",
         "prisma": "^6.13.0"
+    },
+    "overrides": {
+        "discord-api-types": "0.37.112"
     }
 }
