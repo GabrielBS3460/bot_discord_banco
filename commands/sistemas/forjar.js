@@ -47,10 +47,9 @@ module.exports = {
 
             const collector = msg.createMessageComponentCollector({
                 filter: i => i.user.id === interaction.user.id,
-                time: 120000 // Aumentei o tempo para dar tempo de escolher tudo
+                time: 120000 
             });
 
-            // Função para abrir o Modal (usada tanto para itens novos quanto para melhorias)
             const abrirModalForja = async (interacao, tipoSelecionado, itemBase = null) => {
                 const modalId = `modal_forja_${Date.now()}`;
                 
@@ -88,7 +87,7 @@ module.exports = {
                         new ActionRowBuilder().addComponents(
                             new TextInputBuilder()
                                 .setCustomId("inp_link")
-                                .setLabel("Link de Imagem ou Descrição")
+                                .setLabel("Descrição")
                                 .setPlaceholder("Opcional")
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(false)
