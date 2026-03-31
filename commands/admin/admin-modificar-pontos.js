@@ -92,12 +92,6 @@ module.exports = {
 
             await interaction.editReply({ content: statusNivel || "✅ Alteração concluída sem mudança de nível.", embeds: [embed] });
 
-            if (statusNivel !== "") {
-                await interaction.channel.send({
-                    content: `📢 **Intervenção Divina:** A progressão de **${char.nome}** (Dono: ${alvoUser}) foi atualizada pelos deuses! O personagem agora está no **Nível ${novoNivel}**.`
-                });
-            }
-
         } catch (err) {
             console.error("Erro no admin-modificar-pontos:", err);
             await interaction.editReply({ content: "❌ Ocorreu um erro ao processar os pontos." });
