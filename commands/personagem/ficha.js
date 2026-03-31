@@ -101,23 +101,67 @@ module.exports = {
             };
 
             const botoes1 = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId("edit_classes").setLabel("Classes").setStyle(ButtonStyle.Success).setEmoji("📚"),
-                new ButtonBuilder().setCustomId("btn_descanso").setLabel("Descansar").setStyle(ButtonStyle.Success).setEmoji("💤"),
-                new ButtonBuilder().setCustomId("edit_status").setLabel("Status").setStyle(ButtonStyle.Primary).setEmoji("❤️"),
-                new ButtonBuilder().setCustomId("edit_pericias").setLabel("Perícias").setStyle(ButtonStyle.Secondary).setEmoji("🎭")
+                new ButtonBuilder()
+                    .setCustomId("edit_classes")
+                    .setLabel("Classes")
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji("📚"),
+                new ButtonBuilder()
+                    .setCustomId("btn_descanso")
+                    .setLabel("Descansar")
+                    .setStyle(ButtonStyle.Success)
+                    .setEmoji("💤"),
+                new ButtonBuilder()
+                    .setCustomId("edit_status")
+                    .setLabel("Status")
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji("❤️"),
+                new ButtonBuilder()
+                    .setCustomId("edit_pericias")
+                    .setLabel("Perícias")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("🎭")
             );
 
             const botoes2 = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId("edit_fisico").setLabel("Físicos").setStyle(ButtonStyle.Secondary).setEmoji("💪"),
-                new ButtonBuilder().setCustomId("edit_mental").setLabel("Mentais").setStyle(ButtonStyle.Secondary).setEmoji("🧠"),
-                new ButtonBuilder().setCustomId("edit_deslocamento").setLabel("Deslocamento").setStyle(ButtonStyle.Secondary).setEmoji("🏃"),
-                new ButtonBuilder().setCustomId("edit_obs").setLabel("Obs").setStyle(ButtonStyle.Secondary).setEmoji("📝")
+                new ButtonBuilder()
+                    .setCustomId("edit_fisico")
+                    .setLabel("Físicos")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("💪"),
+                new ButtonBuilder()
+                    .setCustomId("edit_mental")
+                    .setLabel("Mentais")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("🧠"),
+                new ButtonBuilder()
+                    .setCustomId("edit_deslocamento")
+                    .setLabel("Deslocamento")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("🏃"),
+                new ButtonBuilder()
+                    .setCustomId("edit_obs")
+                    .setLabel("Obs")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("📝")
             );
 
             const botoes3 = new ActionRowBuilder().addComponents(
-                new ButtonBuilder().setCustomId("btn_usar_alimento").setLabel("Alimentos").setStyle(ButtonStyle.Primary).setEmoji("🍔"),
-                new ButtonBuilder().setCustomId("btn_usar_pocao").setLabel("Poções/Pergs").setStyle(ButtonStyle.Primary).setEmoji("🧪"),
-                new ButtonBuilder().setCustomId("btn_usar_consumivel").setLabel("Consumíveis").setStyle(ButtonStyle.Primary).setEmoji("🎒")
+                new ButtonBuilder()
+                    .setCustomId("btn_usar_alimento")
+                    .setLabel("Alimentos")
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji("🍔"),
+                new ButtonBuilder()
+                    .setCustomId("btn_usar_pocao")
+                    .setLabel("Poções/Pergs")
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji("🧪"),
+                new ButtonBuilder()
+                    .setCustomId("btn_usar_consumivel")
+                    .setLabel("Consumíveis")
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji("🎒")
             );
 
             const msg = await interaction.reply({
@@ -138,7 +182,7 @@ module.exports = {
                     const inventario = await ItensRepository.buscarInventario(char.id);
                     let tiposValidos = [];
                     let icone = "";
-                    
+
                     if (iBtn.customId === "btn_usar_alimento") {
                         tiposValidos = ["Alimento"];
                         icone = "🍔";
@@ -175,10 +219,10 @@ module.exports = {
                         content: `Mochila Aberta! Selecione o que deseja usar:`,
                         components: [new ActionRowBuilder().addComponents(menuItens)],
                         flags: MessageFlags.Ephemeral,
-                        withResponse: true
+                        fetchReply: true
                     });
 
-                    const menuCollector = responseMenu.resource.message.createMessageComponentCollector({
+                    const menuCollector = responseMenu.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
                         time: 60000
                     });
@@ -200,11 +244,11 @@ module.exports = {
                             content: `✅ Você consumiu 1x **${itemSelecionado.nome}**!`,
                             components: []
                         });
-                        
+
                         menuCollector.stop();
                     });
 
-                    return; 
+                    return;
                 }
 
                 if (iBtn.customId === "btn_descanso") {
@@ -230,10 +274,10 @@ module.exports = {
                         content: `🛏️ **Modo de Descanso**\nNível: ${nivelReal}\nEscolha:`,
                         components: [botoesDescanso],
                         flags: MessageFlags.Ephemeral,
-                        withResponse: true
+                        fetchReply: true
                     });
 
-                    const descCollector = response.resource.message.createMessageComponentCollector({
+                    const descCollector = response.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
                         time: 60000
                     });
@@ -285,7 +329,7 @@ module.exports = {
                             });
 
                             await modalSubmit.deleteReply().catch(() => {});
-                        // eslint-disable-next-line no-unused-vars
+                            // eslint-disable-next-line no-unused-vars
                         } catch (err) {
                             /* ignora */
                         }
@@ -365,7 +409,7 @@ module.exports = {
                         });
 
                         await interaction.editReply({ embeds: [montarEmbedFicha(char)] });
-                    // eslint-disable-next-line no-unused-vars
+                        // eslint-disable-next-line no-unused-vars
                     } catch (err) {
                         /* ignora */
                     }
@@ -388,10 +432,10 @@ module.exports = {
                             new ActionRowBuilder().addComponents(m2)
                         ],
                         flags: MessageFlags.Ephemeral,
-                        withResponse: true
+                        fetchReply: true
                     });
 
-                    const menuColl = response.resource.message.createMessageComponentCollector({
+                    const menuColl = response.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
                         time: 60000
                     });
@@ -428,7 +472,7 @@ module.exports = {
                             char = await PersonagemRepository.obterFichaCompleta(char.id);
                             await interaction.editReply({ embeds: [montarEmbedFicha(char)] });
                             await sub.followUp({ content: "✅ Classes atualizadas.", flags: MessageFlags.Ephemeral });
-                        // eslint-disable-next-line no-unused-vars
+                            // eslint-disable-next-line no-unused-vars
                         } catch (err) {
                             /* ignora */
                         }
@@ -460,10 +504,10 @@ module.exports = {
                         content: `Selecione para adicionar/remover perícias.\nAtuais: ${(char.pericias || []).join(", ") || "Nenhuma"}`,
                         components: [r1, r2, r3],
                         flags: MessageFlags.Ephemeral,
-                        withResponse: true
+                        fetchReply: true
                     });
 
-                    const periciaCollector = response.resource.message.createMessageComponentCollector({
+                    const periciaCollector = response.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
                         time: 60000
                     });
@@ -564,7 +608,7 @@ module.exports = {
 
                         char = await PersonagemRepository.atualizar(char.id, payload);
                         await interaction.editReply({ embeds: [montarEmbedFicha(char)] });
-                    // eslint-disable-next-line no-unused-vars
+                        // eslint-disable-next-line no-unused-vars
                     } catch (e) {
                         /* empty */
                     }
