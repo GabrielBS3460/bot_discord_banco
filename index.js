@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
 const { Player } = require('discord-player');
+const { DefaultExtractors } = require('@discord-player/extractor');
 
 const prisma = require("./database.js");
 const PungaSystem = require("./punga_sistema.js");
@@ -17,7 +18,8 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMembers
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.GuildVoiceStates
     ]
 });
 
@@ -25,9 +27,9 @@ const player = new Player(client);
 
 client.commands = new Collection();
 
-player.extractors.loadDefault().then(() => {
+player.extractors.loadMulti(DefaultExtractors).then(() => {
     console.log("🎵 Extratores de música carregados com sucesso!");
-});
+}).catch(console.error);
 
 process.on("unhandledRejection", reason => console.error("Unhandled Rejection:", reason));
 process.on("uncaughtException", err => console.error("Uncaught Exception:", err));
