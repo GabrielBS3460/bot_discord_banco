@@ -74,6 +74,7 @@ const COMODOS = {
         reqComodo: "Casa da guarda",
         addSeguranca: 2
     },
+    Quarto: { desc: "Aumenta o número de Membros em +2", reqPorte: null, reqComodo: null, addSeguranca: 0 },
     Sacada: { desc: "+1 em Diplomacia.", reqPorte: null, reqComodo: null, addSeguranca: 0 },
     "Sala de estar": { desc: "Espaço para três mobílias.", reqPorte: null, reqComodo: null, addSeguranca: 0 },
     "Sala de guerra": { desc: "+1 em Guerra e Iniciativa.", reqPorte: null, reqComodo: null, addSeguranca: 0 },

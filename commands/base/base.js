@@ -546,6 +546,9 @@ module.exports = {
                 const montarEmbedPainel = b => {
                     const limCom = PORTES[b.porte].comodos;
                     const res = b.residentes.map(r => `• ${r.personagem.nome}`).join("\n") || "Nenhum.";
+                    
+                    const qtdQuartos = b.comodos.filter(c => c.nome_comodo === "Quarto").length;
+                    const limiteResidentes = 4 + (qtdQuartos * 2);
 
                     const coms =
                         b.comodos
@@ -573,7 +576,7 @@ module.exports = {
                                 value: `K$ ${PORTES[b.porte].manutencao} ${b.manutencao_paga ? "✅" : "⚠️"}`,
                                 inline: true
                             },
-                            { name: `👥 Equipe (${b.residentes.length}/4)`, value: res, inline: true },
+                            { name: `👥 Equipe (${b.residentes.length}/${limiteResidentes})`, value: res, inline: true },
                             { name: `🏠 Estrutura (${b.comodos.length}/${limCom})`, value: coms, inline: false }
                         );
 
@@ -587,7 +590,7 @@ module.exports = {
             if (subcomando === "morador-add") {
                 const base = await prisma.base.findFirst({
                     where: { dono_id: char.id },
-                    include: { residentes: true }
+                    include: { residentes: true, comodos: true } 
                 });
 
                 if (!base) {
@@ -611,9 +614,12 @@ module.exports = {
                     return interaction.editReply({ content: `🚫 **${alvoChar.nome}** já possui uma residência fixa.` });
                 }
 
-                if (base.residentes.length >= 4) {
+                const qtdQuartos = base.comodos.filter(c => c.nome_comodo === "Quarto").length;
+                const limiteResidentes = 4 + (qtdQuartos * 2);
+
+                if (base.residentes.length >= limiteResidentes) {
                     return interaction.editReply({
-                        content: "🚫 Sua base já atingiu o limite máximo de 4 residentes."
+                        content: `🚫 Sua base já atingiu o limite máximo de **${limiteResidentes} residentes**.\n*Dica: Construa mais quartos para aumentar o limite (+2 vagas por quarto).*`
                     });
                 }
 
