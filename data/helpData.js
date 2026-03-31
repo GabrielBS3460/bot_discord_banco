@@ -49,7 +49,9 @@ module.exports = {
                 desc: "Remove um morador da base.",
                 syntax: "/base morador-remover jogador:@usuario"
             },
-            { cmd: "/base reparar", desc: "Conserta cômodos danificados (K$ 500).", syntax: "/base reparar" }
+            { cmd: "/base reparar", desc: "Conserta cômodos danificados (K$ 500).", syntax: "/base reparar" },
+            { cmd: "/base desfazer", desc: "Desfaz uma base Criada", syntax: "/base desfazer" },
+            { cmd: "/base upgrade", desc: "Melhora o porte de uma base Criada", syntax: "/base upgrade"}
         ]
     },
     agenda: {
@@ -110,7 +112,8 @@ module.exports = {
                 desc: "Faz uma aposta no jogo do bicho.",
                 syntax: "/apostar valor:<valor> tipo:<tipo> numero:<num>"
             },
-            { cmd: "/punga", desc: "Tenta roubar K$ de um alvo aleatório.", syntax: "/punga" }
+            { cmd: "/punga", desc: "Tenta roubar K$ de um alvo aleatório.", syntax: "/punga" },
+            { cmd: "/musica", desc: "Abre o Painel de Música", syntax: "/musica"}
         ]
     },
     mestre: {

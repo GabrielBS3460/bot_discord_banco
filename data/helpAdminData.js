@@ -33,6 +33,11 @@ const CATEGORIAS = {
                 cmd: "/admin-excluir",
                 desc: "Remove permanentemente um personagem e todos os seus vínculos do banco de dados.",
                 syntax: "/admin-excluir jogador:@usuario nome:<nome_exato>"
+            },
+            {
+                cmd: "admin-modificar-pontos",
+                desc: "Modifica os pontos de contrato de um personagem alvo de um player alvo",
+                syntax: "/admin-modificar-pontos jogador:@usuario nome:<nome_exato> operacao:<tipo_operacao> valor:<valor_a_modificar>"
             }
         ]
     },
