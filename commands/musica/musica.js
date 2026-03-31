@@ -14,7 +14,7 @@ const { useMainPlayer, useQueue } = require("discord-player");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("musica")
-        .setDescription("Abre o painel de controle de música do servidor.")
+        .setDescription("Abre o painel de controle de música da sessão.")
         .addStringOption(opt => 
             opt.setName("busca")
                 .setDescription("Link ou nome da primeira música para iniciar o painel")
@@ -26,9 +26,18 @@ module.exports = {
         const canalVoz = interaction.member.voice.channel;
         const queryInicial = interaction.options.getString("busca");
 
+        const botCanalVoz = interaction.guild.members.me.voice.channel;
+
         if (!canalVoz) {
             return interaction.reply({ 
                 content: "🚫 Você precisa estar em um canal de voz para usar a música.", 
+                flags: MessageFlags.Ephemeral 
+            });
+        }
+
+        if (botCanalVoz && botCanalVoz.id !== canalVoz.id) {
+            return interaction.reply({ 
+                content: `🚫 Eu já estou ocupado tocando música em outro canal. Junte-se a nós lá ou aguarde a sessão acabar!`, 
                 flags: MessageFlags.Ephemeral 
             });
         }
@@ -52,14 +61,18 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor("#1DB954")
-                .setTitle("📻 Painel de Som da Organização")
+                .setTitle("📻 Painel de Som da Guilda")
                 .setImage(trackAtual?.thumbnail || "https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?q=80&w=1000&auto=format&fit=crop")
                 .addFields(
                     { name: "Tocando Agora", value: trackAtual ? `[${trackAtual.title}](${trackAtual.url})` : "Nenhuma música tocando.", inline: false },
                     { name: "Artista", value: trackAtual?.author || "-", inline: true },
                     { name: "Duração", value: trackAtual?.duration || "-", inline: true },
                     { name: "Fila", value: queue ? `${queue.tracks.size} música(s)` : "Vazia", inline: true }
-                );
+                )
+                .setFooter({ 
+                    text: `Painel pertencente a: ${interaction.user.username}`, 
+                    iconURL: interaction.user.displayAvatarURL() 
+                });
 
             const row = new ActionRowBuilder().addComponents(
                 new ButtonBuilder().setCustomId("btn_music_playpause").setEmoji(queue?.node.isPaused() ? "▶️" : "⏸️").setStyle(queue?.node.isPaused() ? ButtonStyle.Success : ButtonStyle.Secondary),
@@ -74,9 +87,16 @@ module.exports = {
 
         const msgPainel = await interaction.editReply(atualizarPainel());
 
-        const collector = msgPainel.createMessageComponentCollector({ time: 3600000 }); // 1 hora ativo
+        const collector = msgPainel.createMessageComponentCollector({ time: 3600000 });
 
         collector.on("collect", async i => {
+            if (i.user.id !== interaction.user.id) {
+                return i.reply({
+                    content: "🚫 Apenas quem iniciou o comando pode controlar o painel.",
+                    flags: MessageFlags.Ephemeral
+                });
+            }
+
             const queue = useQueue(i.guild.id);
 
             try {
@@ -118,7 +138,8 @@ module.exports = {
                             new ActionRowBuilder().addComponents(
                                 new TextInputBuilder()
                                     .setCustomId("inp_musica")
-                                    .setLabel("Link ou Nome da Música (YouTube/Spotify)")
+                                    .setLabel("Link ou Nome da Música")
+                                    .setPlaceholder("Ex: Trilha sonora de taverna medieval")
                                     .setStyle(TextInputStyle.Short)
                                     .setRequired(true)
                             )
@@ -126,7 +147,10 @@ module.exports = {
 
                     await i.showModal(modal);
 
-                    const submit = await i.awaitModalSubmit({ filter: m => m.customId === `modal_add_music_${i.id}`, time: 60000 }).catch(() => null);
+                    const submit = await i.awaitModalSubmit({ 
+                        filter: m => m.customId === `modal_add_music_${i.id}`, 
+                        time: 60000 
+                    }).catch(() => null);
                     
                     if (submit) {
                         await submit.deferReply({ flags: MessageFlags.Ephemeral });
@@ -136,13 +160,16 @@ module.exports = {
                             nodeOptions: { metadata: interaction.channel }
                         });
 
-                        await submit.editReply({ content: `✅ **Pesquisa enviada:** ${query}` });
+                        await submit.editReply({ content: `✅ **Adicionado à fila:** ${query}` });
+                        
                         await interaction.editReply(atualizarPainel());
                     }
                 }
             } catch (err) {
                 console.error("Erro na interação de música:", err);
-                if (!i.replied && !i.deferred) await i.reply({ content: "❌ Ocorreu um erro na operação.", flags: MessageFlags.Ephemeral });
+                if (!i.replied && !i.deferred) {
+                    await i.reply({ content: "❌ Ocorreu um erro na operação.", flags: MessageFlags.Ephemeral });
+                }
             }
         });
     }
