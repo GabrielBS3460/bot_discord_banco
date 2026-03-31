@@ -2,13 +2,13 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
+const { Player } = require('discord-player');
 
 const prisma = require("./database.js");
 const PungaSystem = require("./punga_sistema.js");
 const { gerarRecompensa } = require("./sistema_drop.js");
 const startKeepAlive = require("./utils/keepAlive.js");
 
-// 📦 Importações Agrupadas (O Truque Mágico)
 const helpers = require("./utils/helpers.js");
 const geralData = require("./data/geralData.js");
 
@@ -21,7 +21,13 @@ const client = new Client({
     ]
 });
 
+const player = new Player(client);
+
 client.commands = new Collection();
+
+player.extractors.loadDefault().then(() => {
+    console.log("🎵 Extratores de música carregados com sucesso!");
+});
 
 process.on("unhandledRejection", reason => console.error("Unhandled Rejection:", reason));
 process.on("uncaughtException", err => console.error("Uncaught Exception:", err));

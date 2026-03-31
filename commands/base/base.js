@@ -47,6 +47,9 @@ module.exports = {
         )
         .addSubcommand(sub =>
             sub.setName("desfazer").setDescription("Exclui permanentemente sua base (não há reembolso).")
+        )
+        .addSubcommand(sub =>
+            sub.setName("upgrade").setDescription("Melhora o porte da sua base pagando a diferença de valor.")
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
@@ -806,6 +809,98 @@ module.exports = {
                             .editReply({ content: "⏰ Tempo de confirmação expirado.", components: [] })
                             .catch(() => {});
                     }
+                });
+            }
+
+            if (subcomando === "upgrade") {
+                const base = await prisma.base.findFirst({
+                    where: { dono_id: char.id }
+                });
+
+                if (!base) {
+                    return interaction.editReply({
+                        content: "🚫 Apenas o **Dono da Base** pode fazer upgrades (ou você não possui uma)."
+                    });
+                }
+
+                const porteAtual = PORTES[base.porte];
+                
+                const upgradesDisponiveis = Object.entries(PORTES).filter(
+                    ([nome, dados]) => dados.valor > porteAtual.valor
+                );
+
+                if (upgradesDisponiveis.length === 0) {
+                    return interaction.editReply({
+                        content: "⭐ Sua base já atingiu o porte máximo disponível!"
+                    });
+                }
+
+                const menuUpgrade = new StringSelectMenuBuilder()
+                    .setCustomId(`sel_upg_${interaction.id}`)
+                    .setPlaceholder("Selecione o novo porte...");
+
+                upgradesDisponiveis.forEach(([nome, dados]) => {
+                    const custoDiferenca = dados.custo - porteAtual.custo;
+                    menuUpgrade.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(`${nome} (K$ ${custoDiferenca})`)
+                            .setDescription(`Cômodos: ${dados.comodos} | Manutenção: K$ ${dados.manutencao}`)
+                            .setValue(nome)
+                    );
+                });
+
+                const response = await interaction.editReply({
+                    content: `⬆️ **Upgrade de Base**\n**Base:** ${base.nome} | **Porte Atual:** ${base.porte}\n**Seu Saldo:** ${formatarMoeda(char.saldo)}\n\n*Escolha para qual porte deseja evoluir (você paga apenas a diferença):*`,
+                    components: [new ActionRowBuilder().addComponents(menuUpgrade)],
+                    withResponse: true
+                });
+
+                const collector = response.createMessageComponentCollector({
+                    filter: i => i.user.id === interaction.user.id,
+                    time: 60000
+                });
+
+                collector.on("collect", async iSelect => {
+                    await iSelect.deferUpdate();
+                    const novoPorteNome = iSelect.values[0];
+                    const dadosNovoPorte = PORTES[novoPorteNome];
+                    
+                    const custoUpgrade = dadosNovoPorte.custo - porteAtual.custo;
+
+                    const charNaHora = await prisma.personagens.findUnique({ where: { id: char.id } });
+                    
+                    if (charNaHora.saldo < custoUpgrade) {
+                        return iSelect.followUp({
+                            content: `💸 Saldo insuficiente. Você precisa de **K$ ${custoUpgrade}** para este upgrade.`,
+                            flags: MessageFlags.Ephemeral
+                        });
+                    }
+
+                    await prisma.$transaction([
+                        prisma.personagens.update({
+                            where: { id: char.id },
+                            data: { saldo: { decrement: custoUpgrade } }
+                        }),
+                        prisma.transacao.create({
+                            data: {
+                                personagem_id: char.id,
+                                descricao: `Upgrade de Base: ${base.porte} ➡️ ${novoPorteNome}`,
+                                valor: custoUpgrade,
+                                tipo: "GASTO"
+                            }
+                        }),
+                        prisma.base.update({
+                            where: { id: base.id },
+                            data: { porte: novoPorteNome }
+                        })
+                    ]);
+
+                    await interaction.editReply({
+                        content: `🎉 **Upgrade Concluído!**\nSua base **${base.nome}** agora é de porte **${novoPorteNome}**.\nK$ ${custoUpgrade} foram deduzidos do seu saldo.`,
+                        components: []
+                    });
+                    
+                    collector.stop();
                 });
             }
         } catch (err) {
