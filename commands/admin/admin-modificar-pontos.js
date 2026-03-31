@@ -6,7 +6,7 @@ const {
 } = require("discord.js");
 
 const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
-const { CUSTO_NIVEL } = require("../../data/baseData.js"); 
+const { CUSTO_NIVEL } = require("../../data/geralData.js"); 
 
 module.exports = {
     data: new SlashCommandBuilder()
