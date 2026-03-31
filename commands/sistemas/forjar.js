@@ -10,11 +10,12 @@ const {
 } = require("discord.js");
 
 const ForjaService = require("../../services/ForjaService.js");
+const ItensRepository = require("../../repositories/ItensRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("forjar")
-        .setDescription("Abre a oficina para forjar ou fabricar novos itens."),
+        .setDescription("Abre a oficina para forjar ou aprimorar itens no seu inventário."),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda, CUSTO_FORJA }) {
         try {
@@ -27,49 +28,52 @@ module.exports = {
                 });
             }
 
-            const menu = new StringSelectMenuBuilder()
+            const menuTipos = new StringSelectMenuBuilder()
                 .setCustomId("menu_forja_tipo")
                 .setPlaceholder("Selecione o TIPO de fabricação");
 
             for (const [tipo, custo] of Object.entries(CUSTO_FORJA)) {
-                menu.addOptions(
+                menuTipos.addOptions(
                     new StringSelectMenuOptionBuilder().setLabel(`${tipo} (Custo: ${custo} pts)`).setValue(tipo)
                 );
             }
 
             const msg = await interaction.reply({
-                content: `🔨 **Oficina de Forja**\n💰 Saldo: ${formatarMoeda(char.saldo)}\n🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\n\nSelecione o **TIPO** de item que deseja criar:`,
-                components: [new ActionRowBuilder().addComponents(menu)],
+                content: `🔨 **Oficina de Forja**\n💰 Saldo: ${formatarMoeda(char.saldo)}\n🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\n\nSelecione o **TIPO** de item que deseja criar ou aprimorar:`,
+                components: [new ActionRowBuilder().addComponents(menuTipos)],
                 flags: MessageFlags.Ephemeral,
                 fetchReply: true
             });
 
             const collector = msg.createMessageComponentCollector({
                 filter: i => i.user.id === interaction.user.id,
-                time: 60000
+                time: 120000 // Aumentei o tempo para dar tempo de escolher tudo
             });
 
-            collector.on("collect", async i => {
-                if (!i.isStringSelectMenu()) return;
-
-                const tipoSelecionado = i.values[0];
-                const modalId = `modal_forja_${tipoSelecionado.replace(/\s+/g, "")}_${i.id}`;
+            // Função para abrir o Modal (usada tanto para itens novos quanto para melhorias)
+            const abrirModalForja = async (interacao, tipoSelecionado, itemBase = null) => {
+                const modalId = `modal_forja_${Date.now()}`;
+                
+                const tituloModal = itemBase 
+                    ? `Aprimorar: ${itemBase.nome.substring(0, 20)}` 
+                    : `Forjar: ${tipoSelecionado.substring(0, 30)}`;
 
                 const modal = new ModalBuilder()
                     .setCustomId(modalId)
-                    .setTitle(`Forjar: ${tipoSelecionado.substring(0, 30)}`)
+                    .setTitle(tituloModal)
                     .addComponents(
                         new ActionRowBuilder().addComponents(
                             new TextInputBuilder()
                                 .setCustomId("inp_nome")
-                                .setLabel("Nome do Item")
+                                .setLabel("Nome do NOVO Item")
+                                .setPlaceholder(itemBase ? `Ex: ${itemBase.nome} +1` : "Nome do item")
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true)
                         ),
                         new ActionRowBuilder().addComponents(
                             new TextInputBuilder()
                                 .setCustomId("inp_qtd")
-                                .setLabel("Quantidade")
+                                .setLabel(itemBase ? `Quantidade (Máx: ${itemBase.quantidade})` : "Quantidade")
                                 .setStyle(TextInputStyle.Short)
                                 .setValue("1")
                                 .setRequired(true)
@@ -84,45 +88,37 @@ module.exports = {
                         new ActionRowBuilder().addComponents(
                             new TextInputBuilder()
                                 .setCustomId("inp_link")
-                                .setLabel("Link do Item (Melhoria/Encantamento)")
-                                .setPlaceholder("Obrigatório para melhorias ou encantamentos")
+                                .setLabel("Link de Imagem ou Descrição")
+                                .setPlaceholder("Opcional")
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(false)
                         )
                     );
 
-                await i.showModal(modal);
+                await interacao.showModal(modal);
 
                 try {
-                    const submit = await i.awaitModalSubmit({
+                    const submit = await interacao.awaitModalSubmit({
                         filter: inter => inter.customId === modalId && inter.user.id === interaction.user.id,
                         time: 120000
                     });
 
-                    await submit.deferReply();
+                    await submit.deferReply({ flags: MessageFlags.Ephemeral });
 
                     const nomeItem = submit.fields.getTextInputValue("inp_nome");
-                    const qtd = parseInt(submit.fields.getTextInputValue("inp_qtd"));
+                    let qtd = parseInt(submit.fields.getTextInputValue("inp_qtd"));
                     const custoOuro = parseFloat(submit.fields.getTextInputValue("inp_ouro").replace(",", "."));
                     const linkItem = submit.fields.getTextInputValue("inp_link");
                     const custoPontosUnit = CUSTO_FORJA[tipoSelecionado];
 
-                    const tiposQueExigemLink = ["Melhorias", "Encantamentos/Mágicos"];
-
-                    if (tiposQueExigemLink.includes(tipoSelecionado) && !linkItem) {
-                        return submit.editReply({
-                            content: `🚫 Para forjar **${tipoSelecionado}**, você deve fornecer o link do item original que está sendo aprimorado.`,
-                            flags: MessageFlags.Ephemeral
-                        });
-                    }
-
                     if (isNaN(qtd) || qtd <= 0)
-                        return submit.editReply({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
+                        return submit.editReply("🚫 Quantidade inválida.");
                     if (isNaN(custoOuro) || custoOuro < 0)
-                        return submit.editReply({
-                            content: "🚫 Valor em Kwanzas inválido.",
-                            flags: MessageFlags.Ephemeral
-                        });
+                        return submit.editReply("🚫 Valor em Kwanzas inválido.");
+                    
+                    if (itemBase && qtd > itemBase.quantidade) {
+                        return submit.editReply(`🚫 Você só possui **${itemBase.quantidade}x** de **${itemBase.nome}** para usar como base.`);
+                    }
 
                     const { saldoAtualizado, pontosAtualizados, custoPontosTotal } = await ForjaService.executarForja(
                         char.id,
@@ -133,36 +129,91 @@ module.exports = {
                         custoPontosUnit
                     );
 
+                    if (itemBase) {
+                        await ItensRepository.removerItem(itemBase.id, qtd);
+                    }
+
+                    let tipoFinal = tipoSelecionado;
+                    if (tipoSelecionado === "Melhorias") tipoFinal = "Itens Permanentes";
+                    if (tipoSelecionado === "Encantamento") tipoFinal = "Item Mágico";
+
+                    await ItensRepository.adicionarItem(char.id, nomeItem, tipoFinal, qtd, linkItem || null);
+
+                    const textoBase = itemBase ? `\n♻️ **Item Base Consumido:** ${itemBase.nome}` : "";
+
                     await submit.editReply({
-                        content: `⚒️ **NOVO ITEM NA FORJA!** ⚒️\n\n👤 **Ferreiro:** ${interaction.user}\n📦 **Item:** ${qtd}x **${nomeItem}**\n📑 **Tipo:** ${tipoSelecionado}\n💰 **Custo:** ${formatarMoeda(custoOuro)}\n🔨 **Esforço:** ${custoPontosTotal} pts\n\n*A oficina ferve com o som do martelo!*`
+                        content: `✅ Forja concluída e item salvo no inventário!\n⚙️ **Resumo:** Saldo: ${formatarMoeda(saldoAtualizado)} | Pts Restantes: ${pontosAtualizados.toFixed(1)}`
                     });
 
-                    await interaction
-                        .followUp({
-                            content: `⚙️ **Resumo Técnico:** Saldo Restante: ${formatarMoeda(saldoAtualizado)} | Pts: ${pontosAtualizados.toFixed(1)}`,
-                            flags: MessageFlags.Ephemeral
-                        })
-                        .catch(() => {});
+                    await interaction.channel.send({
+                        content: `⚒️ **NOVO ITEM NA FORJA!** ⚒️\n\n👤 **Ferreiro:** ${interaction.user}\n📦 **Item:** ${qtd}x **${nomeItem}**\n📑 **Tipo:** ${tipoFinal}${textoBase}\n💰 **Custo:** ${formatarMoeda(custoOuro)}\n🔨 **Esforço:** ${custoPontosTotal} pts\n\n*A oficina ferve com o som do martelo!*`
+                    });
 
                     await msg.edit({ components: [] }).catch(() => {});
                     collector.stop();
+
                 } catch (err) {
                     if (err.message === "SALDO_INSUFICIENTE") {
-                        return msg
-                            .edit({ content: "🚫 Kwanzas insuficientes para concluir a forja.", components: [] })
-                            .catch(() => {});
+                        return msg.edit({ content: "🚫 Kwanzas insuficientes para concluir a forja.", components: [] }).catch(() => {});
                     }
                     if (err.message === "PONTOS_INSUFICIENTES") {
-                        return msg
-                            .edit({
-                                content: "🚫 Pontos de Forja insuficientes para concluir a forja.",
-                                components: []
-                            })
-                            .catch(() => {});
+                        return msg.edit({ content: "🚫 Pontos de Forja insuficientes para concluir a forja.", components: [] }).catch(() => {});
                     }
-                    console.log("Tempo de modal expirado ou erro:", err);
+                    console.error("Tempo de modal expirado ou erro interno:", err);
+                }
+            };
+
+            collector.on("collect", async i => {
+                if (!i.isStringSelectMenu()) return;
+
+                if (i.customId === "menu_forja_tipo") {
+                    const tipoSelecionado = i.values[0];
+
+                    if (tipoSelecionado === "Melhorias" || tipoSelecionado === "Encantamento") {
+                        const inventario = await ItensRepository.buscarInventario(char.id);
+                        const itensPerm = inventario.filter(item => item.tipo === "Itens Permanentes");
+
+                        if (itensPerm.length === 0) {
+                            return i.reply({ 
+                                content: "🚫 Você não possui nenhum item do tipo **Itens Permanentes** no inventário para usar como base.", 
+                                flags: MessageFlags.Ephemeral 
+                            });
+                        }
+
+                        const menuBase = new StringSelectMenuBuilder()
+                            .setCustomId(`menu_base_${tipoSelecionado}`)
+                            .setPlaceholder("Selecione o Item Base que será modificado...");
+
+                        itensPerm.slice(0, 25).forEach(item => {
+                            menuBase.addOptions(
+                                new StringSelectMenuOptionBuilder()
+                                    .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
+                                    .setValue(item.id.toString())
+                            );
+                        });
+
+                        return i.update({
+                            content: `🔨 **${tipoSelecionado}**\nSelecione no menu abaixo qual **Item Permanente** você usará como base (ele será consumido/modificado):`,
+                            components: [new ActionRowBuilder().addComponents(menuBase)]
+                        });
+                    } else {
+                        await abrirModalForja(i, tipoSelecionado, null);
+                    }
+                }
+
+                if (i.customId.startsWith("menu_base_")) {
+                    const tipoSelecionado = i.customId.split("_").pop(); 
+                    const itemId = parseInt(i.values[0]);
+                    
+                    const inventario = await ItensRepository.buscarInventario(char.id);
+                    const itemBase = inventario.find(item => item.id === itemId);
+
+                    if (!itemBase) return i.reply({ content: "Item não encontrado no inventário.", flags: MessageFlags.Ephemeral });
+
+                    await abrirModalForja(i, tipoSelecionado, itemBase);
                 }
             });
+
         } catch (err) {
             console.error("Erro no comando forjar:", err);
             const erroMsg = { content: "❌ Ocorreu um erro ao abrir a forja.", flags: MessageFlags.Ephemeral };

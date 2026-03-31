@@ -27,7 +27,8 @@ module.exports = {
                 cmd: "/alt",
                 desc: "Transfere K$, itens ou equipamentos entre seus personagens.",
                 syntax: "/alt <dinheiro | itens | diverso>"
-            }
+            },
+            { cmd: "/inventario", desc: "Mostra o inventário do seu personagem Ativo", syntax: "/inventario filtro:<tipoItem>"}
         ]
     },
     base: {

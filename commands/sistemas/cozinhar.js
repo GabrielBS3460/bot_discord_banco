@@ -12,6 +12,7 @@ const {
 } = require("discord.js");
 
 const CulinariaService = require("../../services/CulinariaService.js");
+const ItensRepository = require("../../repositories/ItensRepository.js"); 
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -194,9 +195,17 @@ module.exports = {
                             nomePratoLog
                         );
 
+                        await ItensRepository.adicionarItem(
+                            charAtual.id,
+                            nomePratoLog, 
+                            "Alimento", 
+                            5, 
+                            efeitosEditados 
+                        );
+
                         const msgSucesso = usarEspeciarias
-                            ? `✨ **Banquete Gourmet! (5 Porções)**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}**.\n*Efeitos (Aprimorados):*\n${efeitosEditados}`
-                            : `🍲 **Refeição Pronta! (5 Porções)**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}**.\n*Efeitos:*\n${efeitosEditados}`;
+                            ? `✨ **Banquete Gourmet!**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}** e guardou **5 Porções** na mochila.\n*Efeitos (Aprimorados):*\n${efeitosEditados}`
+                            : `🍲 **Refeição Pronta!**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}** e guardou **5 Porções** na mochila.\n*Efeitos:*\n${efeitosEditados}`;
 
                         await interaction.channel.send({ content: msgSucesso });
 
@@ -206,7 +215,7 @@ module.exports = {
                                 .join(", ") || "Vazio";
 
                         await modalSubmit.editReply({
-                            content: `✅ O prato foi servido na mesa!\n\n🎒 **Estoque:** ${estoqueFinalTxt}\n🔨 **Pts Restantes:** ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
+                            content: `✅ O prato foi preparado e adicionado ao seu inventário!\n\n🎒 **Estoque de Ingredientes:** ${estoqueFinalTxt}\n🔨 **Pts Restantes:** ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
                             components: []
                         });
 
