@@ -213,7 +213,7 @@ module.exports = {
                 };
 
                 const msg = await interaction.reply({
-                    content: `🛒 **Casa de Leilões**\nSeu Saldo: **${formatarMoeda(char.saldo)}**\n*Navegue pelas páginas e selecione o item (a compra é imediata):*`,
+                    content: `🛒 **Mercado Global**\nSeu Saldo: **${formatarMoeda(char.saldo)}**\n*Navegue pelas páginas e selecione o item (a compra é imediata):*`,
                     components: gerarComponentes(paginaAtual),
                     flags: MessageFlags.Ephemeral,
                     fetchReply: true
