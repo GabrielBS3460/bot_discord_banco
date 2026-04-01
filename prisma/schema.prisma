@@ -222,7 +222,7 @@ model Item {
 
 model Mercado {
   id            Int      @id @default(autoincrement())
-  vendedor_id   String   
+  vendedor_id   Int   
   vendedor_nome String  
   item_nome     String
   tipo          String
