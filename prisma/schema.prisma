@@ -76,6 +76,8 @@ model Personagens {
   ultima_missao  DateTime?
 
   agenda  Json?
+
+  inventario        Item[]
 }
 
 model PersonagemClasse {
@@ -203,4 +205,29 @@ model BaseMobilia {
   
   base        Base        @relation(fields: [base_id], references: [id], onDelete: Cascade)
   comodo      BaseComodo? @relation(fields: [comodo_id], references: [id], onDelete: Cascade)
+}
+
+model Item {
+  id            Int         @id @default(autoincrement())
+  nome          String
+  tipo          String      
+  descricao     String?     
+  quantidade    Int         @default(1)
+  
+  personagem_id Int
+  personagem    Personagens @relation(fields: [personagem_id], references: [id], onDelete: Cascade)
+
+  @@map("itens") 
+}
+
+model Mercado {
+  id            Int      @id @default(autoincrement())
+  vendedor_id   Int   
+  vendedor_nome String  
+  item_nome     String
+  tipo          String
+  quantidade    Int
+  descricao     String?  
+  preco         Float
+  criado_em     DateTime @default(now())
 }

@@ -35,9 +35,14 @@ const CATEGORIAS = {
                 syntax: "/admin-excluir jogador:@usuario nome:<nome_exato>"
             },
             {
-                cmd: "admin-modificar-pontos",
+                cmd: "/admin-modificar-pontos",
                 desc: "Modifica os pontos de contrato de um personagem alvo de um player alvo",
                 syntax: "/admin-modificar-pontos jogador:@usuario nome:<nome_exato> operacao:<tipo_operacao> valor:<valor_a_modificar>"
+            },
+            {
+                cmd: "/admin-dar-item",
+                desc: "Da um item para o personagem ativo de um player alvo",
+                syntax: "/admin-dar-item [jogador] [nome] [tipo] [qtd]"
             }
         ]
     },

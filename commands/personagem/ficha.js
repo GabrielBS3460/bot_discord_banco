@@ -8,6 +8,7 @@ const {
     TextInputBuilder,
     TextInputStyle,
     StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
     MessageFlags
 } = require("discord.js");
 
@@ -20,6 +21,7 @@ const {
 } = require("../../data/fichaData.js");
 const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
 const PersonagemService = require("../../services/PersonagemService.js");
+const ItensRepository = require("../../repositories/ItensRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -144,9 +146,27 @@ module.exports = {
                     .setEmoji("📝")
             );
 
+            const botoes3 = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("btn_usar_alimento")
+                    .setLabel("Alimentos")
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji("🍔"),
+                new ButtonBuilder()
+                    .setCustomId("btn_usar_pocao")
+                    .setLabel("Poções/Pergs")
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji("🧪"),
+                new ButtonBuilder()
+                    .setCustomId("btn_usar_consumivel")
+                    .setLabel("Consumíveis")
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji("🎒")
+            );
+
             const msg = await interaction.reply({
                 embeds: [montarEmbedFicha(char)],
-                components: [botoes1, botoes2],
+                components: [botoes1, botoes2, botoes3],
                 fetchReply: true
             });
 
@@ -157,6 +177,79 @@ module.exports = {
 
             collector.on("collect", async iBtn => {
                 const uniqueID = `_${msg.id}`;
+
+                if (["btn_usar_alimento", "btn_usar_pocao", "btn_usar_consumivel"].includes(iBtn.customId)) {
+                    const inventario = await ItensRepository.buscarInventario(char.id);
+                    let tiposValidos = [];
+                    let icone = "";
+
+                    if (iBtn.customId === "btn_usar_alimento") {
+                        tiposValidos = ["Alimento"];
+                        icone = "🍔";
+                    } else if (iBtn.customId === "btn_usar_pocao") {
+                        tiposValidos = ["Poções/Pergaminhos (1-2)", "Poções/Pergaminhos (3-5)"];
+                        icone = "🧪";
+                    } else if (iBtn.customId === "btn_usar_consumivel") {
+                        tiposValidos = ["Consumíveis", "Consumível"];
+                        icone = "🎒";
+                    }
+
+                    const itensFiltrados = inventario.filter(item => tiposValidos.includes(item.tipo));
+
+                    if (itensFiltrados.length === 0) {
+                        return iBtn.reply({
+                            content: `🚫 Você não possui itens da categoria selecionada no inventário.`,
+                            flags: MessageFlags.Ephemeral
+                        });
+                    }
+
+                    const menuItens = new StringSelectMenuBuilder()
+                        .setCustomId(`menu_usar_item_${uniqueID}`)
+                        .setPlaceholder(`${icone} Selecione o item (Consome 1 uso)`);
+
+                    itensFiltrados.slice(0, 25).forEach(item => {
+                        menuItens.addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
+                                .setValue(item.id.toString())
+                        );
+                    });
+
+                    const responseMenu = await iBtn.reply({
+                        content: `Mochila Aberta! Selecione o que deseja usar:`,
+                        components: [new ActionRowBuilder().addComponents(menuItens)],
+                        flags: MessageFlags.Ephemeral,
+                        fetchReply: true
+                    });
+
+                    const menuCollector = responseMenu.createMessageComponentCollector({
+                        filter: i => i.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    menuCollector.on("collect", async iMenu => {
+                        await iMenu.deferUpdate();
+                        const itemId = parseInt(iMenu.values[0]);
+                        const itemSelecionado = itensFiltrados.find(it => it.id === itemId);
+
+                        if (!itemSelecionado) return;
+
+                        await ItensRepository.removerItem(itemSelecionado.id, 1);
+
+                        await interaction.channel.send({
+                            content: `${icone} **${char.nome}** usou **${itemSelecionado.nome}**!\n*Efeito/Descrição:* ${itemSelecionado.descricao || "Nenhum efeito registrado."}`
+                        });
+
+                        await iMenu.editReply({
+                            content: `✅ Você consumiu 1x **${itemSelecionado.nome}**!`,
+                            components: []
+                        });
+
+                        menuCollector.stop();
+                    });
+
+                    return;
+                }
 
                 if (iBtn.customId === "btn_descanso") {
                     if (!PersonagemService.verificarPodeDescansar(char)) {
@@ -181,10 +274,10 @@ module.exports = {
                         content: `🛏️ **Modo de Descanso**\nNível: ${nivelReal}\nEscolha:`,
                         components: [botoesDescanso],
                         flags: MessageFlags.Ephemeral,
-                        withResponse: true
+                        fetchReply: true
                     });
 
-                    const descCollector = response.resource.message.createMessageComponentCollector({
+                    const descCollector = response.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
                         time: 60000
                     });
@@ -339,10 +432,10 @@ module.exports = {
                             new ActionRowBuilder().addComponents(m2)
                         ],
                         flags: MessageFlags.Ephemeral,
-                        withResponse: true
+                        fetchReply: true
                     });
 
-                    const menuColl = response.resource.message.createMessageComponentCollector({
+                    const menuColl = response.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
                         time: 60000
                     });
@@ -411,10 +504,10 @@ module.exports = {
                         content: `Selecione para adicionar/remover perícias.\nAtuais: ${(char.pericias || []).join(", ") || "Nenhuma"}`,
                         components: [r1, r2, r3],
                         flags: MessageFlags.Ephemeral,
-                        withResponse: true
+                        fetchReply: true
                     });
 
-                    const periciaCollector = response.resource.message.createMessageComponentCollector({
+                    const periciaCollector = response.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
                         time: 60000
                     });

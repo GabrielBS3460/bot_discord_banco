@@ -4,50 +4,40 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    MessageFlags
+    MessageFlags,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } = require("discord.js");
 const TransacaoService = require("../../services/TransacaoService.js");
+const ItensRepository = require("../../repositories/ItensRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("venda")
-        .setDescription("Propõe a venda de um item para outro jogador.")
+        .setDescription("Propõe a venda de um item do seu inventário para outro jogador.")
         .addUserOption(option =>
             option.setName("comprador").setDescription("O jogador que vai comprar o item").setRequired(true)
         )
-        .addStringOption(option =>
-            option.setName("item").setDescription("O nome do item que está sendo vendido").setRequired(true)
-        )
         .addNumberOption(option =>
-            option.setName("valor").setDescription("O valor da venda em Kwanzas").setRequired(true).setMinValue(0.1)
-        )
-        .addStringOption(option =>
-            option
-                .setName("link")
-                .setDescription("Link (http/https) com a imagem ou documento do item")
-                .setRequired(true)
+            option.setName("valor").setDescription("O valor total da venda em Kwanzas").setRequired(true).setMinValue(0.1)
         ),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         const vendedorUser = interaction.user;
         const compradorUser = interaction.options.getUser("comprador");
-        const item = interaction.options.getString("item");
-        const valor = interaction.options.getNumber("valor");
-        const link = interaction.options.getString("link");
+        const valorVenda = interaction.options.getNumber("valor");
 
         if (compradorUser.bot)
             return interaction.reply({ content: "🚫 Bots não compram itens.", flags: MessageFlags.Ephemeral });
+        
         if (compradorUser.id === vendedorUser.id)
             return interaction.reply({
-                content: "🚫 Você não pode vender para si mesmo.",
+                content: "🚫 Você não pode vender itens para si mesmo.",
                 flags: MessageFlags.Ephemeral
             });
-        if (!link.startsWith("http://") && !link.startsWith("https://")) {
-            return interaction.reply({
-                content: "🚫 O link do item deve ser válido (começar com http:// ou https://).",
-                flags: MessageFlags.Ephemeral
-            });
-        }
 
         try {
             const [charVendedor, charComprador] = await Promise.all([
@@ -57,138 +47,238 @@ module.exports = {
 
             if (!charVendedor)
                 return interaction.reply({
-                    content: "🚫 Você (vendedor) não tem um personagem ativo.",
+                    content: "🚫 Você não tem um personagem ativo.",
                     flags: MessageFlags.Ephemeral
                 });
+                
             if (!charComprador)
                 return interaction.reply({
                     content: `🚫 O comprador **${compradorUser.username}** não tem um personagem ativo.`,
                     flags: MessageFlags.Ephemeral
                 });
 
-            if (charComprador.saldo < valor) {
+            if (charComprador.saldo < valorVenda) {
                 return interaction.reply({
                     content: `🚫 **${charComprador.nome}** não tem saldo suficiente para essa compra (Saldo: ${formatarMoeda(charComprador.saldo)}).`,
                     flags: MessageFlags.Ephemeral
                 });
             }
 
-            const propostaEmbed = new EmbedBuilder()
-                .setColor("#0099FF")
-                .setTitle("❓ Proposta de Venda")
-                .setDescription(
-                    `**${charVendedor.nome}** quer vender **[${item}](${link})** para **${charComprador.nome}**.`
-                )
-                .addFields(
-                    { name: "Valor", value: formatarMoeda(valor) },
-                    { name: "Comprador", value: `Aguardando confirmação de ${charComprador.nome}...` }
-                )
-                .setFooter({ text: "Expira em 60 segundos." });
+            const inventario = await ItensRepository.buscarInventario(charVendedor.id);
 
-            if (/\.(jpeg|jpg|gif|png|webp)$/i.test(link)) {
-                propostaEmbed.setThumbnail(link);
+            if (!inventario || inventario.length === 0) {
+                return interaction.reply({
+                    content: "🎒 Seu inventário está vazio. Você não tem nada para vender.",
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
-            const botoes = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId("confirmar_venda")
-                    .setLabel("Comprar")
-                    .setStyle(ButtonStyle.Success)
-                    .setEmoji("✔️"),
-                new ButtonBuilder()
-                    .setCustomId("cancelar_venda")
-                    .setLabel("Cancelar")
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji("✖️")
-            );
+            const menuItens = new StringSelectMenuBuilder()
+                .setCustomId(`menu_venda_item_${interaction.id}`)
+                .setPlaceholder("Selecione o item que deseja vender...");
 
-            const msg = await interaction.reply({
-                content: `<@${compradorUser.id}>`,
-                embeds: [propostaEmbed],
-                components: [botoes],
+            const itensMenu = inventario.slice(0, 25);
+            itensMenu.forEach(item => {
+                menuItens.addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
+                        .setDescription(`Tipo: ${item.tipo}`)
+                        .setValue(item.id.toString())
+                );
+            });
+
+            const rowMenu = new ActionRowBuilder().addComponents(menuItens);
+
+            const msgMenu = await interaction.reply({
+                content: `🛒 **Mercado Aberto**\nSelecione o item que deseja vender para **${charComprador.nome}** pelo valor de **${formatarMoeda(valorVenda)}**:`,
+                components: [rowMenu],
+                flags: MessageFlags.Ephemeral,
                 fetchReply: true
             });
 
-            const collector = msg.createMessageComponentCollector({
-                filter: i => i.user.id === compradorUser.id || i.user.id === vendedorUser.id,
+            const collectorMenu = msgMenu.createMessageComponentCollector({
+                filter: i => i.user.id === vendedorUser.id,
                 time: 60000
             });
 
-            collector.on("collect", async iBtn => {
-                await iBtn.deferUpdate();
+            collectorMenu.on("collect", async iSelect => {
+                if (iSelect.isStringSelectMenu() && iSelect.customId.startsWith("menu_venda_item_")) {
+                    const itemId = parseInt(iSelect.values[0]);
+                    const itemSelecionado = inventario.find(item => item.id === itemId);
 
-                if (iBtn.customId === "cancelar_venda") {
-                    const canceladoEmbed = new EmbedBuilder()
-                        .setColor("#FF0000")
-                        .setTitle("✖️ Venda Cancelada")
-                        .setDescription(`A venda de **${item}** foi cancelada por ${iBtn.user.username}.`);
+                    if (!itemSelecionado) return iSelect.reply({ content: "Item não encontrado.", flags: MessageFlags.Ephemeral });
 
-                    await msg.edit({ content: null, embeds: [canceladoEmbed], components: [] });
-                    return collector.stop("cancelado");
-                }
-
-                if (iBtn.customId === "confirmar_venda") {
-                    if (iBtn.user.id !== compradorUser.id) {
-                        return iBtn.followUp({
-                            content: "🚫 Apenas o comprador pode aceitar a venda.",
-                            flags: MessageFlags.Ephemeral
-                        });
-                    }
-
-                    try {
-                        await TransacaoService.executarVendaItemRP(
-                            charVendedor.id,
-                            charComprador.id,
-                            charVendedor.nome,
-                            charComprador.nome,
-                            item,
-                            valor
+                    const modalId = `modal_qtd_venda_${iSelect.id}`;
+                    const modal = new ModalBuilder()
+                        .setCustomId(modalId)
+                        .setTitle("Quantidade a Vender")
+                        .addComponents(
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId("inp_qtd_venda")
+                                    .setLabel(`Quantidade (Máx: ${itemSelecionado.quantidade})`)
+                                    .setStyle(TextInputStyle.Short)
+                                    .setValue("1")
+                                    .setRequired(true)
+                            )
                         );
 
-                        const sucesso = new EmbedBuilder()
-                            .setColor("#00FF00")
-                            .setTitle("✅ Venda Concluída")
-                            .setDescription(`**[${item}](${link})** foi transferido com sucesso!`)
-                            .addFields(
-                                { name: "Vendedor", value: charVendedor.nome, inline: true },
-                                { name: "Comprador", value: charComprador.nome, inline: true },
-                                { name: "Valor", value: formatarMoeda(valor) }
-                            );
+                    await iSelect.showModal(modal);
 
-                        if (/\.(jpeg|jpg|gif|png|webp)$/i.test(link)) sucesso.setThumbnail(link);
+                    try {
+                        const submit = await iSelect.awaitModalSubmit({
+                            filter: m => m.customId === modalId && m.user.id === vendedorUser.id,
+                            time: 60000
+                        });
 
-                        await msg.edit({ content: null, embeds: [sucesso], components: [] });
-                        collector.stop("concluido");
-                    } catch (err) {
-                        if (err.message === "SALDO_COMPRADOR_INSUFICIENTE") {
-                            await msg.edit({
-                                content: "❌ O comprador não tem mais saldo suficiente.",
-                                embeds: [],
-                                components: []
-                            });
-                            return collector.stop("sem_saldo");
+                        await submit.deferReply({ flags: MessageFlags.Ephemeral });
+
+                        let qtd = parseInt(submit.fields.getTextInputValue("inp_qtd_venda"));
+
+                        if (isNaN(qtd) || qtd <= 0) {
+                            return submit.editReply("🚫 Quantidade inválida.");
                         }
 
-                        console.error("Erro na transação de venda:", err);
-                        await msg.edit({
-                            content: "❌ Ocorreu um erro ao processar a venda no banco de dados.",
-                            embeds: [],
-                            components: []
+                        if (qtd > itemSelecionado.quantidade) {
+                            return submit.editReply(`🚫 Você tem apenas **${itemSelecionado.quantidade}x** de **${itemSelecionado.nome}**.`);
+                        }
+
+                        await msgMenu.edit({ components: [] }).catch(() => null);
+                        await submit.editReply({ content: `⏳ A proposta de venda de **${qtd}x ${itemSelecionado.nome}** foi enviada publicamente. Aguardando o comprador...` });
+                        collectorMenu.stop();
+
+                        const nomeItemFormatado = `${qtd}x ${itemSelecionado.nome}`;
+
+                        const propostaEmbed = new EmbedBuilder()
+                            .setColor("#0099FF")
+                            .setTitle("❓ Proposta de Venda")
+                            .setDescription(`**${charVendedor.nome}** quer vender **${nomeItemFormatado}** para **${charComprador.nome}**.`)
+                            .addFields(
+                                { name: "Valor", value: formatarMoeda(valorVenda) },
+                                { name: "Comprador", value: `Aguardando confirmação de ${charComprador.nome}...` }
+                            )
+                            .setFooter({ text: "Expira em 60 segundos." });
+
+                        if (itemSelecionado.descricao && /\.(jpeg|jpg|gif|png|webp)$/i.test(itemSelecionado.descricao)) {
+                            const linkEncontrado = itemSelecionado.descricao.match(/https?:\/\/[^\s]+/);
+                            if (linkEncontrado) propostaEmbed.setThumbnail(linkEncontrado[0]);
+                        }
+
+                        const botoes = new ActionRowBuilder().addComponents(
+                            new ButtonBuilder()
+                                .setCustomId("confirmar_venda_item")
+                                .setLabel("Comprar")
+                                .setStyle(ButtonStyle.Success)
+                                .setEmoji("✔️"),
+                            new ButtonBuilder()
+                                .setCustomId("cancelar_venda_item")
+                                .setLabel("Cancelar")
+                                .setStyle(ButtonStyle.Danger)
+                                .setEmoji("✖️")
+                        );
+
+                        const msgProposta = await interaction.channel.send({
+                            content: `<@${compradorUser.id}>`,
+                            embeds: [propostaEmbed],
+                            components: [botoes]
                         });
+
+                        const collectorVenda = msgProposta.createMessageComponentCollector({
+                            filter: iBtn => iBtn.user.id === compradorUser.id || iBtn.user.id === vendedorUser.id,
+                            time: 60000
+                        });
+
+                        collectorVenda.on("collect", async iBtn => {
+                            await iBtn.deferUpdate();
+
+                            if (iBtn.customId === "cancelar_venda_item") {
+                                const canceladoEmbed = new EmbedBuilder()
+                                    .setColor("#FF0000")
+                                    .setTitle("✖️ Venda Cancelada")
+                                    .setDescription(`A venda de **${nomeItemFormatado}** foi cancelada por ${iBtn.user.username}.`);
+
+                                await msgProposta.edit({ content: null, embeds: [canceladoEmbed], components: [] });
+                                return collectorVenda.stop("cancelado");
+                            }
+
+                            if (iBtn.customId === "confirmar_venda_item") {
+                                if (iBtn.user.id !== compradorUser.id) {
+                                    return iBtn.followUp({
+                                        content: "🚫 Apenas o comprador pode aceitar a venda.",
+                                        flags: MessageFlags.Ephemeral
+                                    });
+                                }
+
+                                try {
+                                    await TransacaoService.executarVendaItemRP(
+                                        charVendedor.id,
+                                        charComprador.id,
+                                        charVendedor.nome,
+                                        charComprador.nome,
+                                        nomeItemFormatado,
+                                        valorVenda
+                                    );
+
+                                    await ItensRepository.removerItem(itemSelecionado.id, qtd);
+                                    await ItensRepository.adicionarItem(
+                                        charComprador.id,
+                                        itemSelecionado.nome,
+                                        itemSelecionado.tipo,
+                                        qtd,
+                                        itemSelecionado.descricao
+                                    );
+
+                                    const sucesso = new EmbedBuilder()
+                                        .setColor("#00FF00")
+                                        .setTitle("✅ Venda Concluída")
+                                        .setDescription(`**${nomeItemFormatado}** foi transferido com sucesso!`)
+                                        .addFields(
+                                            { name: "Vendedor", value: charVendedor.nome, inline: true },
+                                            { name: "Comprador", value: charComprador.nome, inline: true },
+                                            { name: "Valor", value: formatarMoeda(valorVenda) }
+                                        );
+
+                                    if (propostaEmbed.data.thumbnail) sucesso.setThumbnail(propostaEmbed.data.thumbnail.url);
+
+                                    await msgProposta.edit({ content: null, embeds: [sucesso], components: [] });
+                                    collectorVenda.stop("concluido");
+                                } catch (err) {
+                                    if (err.message === "SALDO_COMPRADOR_INSUFICIENTE") {
+                                        await msgProposta.edit({
+                                            content: "❌ O comprador não tem mais saldo suficiente para finalizar a transação.",
+                                            embeds: [],
+                                            components: []
+                                        });
+                                        return collectorVenda.stop("sem_saldo");
+                                    }
+
+                                    console.error("Erro na transação de venda de item:", err);
+                                    await msgProposta.edit({
+                                        content: "❌ Ocorreu um erro ao processar a venda no banco de dados.",
+                                        embeds: [],
+                                        components: []
+                                    });
+                                }
+                            }
+                        });
+
+                        collectorVenda.on("end", (collected, reason) => {
+                            if (reason === "time") {
+                                const expiradoEmbed = new EmbedBuilder()
+                                    .setColor("#808080")
+                                    .setTitle("⌛ Proposta Expirada")
+                                    .setDescription(`A oferta de venda de **${nomeItemFormatado}** expirou porque o comprador não respondeu.`);
+
+                                msgProposta.edit({ content: null, embeds: [expiradoEmbed], components: [] }).catch(() => {});
+                            }
+                        });
+
+                    } catch (err) {
+                        console.error("Erro no modal de venda:", err);
                     }
                 }
             });
 
-            collector.on("end", (collected, reason) => {
-                if (reason === "time") {
-                    const expiradoEmbed = new EmbedBuilder()
-                        .setColor("#808080")
-                        .setTitle("⌛ Proposta Expirada")
-                        .setDescription(`A oferta de venda de **${item}** expirou porque o comprador não respondeu.`);
-
-                    msg.edit({ content: null, embeds: [expiradoEmbed], components: [] }).catch(() => {});
-                }
-            });
         } catch (err) {
             console.error("Erro ao processar venda:", err);
             const erroMsg = {

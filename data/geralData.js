@@ -6,7 +6,8 @@ const CUSTO_FORJA = {
     Consumíveis: 1,
     "Itens Permanentes": 2,
     Melhorias: 16,
-    "Encantamentos/Mágicos": 64,
+    Encantamento: 64,
+    "Item Mágico": 64,
     "Poções/Pergaminhos (1-2)": 2,
     "Poções/Pergaminhos (3-5)": 6
 };

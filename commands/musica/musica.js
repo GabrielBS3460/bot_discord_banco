@@ -61,7 +61,7 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor("#1DB954")
-                .setTitle("📻 Painel de Som da Guilda")
+                .setTitle("📻 Painel de Música do Servidor")
                 .setImage(trackAtual?.thumbnail || "https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?q=80&w=1000&auto=format&fit=crop")
                 .addFields(
                     { name: "Tocando Agora", value: trackAtual ? `[${trackAtual.title}](${trackAtual.url})` : "Nenhuma música tocando.", inline: false },
