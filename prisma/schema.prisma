@@ -219,3 +219,15 @@ model Item {
 
   @@map("itens") 
 }
+
+model Mercado {
+  id            Int      @id @default(autoincrement())
+  vendedor_id   String   
+  vendedor_nome String  
+  item_nome     String
+  tipo          String
+  quantidade    Int
+  descricao     String?  
+  preco         Float
+  criado_em     DateTime @default(now())
+}

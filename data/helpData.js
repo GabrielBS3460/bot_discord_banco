@@ -11,24 +11,16 @@ module.exports = {
                 syntax: "/personagem <subcomando>"
             },
             { cmd: "/ficha", desc: "Mostra sua ficha.", syntax: "/ficha" },
-            { cmd: "/saldo", desc: "Mostra seu saldo atual.", syntax: "/saldo" },
-            { cmd: "/extrato", desc: "Histórico financeiro do personagem.", syntax: "/extrato" },
-            {
-                cmd: "/tix",
-                desc: "Transferência de K$ entre jogadores.",
-                syntax: "/tix destinatario:@usuario valor:<valor>"
-            },
-            {
-                cmd: "/gasto",
-                desc: "Registra um gasto no seu extrato.",
-                syntax: "/gasto valor:<valor> motivo:<motivo>"
-            },
             {
                 cmd: "/alt",
                 desc: "Transfere K$, itens ou equipamentos entre seus personagens.",
                 syntax: "/alt <dinheiro | itens | diverso>"
             },
-            { cmd: "/inventario", desc: "Mostra o inventário do seu personagem Ativo", syntax: "/inventario filtro:<tipoItem>"}
+            {
+                cmd: "/inventario",
+                desc: "Mostra o inventário do seu personagem Ativo",
+                syntax: "/inventario filtro:<tipoItem>"
+            }
         ]
     },
     base: {
@@ -52,7 +44,7 @@ module.exports = {
             },
             { cmd: "/base reparar", desc: "Conserta cômodos danificados (K$ 500).", syntax: "/base reparar" },
             { cmd: "/base desfazer", desc: "Desfaz uma base Criada", syntax: "/base desfazer" },
-            { cmd: "/base upgrade", desc: "Melhora o porte de uma base Criada", syntax: "/base upgrade"}
+            { cmd: "/base upgrade", desc: "Melhora o porte de uma base Criada", syntax: "/base upgrade" }
         ]
     },
     agenda: {
@@ -71,36 +63,75 @@ module.exports = {
         comandos: [
             { cmd: "/inscrever", desc: "Se candidata a um contrato aberto.", syntax: "/inscrever" },
             { cmd: "/resgatar", desc: "Resgata a recompensa de um contrato.", syntax: '/resgatar contrato:"Nome"' },
-            { cmd: "/drop", desc: "Gera loot aleatório baseado no ND.", syntax: "/drop nd:<ND>" },
+            {
+                cmd: "/drop",
+                desc: "Gera loot aleatório baseado no ND e guarda no inventário.",
+                syntax: "/drop nd:<ND>"
+            },
             { cmd: "/avaliar", desc: "Avalia o mestre da sessão.", syntax: "/avaliar mestre:@usuario link:<link>" }
+        ]
+    },
+    comercio: {
+        emoji: "⚖️",
+        titulo: "Comércio & Leilões",
+        descricao: "Compre, venda e negocie itens com jogadores ou NPCs.",
+        comandos: [
+            {
+                cmd: "/mercado anunciar",
+                desc: "Coloca um item da sua mochila à venda na Casa de Leilões.",
+                syntax: "/mercado anunciar preco:<valor>"
+            },
+            {
+                cmd: "/mercado comprar",
+                desc: "Abre o mural de anúncios para comprar itens de outros jogadores.",
+                syntax: "/mercado comprar"
+            },
+            {
+                cmd: "/mercado meus_anuncios",
+                desc: "Veja seus itens à venda e cancele anúncios se desejar.",
+                syntax: "/mercado meus_anuncios"
+            },
+            {
+                cmd: "/venda",
+                desc: "Propõe venda direta de um item do inventário a um jogador.",
+                syntax: "/venda comprador:@usuario valor:<valor>"
+            },
+            {
+                cmd: "/venda-npc",
+                desc: "Vende um item do inventário para um NPC por K$.",
+                syntax: "/venda-npc valor:<valor>"
+            },
+            {
+                cmd: "/venda-ingredientes",
+                desc: "Venda P2P de ingredientes (entre jogadores).",
+                syntax: "/venda-ingredientes comprador:@usuario"
+            },
+            {
+                cmd: "/entregar",
+                desc: "Entrega um item do seu inventário diretamente para outro jogador.",
+                syntax: "/entregar destinatario:@usuario"
+            },
+            { cmd: "/saldo", desc: "Mostra seu saldo atual.", syntax: "/saldo" },
+            { cmd: "/extrato", desc: "Histórico financeiro do personagem.", syntax: "/extrato" },
+            {
+                cmd: "/tix",
+                desc: "Transferência de K$ entre jogadores.",
+                syntax: "/tix destinatario:@usuario valor:<valor>"
+            },
+            { cmd: "/gasto", desc: "Registra um gasto no seu extrato.", syntax: "/gasto valor:<valor> motivo:<motivo>" }
         ]
     },
     sistemas: {
         emoji: "⚒️",
-        titulo: "Ofícios & Comércio",
-        descricao: "Crafting, culinária e mercado.",
+        titulo: "Ofícios & Profissões",
+        descricao: "Sistemas de crafting e culinária.",
         comandos: [
-            { cmd: "/forjar", desc: "Cria itens usando pontos de forja.", syntax: "/forjar" },
+            { cmd: "/forjar", desc: "Cria e aprimora itens usando pontos de forja.", syntax: "/forjar" },
             { cmd: "/setforja", desc: "Configura seus poderes de forja.", syntax: "/setforja poderes:<texto>" },
             { cmd: "/resgatarforja", desc: "Resgata seus pontos de forja diários.", syntax: "/resgatarforja" },
             { cmd: "/feirinha", desc: "Mercado semanal de ingredientes.", syntax: "/feirinha" },
-            { cmd: "/cozinhar", desc: "Prepara pratos com bônus.", syntax: "/cozinhar" },
-            { cmd: "/aprenderculinaria", desc: "Aprende novas receitas.", syntax: "/aprenderculinaria" },
-            {
-                cmd: "/venda-npc",
-                desc: "Vende um item para um NPC por K$.",
-                syntax: "/venda-npc valor:<valor> link:<link>"
-            },
-            {
-                cmd: "/venda-ingredientes",
-                desc: "Venda P2P (entre jogadores).",
-                syntax: "/venda-ingredientes comprador:@usuario"
-            },
-            {
-                cmd: "/venda",
-                desc: "Propõe venda de qualquer item a um jogador.",
-                syntax: "/venda comprador:@usuario item:<nome> valor:<valor> link:<link>"
-            }
+            { cmd: "/cozinhar", desc: "Prepara pratos com bônus e guarda na mochila.", syntax: "/cozinhar" },
+            { cmd: "/aprenderculinaria", desc: "Aprende novas receitas.", syntax: "/aprenderculinaria" }
         ]
     },
     atividades: {
@@ -113,8 +144,7 @@ module.exports = {
                 desc: "Faz uma aposta no jogo do bicho.",
                 syntax: "/apostar valor:<valor> tipo:<tipo> numero:<num>"
             },
-            { cmd: "/punga", desc: "Tenta roubar K$ de um alvo aleatório.", syntax: "/punga" },
-            { cmd: "/musica", desc: "Abre o Painel de Música", syntax: "/musica"}
+            { cmd: "/musica", desc: "Abre o Painel de Música", syntax: "/musica" }
         ]
     },
     mestre: {
@@ -136,16 +166,6 @@ module.exports = {
                 cmd: "/loot",
                 desc: "Entrega K$ diretamente a um jogador.",
                 syntax: "/loot jogador:@usuario valor:<valor>"
-            },
-            {
-                cmd: "/solicitada",
-                desc: "Registra missão solicitada e paga o grupo.",
-                syntax: "/solicitada nd:<ND> custo:<valor> jogador1:@usuario ..."
-            },
-            {
-                cmd: "/missa",
-                desc: "Cobra o dízimo e transfere para o clérigo.",
-                syntax: "/missa valor_total:<valor> fiel1:@usuario ..."
             }
         ]
     }

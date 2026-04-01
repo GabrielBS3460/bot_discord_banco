@@ -1,22 +1,17 @@
-const { 
-    SlashCommandBuilder, 
-    PermissionFlagsBits, 
-    EmbedBuilder, 
-    MessageFlags 
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require("discord.js");
 
 const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
-const { CUSTO_NIVEL } = require("../../data/geralData.js"); 
+const { CUSTO_NIVEL } = require("../../data/geralData.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("admin-modificar-pontos")
         .setDescription("[ADMIN] Adiciona, remove ou define XP/Pontos e ajusta o nível automaticamente.")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addUserOption(opt => opt.setName("jogador").setDescription("Dono do personagem").setRequired(true))
         .addStringOption(opt => opt.setName("nome").setDescription("Nome exato do personagem").setRequired(true))
         .addStringOption(opt =>
-            opt.setName("operacao")
+            opt
+                .setName("operacao")
                 .setDescription("O que você deseja fazer?")
                 .setRequired(true)
                 .addChoices(
@@ -27,7 +22,17 @@ module.exports = {
         )
         .addNumberOption(opt => opt.setName("valor").setDescription("Quantidade de pontos").setRequired(true)),
 
-    async execute({ interaction }) {
+    async execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
+        const temPermissao =
+            interaction.member.roles.cache.has(ID_CARGO_ADMIN) || interaction.member.roles.cache.has(ID_CARGO_MOD);
+
+        if (!temPermissao) {
+            return interaction.reply({
+                content: "🚫 Você não tem permissão para usar este comando.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
@@ -39,14 +44,14 @@ module.exports = {
             const char = await PersonagemRepository.buscarPorNomeEJogador(nomeChar, alvoUser.id);
 
             if (!char) {
-                return interaction.editReply({ 
-                    content: `🚫 Personagem **${nomeChar}** não encontrado para o jogador ${alvoUser}.` 
+                return interaction.editReply({
+                    content: `🚫 Personagem **${nomeChar}** não encontrado para o jogador ${alvoUser}.`
                 });
             }
 
             let novosPontos = parseFloat(char.pontos_missao) || 0;
             let novoNivel = char.nivel_personagem;
-            
+
             const nivelAntigo = novoNivel;
             const pontosAntigos = novosPontos;
 
@@ -61,7 +66,7 @@ module.exports = {
 
             while (novosPontos < 0 && novoNivel > 1) {
                 novoNivel--;
-                const custoNivelAnterior = CUSTO_NIVEL[novoNivel] || 10; 
+                const custoNivelAnterior = CUSTO_NIVEL[novoNivel] || 10;
                 novosPontos += custoNivelAnterior;
             }
 
@@ -76,22 +81,30 @@ module.exports = {
             });
 
             let statusNivel = "";
-            if (novoNivel > nivelAntigo) statusNivel = `🎉 **LEVEL UP!** Subiu do nível ${nivelAntigo} para ${novoNivel}!`;
-            else if (novoNivel < nivelAntigo) statusNivel = `📉 **LEVEL DOWN!** Caiu do nível ${nivelAntigo} para ${novoNivel}.`;
+            if (novoNivel > nivelAntigo)
+                statusNivel = `🎉 **LEVEL UP!** Subiu do nível ${nivelAntigo} para ${novoNivel}!`;
+            else if (novoNivel < nivelAntigo)
+                statusNivel = `📉 **LEVEL DOWN!** Caiu do nível ${nivelAntigo} para ${novoNivel}.`;
 
             const embed = new EmbedBuilder()
                 .setColor(operacao === "ADD" ? "#00FF00" : operacao === "REM" ? "#ED4245" : "#00AAFF")
                 .setTitle("⚙️ Ajuste de Pontos e Nível")
                 .setDescription(`A ficha de **${char.nome}** foi atualizada.`)
                 .addFields(
-                    { name: "Operação", value: `${operacao === "ADD" ? "Adicionado" : operacao === "REM" ? "Removido" : "Definido para"} ${valor} pts`, inline: false },
+                    {
+                        name: "Operação",
+                        value: `${operacao === "ADD" ? "Adicionado" : operacao === "REM" ? "Removido" : "Definido para"} ${valor} pts`,
+                        inline: false
+                    },
                     { name: "Antes", value: `Nvl ${nivelAntigo} (${pontosAntigos} pts)`, inline: true },
                     { name: "Depois", value: `Nvl ${novoNivel} (${novosPontos} pts)`, inline: true }
                 )
                 .setFooter({ text: `Alteração feita por ${interaction.user.username}` });
 
-            await interaction.editReply({ content: statusNivel || "✅ Alteração concluída sem mudança de nível.", embeds: [embed] });
-
+            await interaction.editReply({
+                content: statusNivel || "✅ Alteração concluída sem mudança de nível.",
+                embeds: [embed]
+            });
         } catch (err) {
             console.error("Erro no admin-modificar-pontos:", err);
             await interaction.editReply({ content: "❌ Ocorreu um erro ao processar os pontos." });

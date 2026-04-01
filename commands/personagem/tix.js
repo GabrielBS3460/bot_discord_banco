@@ -63,7 +63,7 @@ module.exports = {
                 )
                 .setTimestamp();
 
-            return interaction.reply({ embeds: [embed] });
+            return interaction.reply({ content: `<@${destinatarioUser.id}>`, embeds: [embed] });
         } catch (err) {
             if (err.message === "SALDO_INSUFICIENTE") {
                 return interaction.reply({

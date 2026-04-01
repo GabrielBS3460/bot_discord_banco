@@ -75,7 +75,7 @@ module.exports = {
                     new StringSelectMenuOptionBuilder()
                         .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
                         .setDescription(`Tipo: ${item.tipo}`)
-                        .setValue(item.id.toString()) 
+                        .setValue(item.id.toString())
                 );
             });
 
@@ -98,7 +98,8 @@ module.exports = {
                     const itemId = parseInt(i.values[0]);
                     const itemSelecionado = inventario.find(item => item.id === itemId);
 
-                    if (!itemSelecionado) return i.reply({ content: "Item não encontrado.", flags: MessageFlags.Ephemeral });
+                    if (!itemSelecionado)
+                        return i.reply({ content: "Item não encontrado.", flags: MessageFlags.Ephemeral });
 
                     const modalId = `modal_qtd_entregar_${i.id}`;
                     const modal = new ModalBuilder()
@@ -132,10 +133,11 @@ module.exports = {
                         }
 
                         if (qtd > itemSelecionado.quantidade) {
-                            return submit.editReply(`🚫 Você tem apenas **${itemSelecionado.quantidade}x** de **${itemSelecionado.nome}**.`);
+                            return submit.editReply(
+                                `🚫 Você tem apenas **${itemSelecionado.quantidade}x** de **${itemSelecionado.nome}**.`
+                            );
                         }
 
-                        
                         await ItensRepository.removerItem(itemSelecionado.id, qtd);
 
                         await ItensRepository.adicionarItem(
@@ -147,7 +149,10 @@ module.exports = {
                         );
 
                         try {
-                            await TransacaoService.registrarEntregaItem(charDestinatario.id, `${qtd}x ${itemSelecionado.nome} (de ${charRemetente.nome})`);
+                            await TransacaoService.registrarEntregaItem(
+                                charDestinatario.id,
+                                `${qtd}x ${itemSelecionado.nome} (de ${charRemetente.nome})`
+                            );
                         } catch (err) {
                             console.log("Erro ao registrar no TransacaoService", err);
                         }
@@ -155,26 +160,26 @@ module.exports = {
                         const embed = new EmbedBuilder()
                             .setColor("#9B59B6")
                             .setTitle("🎁 Item Entregue!")
-                            .setDescription(`**${charRemetente.nome}** passou um item para as mãos de **${charDestinatario.nome}**.`)
+                            .setDescription(
+                                `**${charRemetente.nome}** passou um item para as mãos de **${charDestinatario.nome}**.`
+                            )
                             .addFields({ name: "📦 Item", value: `${qtd}x **${itemSelecionado.nome}**` })
                             .setTimestamp();
 
-                        await interaction.channel.send({ embeds: [embed] });
+                        await interaction.channel.send({ content: `<@${destinatarioUser.id}>`, embeds: [embed] });
 
-                        await submit.editReply({ 
-                            content: `✅ Você entregou ${qtd}x **${itemSelecionado.nome}** para ${charDestinatario.nome} com sucesso!`, 
-                            components: [] 
+                        await submit.editReply({
+                            content: `✅ Você entregou ${qtd}x **${itemSelecionado.nome}** para ${charDestinatario.nome} com sucesso!`,
+                            components: []
                         });
 
                         await msg.edit({ components: [] }).catch(() => null);
                         collector.stop();
-
                     } catch (err) {
                         console.error("Erro no submit do modal de entrega:", err);
                     }
                 }
             });
-
         } catch (err) {
             console.error("Erro no comando entregar:", err);
 
