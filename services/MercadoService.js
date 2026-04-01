@@ -1,7 +1,7 @@
 const MercadoRepository = require("../repositories/MercadoRepository.js");
 const ItensRepository = require("../repositories/ItensRepository.js");
 const PersonagemRepository = require("../repositories/PersonagemRepository.js");
-const TransacaoService = require("./TransacaoService.js");
+const TransacaoRepository = require("../repositories/TransacaoRepository.js");
 
 class MercadoService {
     async comprarItem(compradorId, anuncioId) {
@@ -24,6 +24,21 @@ class MercadoService {
 
         await PersonagemRepository.atualizar(comprador.id, { saldo: comprador.saldo - anuncio.preco });
         await PersonagemRepository.atualizar(vendedor.id, { saldo: vendedor.saldo + anuncio.preco });
+
+        try {
+            await TransacaoRepository.criar(
+                comprador.id,
+                -anuncio.preco,
+                `Compra no Mercado (${anuncio.quantidade}x ${anuncio.item_nome})`
+            );
+            await TransacaoRepository.criar(
+                vendedor.id,
+                anuncio.preco,
+                `Venda no Mercado (${anuncio.quantidade}x ${anuncio.item_nome})`
+            );
+        } catch (err) {
+            console.log("Erro ao registrar extrato do mercado:", err);
+        }
 
         await ItensRepository.adicionarItem(
             comprador.id,

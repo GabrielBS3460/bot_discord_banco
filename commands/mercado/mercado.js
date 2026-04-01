@@ -17,7 +17,7 @@ const MercadoService = require("../../services/MercadoService.js");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("mercado")
-        .setDescription("Sistema da Casa de Leilões Global.")
+        .setDescription("Sistema do Mercado Global.")
         .addSubcommand(sub =>
             sub
                 .setName("anunciar")
@@ -134,7 +134,7 @@ module.exports = {
 
                             await msg.edit({ components: [] }).catch(() => null);
                             await submit.reply({
-                                content: `✅ **${qtd}x ${itemSelecionado.nome}** foi enviado para a Casa de Leilões por **${formatarMoeda(preco)}**!`,
+                                content: `✅ **${qtd}x ${itemSelecionado.nome}** foi enviado para o Mercado por **${formatarMoeda(preco)}**!`,
                                 flags: MessageFlags.Ephemeral
                             });
 
@@ -184,7 +184,7 @@ module.exports = {
                 });
 
                 const msg = await interaction.reply({
-                    content: `🛒 **Casa de Leilões**\nSeu Saldo: **${formatarMoeda(char.saldo)}**\n*Selecione o item que deseja comprar (a compra é imediata e sem volta):*`,
+                    content: `🛒 **Mercado Global**\nSeu Saldo: **${formatarMoeda(char.saldo)}**\n*Selecione o item que deseja comprar (a compra é imediata e sem volta):*`,
                     components: [new ActionRowBuilder().addComponents(menuCompra)],
                     flags: MessageFlags.Ephemeral,
                     fetchReply: true
@@ -207,8 +207,10 @@ module.exports = {
                             flags: MessageFlags.Ephemeral
                         });
 
+                        const discordIdVendedor = vendedor.usuario_id || vendedor.discord_id;
+
                         await interaction.channel.send({
-                            content: `🤝 **Negócio Fechado no Mercado!**\n**${char.nome}** comprou **${anuncio.quantidade}x ${anuncio.item_nome}** que pertencia a **${vendedor.nome}**.`
+                            content: `🤝 **Negócio Fechado no Mercado!** <@${discordIdVendedor}>\n**${char.nome}** comprou **${anuncio.quantidade}x ${anuncio.item_nome}** por **K$ ${anuncio.preco}** e o dinheiro já está na sua conta!`
                         });
 
                         await msg.edit({ components: [] }).catch(() => null);
