@@ -26,14 +26,14 @@ class MercadoService {
         await PersonagemRepository.atualizar(vendedor.id, { saldo: vendedor.saldo + anuncio.preco });
 
         try {
-            await TransacaoService.criar({
+            await TransacaoRepository.criar({
                 personagem_id: comprador.id,
                 descricao: `Compra no Mercado (${anuncio.quantidade}x ${anuncio.item_nome})`,
                 valor: anuncio.preco,
                 tipo: "GASTO"
             });
 
-            await TransacaoService.criar({
+            await TransacaoRepository.criar({
                 personagem_id: vendedor.id,
                 descricao: `Venda no Mercado (${anuncio.quantidade}x ${anuncio.item_nome})`,
                 valor: anuncio.preco,
