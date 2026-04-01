@@ -7,7 +7,9 @@ const {
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
-    MessageFlags
+    MessageFlags,
+    ButtonBuilder,
+    ButtonStyle
 } = require("discord.js");
 
 const MercadoRepository = require("../../repositories/MercadoRepository.js");
@@ -158,7 +160,6 @@ module.exports = {
                 });
             } else if (subcomando === "comprar") {
                 const anuncios = await MercadoRepository.buscarAnuncios();
-
                 const vitrine = anuncios.filter(a => a.vendedor_id !== char.id);
 
                 if (vitrine.length === 0) {
@@ -168,61 +169,97 @@ module.exports = {
                     });
                 }
 
-                const menuCompra = new StringSelectMenuBuilder()
-                    .setCustomId(`menu_comprar_mercado_${interaction.id}`)
-                    .setPlaceholder("Selecione um item para COMPRAR");
+                let paginaAtual = 0;
+                const itensPorPagina = 25;
+                const totalPaginas = Math.ceil(vitrine.length / itensPorPagina);
 
-                vitrine.slice(0, 25).forEach(anuncio => {
-                    menuCompra.addOptions(
-                        new StringSelectMenuOptionBuilder()
-                            .setLabel(`${anuncio.quantidade}x ${anuncio.item_nome}`)
-                            .setDescription(
-                                `Vendedor: ${anuncio.vendedor_nome} | Preço: ${formatarMoeda(anuncio.preco)}`
-                            )
-                            .setValue(anuncio.id.toString())
-                    );
-                });
+                const gerarComponentes = pagina => {
+                    const inicio = pagina * itensPorPagina;
+                    const itensPagina = vitrine.slice(inicio, inicio + itensPorPagina);
+
+                    const menuCompra = new StringSelectMenuBuilder()
+                        .setCustomId(`menu_comprar_mercado_${interaction.id}`)
+                        .setPlaceholder(`Selecione um item (Página ${pagina + 1} de ${totalPaginas})`);
+
+                    itensPagina.forEach(anuncio => {
+                        menuCompra.addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(`${anuncio.quantidade}x ${anuncio.item_nome}`)
+                                .setDescription(`Vend: ${anuncio.vendedor_nome} | K$ ${anuncio.preco}`)
+                                .setValue(anuncio.id.toString())
+                        );
+                    });
+
+                    const rowMenu = new ActionRowBuilder().addComponents(menuCompra);
+                    const componentes = [rowMenu];
+
+                    if (totalPaginas > 1) {
+                        const rowBotoes = new ActionRowBuilder().addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`btn_ant_${interaction.id}`)
+                                .setLabel("◀️ Anterior")
+                                .setStyle(ButtonStyle.Primary)
+                                .setDisabled(pagina === 0),
+                            new ButtonBuilder()
+                                .setCustomId(`btn_prox_${interaction.id}`)
+                                .setLabel("Próxima ▶️")
+                                .setStyle(ButtonStyle.Primary)
+                                .setDisabled(pagina === totalPaginas - 1)
+                        );
+                        componentes.push(rowBotoes);
+                    }
+
+                    return componentes;
+                };
 
                 const msg = await interaction.reply({
-                    content: `🛒 **Mercado Global**\nSeu Saldo: **${formatarMoeda(char.saldo)}**\n*Selecione o item que deseja comprar (a compra é imediata e sem volta):*`,
-                    components: [new ActionRowBuilder().addComponents(menuCompra)],
+                    content: `🛒 **Casa de Leilões**\nSeu Saldo: **${formatarMoeda(char.saldo)}**\n*Navegue pelas páginas e selecione o item (a compra é imediata):*`,
+                    components: gerarComponentes(paginaAtual),
                     flags: MessageFlags.Ephemeral,
                     fetchReply: true
                 });
 
                 const collector = msg.createMessageComponentCollector({
                     filter: i => i.user.id === interaction.user.id,
-                    time: 60000
+                    time: 120000
                 });
 
-                collector.on("collect", async iSelect => {
-                    await iSelect.deferUpdate();
-                    const anuncioId = parseInt(iSelect.values[0]);
+                collector.on("collect", async iAction => {
+                    if (iAction.isButton()) {
+                        if (iAction.customId === `btn_ant_${interaction.id}`) {
+                            paginaAtual--;
+                        } else if (iAction.customId === `btn_prox_${interaction.id}`) {
+                            paginaAtual++;
+                        }
+                        await iAction.update({ components: gerarComponentes(paginaAtual) });
+                    } else if (iAction.isStringSelectMenu() && iAction.customId.startsWith("menu_comprar_mercado")) {
+                        await iAction.deferUpdate();
+                        const anuncioId = parseInt(iAction.values[0]);
 
-                    try {
-                        const { anuncio, vendedor } = await MercadoService.comprarItem(char.id, anuncioId);
+                        try {
+                            const { anuncio, vendedor } = await MercadoService.comprarItem(char.id, anuncioId);
 
-                        await iSelect.followUp({
-                            content: `🛍️ **Compra Concluída!**\nVocê comprou **${anuncio.quantidade}x ${anuncio.item_nome}** por **${formatarMoeda(anuncio.preco)}**.\nO item já está no seu inventário!`,
-                            flags: MessageFlags.Ephemeral
-                        });
+                            await iAction.followUp({
+                                content: `🛍️ **Compra Concluída!**\nVocê comprou **${anuncio.quantidade}x ${anuncio.item_nome}** por **${formatarMoeda(anuncio.preco)}**.\nO item já está no seu inventário!`,
+                                flags: MessageFlags.Ephemeral
+                            });
 
-                        const discordIdVendedor = vendedor.usuario_id || vendedor.discord_id;
+                            const discordIdVendedor = vendedor.usuario_id || vendedor.discord_id;
+                            await interaction.channel.send({
+                                content: `🤝 **Negócio Fechado no Mercado!** <@${discordIdVendedor}>\n**${char.nome}** comprou **${anuncio.quantidade}x ${anuncio.item_nome}** por **K$ ${anuncio.preco}** e o dinheiro já está na sua conta!`
+                            });
 
-                        await interaction.channel.send({
-                            content: `🤝 **Negócio Fechado no Mercado!** <@${discordIdVendedor}>\n**${char.nome}** comprou **${anuncio.quantidade}x ${anuncio.item_nome}** por **K$ ${anuncio.preco}** e o dinheiro já está na sua conta!`
-                        });
+                            await msg.edit({ components: [] }).catch(() => null);
+                            collector.stop();
+                        } catch (err) {
+                            let erroMsg = "❌ Erro ao realizar a compra.";
+                            if (err.message === "SALDO_INSUFICIENTE")
+                                erroMsg = "🚫 Você não tem saldo suficiente para comprar este item.";
+                            if (err.message === "ANUNCIO_NAO_ENCONTRADO")
+                                erroMsg = "🚫 Este item já foi vendido ou retirado do mercado.";
 
-                        await msg.edit({ components: [] }).catch(() => null);
-                        collector.stop();
-                    } catch (err) {
-                        let erroMsg = "❌ Erro ao realizar a compra.";
-                        if (err.message === "SALDO_INSUFICIENTE")
-                            erroMsg = "🚫 Você não tem saldo suficiente para comprar este item.";
-                        if (err.message === "ANUNCIO_NAO_ENCONTRADO")
-                            erroMsg = "🚫 Este item já foi vendido ou retirado do mercado.";
-
-                        await iSelect.followUp({ content: erroMsg, flags: MessageFlags.Ephemeral });
+                            await iAction.followUp({ content: erroMsg, flags: MessageFlags.Ephemeral });
+                        }
                     }
                 });
             } else if (subcomando === "meus_anuncios") {
