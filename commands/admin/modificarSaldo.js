@@ -19,7 +19,7 @@ module.exports = {
         ),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
-        const temPermissao =
+        /*const temPermissao =
             interaction.member.roles.cache.has(ID_CARGO_ADMIN) || interaction.member.roles.cache.has(ID_CARGO_MOD);
 
         if (!temPermissao) {
@@ -27,7 +27,7 @@ module.exports = {
                 content: "🚫 Você não tem permissão para usar este comando.",
                 flags: MessageFlags.Ephemeral
             });
-        }
+        }*/
 
         const alvo = interaction.options.getUser("jogador");
         const valor = interaction.options.getNumber("valor");
