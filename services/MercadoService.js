@@ -26,16 +26,17 @@ class MercadoService {
         await PersonagemRepository.atualizar(vendedor.id, { saldo: vendedor.saldo + anuncio.preco });
 
         try {
-            await TransacaoRepository.criar(
-                comprador.id,
-                -anuncio.preco,
-                `Compra no Mercado (${anuncio.quantidade}x ${anuncio.item_nome})`
-            );
-            await TransacaoRepository.criar(
-                vendedor.id,
-                anuncio.preco,
-                `Venda no Mercado (${anuncio.quantidade}x ${anuncio.item_nome})`
-            );
+            await TransacaoRepository.criar({
+                personagem_id: comprador.id,
+                valor: -anuncio.preco,
+                motivo: `Compra no Mercado (${anuncio.quantidade}x ${anuncio.item_nome})`
+            });
+
+            await TransacaoRepository.criar({
+                personagem_id: vendedor.id,
+                valor: anuncio.preco,
+                motivo: `Venda no Mercado (${anuncio.quantidade}x ${anuncio.item_nome})`
+            });
         } catch (err) {
             console.log("Erro ao registrar extrato do mercado:", err);
         }
