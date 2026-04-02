@@ -22,7 +22,11 @@ module.exports = {
             option.setName("comprador").setDescription("O jogador que vai comprar o item").setRequired(true)
         )
         .addNumberOption(option =>
-            option.setName("valor").setDescription("O valor total da venda em Kwanzas").setRequired(true).setMinValue(0.1)
+            option
+                .setName("valor")
+                .setDescription("O valor total da venda em Kwanzas")
+                .setRequired(true)
+                .setMinValue(0.1)
         ),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
@@ -32,7 +36,7 @@ module.exports = {
 
         if (compradorUser.bot)
             return interaction.reply({ content: "🚫 Bots não compram itens.", flags: MessageFlags.Ephemeral });
-        
+
         if (compradorUser.id === vendedorUser.id)
             return interaction.reply({
                 content: "🚫 Você não pode vender itens para si mesmo.",
@@ -50,7 +54,7 @@ module.exports = {
                     content: "🚫 Você não tem um personagem ativo.",
                     flags: MessageFlags.Ephemeral
                 });
-                
+
             if (!charComprador)
                 return interaction.reply({
                     content: `🚫 O comprador **${compradorUser.username}** não tem um personagem ativo.`,
@@ -106,7 +110,8 @@ module.exports = {
                     const itemId = parseInt(iSelect.values[0]);
                     const itemSelecionado = inventario.find(item => item.id === itemId);
 
-                    if (!itemSelecionado) return iSelect.reply({ content: "Item não encontrado.", flags: MessageFlags.Ephemeral });
+                    if (!itemSelecionado)
+                        return iSelect.reply({ content: "Item não encontrado.", flags: MessageFlags.Ephemeral });
 
                     const modalId = `modal_qtd_venda_${iSelect.id}`;
                     const modal = new ModalBuilder()
@@ -140,11 +145,15 @@ module.exports = {
                         }
 
                         if (qtd > itemSelecionado.quantidade) {
-                            return submit.editReply(`🚫 Você tem apenas **${itemSelecionado.quantidade}x** de **${itemSelecionado.nome}**.`);
+                            return submit.editReply(
+                                `🚫 Você tem apenas **${itemSelecionado.quantidade}x** de **${itemSelecionado.nome}**.`
+                            );
                         }
 
                         await msgMenu.edit({ components: [] }).catch(() => null);
-                        await submit.editReply({ content: `⏳ A proposta de venda de **${qtd}x ${itemSelecionado.nome}** foi enviada publicamente. Aguardando o comprador...` });
+                        await submit.editReply({
+                            content: `⏳ A proposta de venda de **${qtd}x ${itemSelecionado.nome}** foi enviada publicamente. Aguardando o comprador...`
+                        });
                         collectorMenu.stop();
 
                         const nomeItemFormatado = `${qtd}x ${itemSelecionado.nome}`;
@@ -152,14 +161,19 @@ module.exports = {
                         const propostaEmbed = new EmbedBuilder()
                             .setColor("#0099FF")
                             .setTitle("❓ Proposta de Venda")
-                            .setDescription(`**${charVendedor.nome}** quer vender **${nomeItemFormatado}** para **${charComprador.nome}**.`)
+                            .setDescription(
+                                `**${charVendedor.nome}** quer vender **${nomeItemFormatado}** para **${charComprador.nome}**.`
+                            )
                             .addFields(
                                 { name: "Valor", value: formatarMoeda(valorVenda) },
                                 { name: "Comprador", value: `Aguardando confirmação de ${charComprador.nome}...` }
                             )
                             .setFooter({ text: "Expira em 60 segundos." });
 
-                        if (itemSelecionado.descricao && /\.(jpeg|jpg|gif|png|webp)$/i.test(itemSelecionado.descricao)) {
+                        if (
+                            itemSelecionado.descricao &&
+                            /\.(jpeg|jpg|gif|png|webp)$/i.test(itemSelecionado.descricao)
+                        ) {
                             const linkEncontrado = itemSelecionado.descricao.match(/https?:\/\/[^\s]+/);
                             if (linkEncontrado) propostaEmbed.setThumbnail(linkEncontrado[0]);
                         }
@@ -183,19 +197,25 @@ module.exports = {
                             components: [botoes]
                         });
 
+                        let processandoClique = false;
+
                         const collectorVenda = msgProposta.createMessageComponentCollector({
                             filter: iBtn => iBtn.user.id === compradorUser.id || iBtn.user.id === vendedorUser.id,
                             time: 60000
                         });
 
                         collectorVenda.on("collect", async iBtn => {
+                            if (processandoClique) return;
+
                             await iBtn.deferUpdate();
 
                             if (iBtn.customId === "cancelar_venda_item") {
                                 const canceladoEmbed = new EmbedBuilder()
                                     .setColor("#FF0000")
                                     .setTitle("✖️ Venda Cancelada")
-                                    .setDescription(`A venda de **${nomeItemFormatado}** foi cancelada por ${iBtn.user.username}.`);
+                                    .setDescription(
+                                        `A venda de **${nomeItemFormatado}** foi cancelada por ${iBtn.user.username}.`
+                                    );
 
                                 await msgProposta.edit({ content: null, embeds: [canceladoEmbed], components: [] });
                                 return collectorVenda.stop("cancelado");
@@ -208,6 +228,8 @@ module.exports = {
                                         flags: MessageFlags.Ephemeral
                                     });
                                 }
+
+                                processandoClique = true;
 
                                 try {
                                     await TransacaoService.executarVendaItemRP(
@@ -238,14 +260,18 @@ module.exports = {
                                             { name: "Valor", value: formatarMoeda(valorVenda) }
                                         );
 
-                                    if (propostaEmbed.data.thumbnail) sucesso.setThumbnail(propostaEmbed.data.thumbnail.url);
+                                    if (propostaEmbed.data.thumbnail)
+                                        sucesso.setThumbnail(propostaEmbed.data.thumbnail.url);
 
                                     await msgProposta.edit({ content: null, embeds: [sucesso], components: [] });
                                     collectorVenda.stop("concluido");
                                 } catch (err) {
+                                    processandoClique = false;
+
                                     if (err.message === "SALDO_COMPRADOR_INSUFICIENTE") {
                                         await msgProposta.edit({
-                                            content: "❌ O comprador não tem mais saldo suficiente para finalizar a transação.",
+                                            content:
+                                                "❌ O comprador não tem mais saldo suficiente para finalizar a transação.",
                                             embeds: [],
                                             components: []
                                         });
@@ -267,18 +293,20 @@ module.exports = {
                                 const expiradoEmbed = new EmbedBuilder()
                                     .setColor("#808080")
                                     .setTitle("⌛ Proposta Expirada")
-                                    .setDescription(`A oferta de venda de **${nomeItemFormatado}** expirou porque o comprador não respondeu.`);
+                                    .setDescription(
+                                        `A oferta de venda de **${nomeItemFormatado}** expirou porque o comprador não respondeu.`
+                                    );
 
-                                msgProposta.edit({ content: null, embeds: [expiradoEmbed], components: [] }).catch(() => {});
+                                msgProposta
+                                    .edit({ content: null, embeds: [expiradoEmbed], components: [] })
+                                    .catch(() => {});
                             }
                         });
-
                     } catch (err) {
                         console.error("Erro no modal de venda:", err);
                     }
                 }
             });
-
         } catch (err) {
             console.error("Erro ao processar venda:", err);
             const erroMsg = {
