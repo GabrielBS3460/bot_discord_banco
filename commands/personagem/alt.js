@@ -12,6 +12,7 @@ const {
 } = require("discord.js");
 
 const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
+const ItensRepository = require("../../repositories/ItensRepository.js");
 const AltService = require("../../services/AltService.js");
 
 module.exports = {
@@ -25,15 +26,7 @@ module.exports = {
             sub.setName("ingredientes").setDescription("Envia ingredientes do seu estoque para outro personagem seu.")
         )
         .addSubcommand(sub =>
-            sub
-                .setName("diverso")
-                .setDescription("Envia um equipamento/item avulso para um alt usando um link.")
-                .addStringOption(opt =>
-                    opt.setName("nome").setDescription("Nome do item (Ex: Espada Longa)").setRequired(true)
-                )
-                .addStringOption(opt =>
-                    opt.setName("link").setDescription("Link da imagem ou ficha do item").setRequired(true)
-                )
+            sub.setName("item").setDescription("Transfere um item real do seu inventário para um alt.")
         ),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
@@ -57,7 +50,7 @@ module.exports = {
             const rotas = {
                 dinheiro: this.executarDinheiro,
                 ingredientes: this.executarIngredientes,
-                diverso: this.executarDiverso
+                item: this.executarItem
             };
 
             if (rotas[subcomando]) {
@@ -146,7 +139,7 @@ module.exports = {
                 collector.stop();
                 // eslint-disable-next-line no-unused-vars
             } catch (err) {
-                /* ignora timeout */
+                /* empty */
             }
         });
     },
@@ -200,10 +193,14 @@ module.exports = {
             filter: i => i.user.id === interaction.user.id,
             time: 120000
         });
+
         let itemEscolhido = null;
         let destinoEscolhidoId = null;
+        let processando = false;
 
         collector.on("collect", async iComp => {
+            if (processando) return;
+
             if (iComp.isStringSelectMenu()) {
                 if (iComp.customId.startsWith("menu_alt_item_")) itemEscolhido = iComp.values[0];
                 if (iComp.customId.startsWith("menu_alt_destino_")) destinoEscolhidoId = parseInt(iComp.values[0]);
@@ -241,10 +238,13 @@ module.exports = {
                         filter: m => m.customId === modalId && m.user.id === interaction.user.id,
                         time: 60000
                     });
+
+                    processando = true;
                     await modalSubmit.deferUpdate();
 
                     const qtdEnviar = parseInt(modalSubmit.fields.getTextInputValue("inp_qtd"));
                     if (isNaN(qtdEnviar) || qtdEnviar <= 0 || qtdEnviar > maxDisp) {
+                        processando = false;
                         return modalSubmit.followUp({
                             content: `🚫 Quantidade inválida. Você só tem ${maxDisp} disponíveis.`,
                             flags: MessageFlags.Ephemeral
@@ -258,6 +258,7 @@ module.exports = {
                     const estDestino = charDestinoAtualizado.estoque_ingredientes || {};
 
                     if (!estOrigem[itemEscolhido] || estOrigem[itemEscolhido] < qtdEnviar) {
+                        processando = false;
                         return modalSubmit.followUp({
                             content: "❌ Ocorreu um erro: o item não está mais no seu estoque.",
                             flags: MessageFlags.Ephemeral
@@ -288,49 +289,157 @@ module.exports = {
                     collector.stop();
                     // eslint-disable-next-line no-unused-vars
                 } catch (err) {
-                    /* ignora timeout */
+                    processando = false;
                 }
             }
         });
     },
 
-    async executarDiverso(interaction, charAtivo, meusAlts) {
-        const nomeItem = interaction.options.getString("nome");
-        const linkItem = interaction.options.getString("link");
+    async executarItem(interaction, charAtivo, meusAlts) {
+        const inventario = await ItensRepository.buscarInventario(charAtivo.id);
+
+        if (!inventario || inventario.length === 0) {
+            return interaction.editReply({
+                content: "🎒 Seu inventário está vazio. Você não tem nada para transferir."
+            });
+        }
+
+        const menuItens = new StringSelectMenuBuilder()
+            .setCustomId(`menu_alt_equip_${interaction.id}`)
+            .setPlaceholder("1️⃣ Selecione o item do inventário...");
+
+        inventario.slice(0, 25).forEach(item => {
+            menuItens.addOptions(
+                new StringSelectMenuOptionBuilder()
+                    .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
+                    .setDescription(`Tipo: ${item.tipo}`)
+                    .setValue(item.id.toString())
+            );
+        });
 
         const menuAlts = new StringSelectMenuBuilder()
-            .setCustomId(`menu_alt_div_${interaction.id}`)
-            .setPlaceholder("Selecione o destinatário...")
-            .addOptions(
-                meusAlts.map(alt => new StringSelectMenuOptionBuilder().setLabel(alt.nome).setValue(String(alt.id)))
-            );
+            .setCustomId(`menu_alt_destequip_${interaction.id}`)
+            .setPlaceholder("2️⃣ Selecione o alt destino...");
+
+        meusAlts.forEach(alt =>
+            menuAlts.addOptions(new StringSelectMenuOptionBuilder().setLabel(alt.nome).setValue(String(alt.id)))
+        );
+
+        const btnConfirmar = new ButtonBuilder()
+            .setCustomId(`btn_conf_equip_${interaction.id}`)
+            .setLabel("Avançar para Quantidade")
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(true);
+
+        const buildComponents = () => [
+            new ActionRowBuilder().addComponents(menuItens),
+            new ActionRowBuilder().addComponents(menuAlts),
+            new ActionRowBuilder().addComponents(btnConfirmar)
+        ];
 
         const replyMsg = await interaction.editReply({
-            content: `📦 **Transferir Equipamento / Item Avulso**\n**Origem:** ${charAtivo.nome}\n**Item:** [${nomeItem}](${linkItem})\n\nSelecione para qual personagem seu você deseja enviar:`,
-            components: [new ActionRowBuilder().addComponents(menuAlts)]
+            content: `🧳 **Transferência de Inventário (Alts)**\n**Origem:** ${charAtivo.nome}\n\nSelecione o Item e para qual personagem deseja enviar:`,
+            components: buildComponents()
         });
 
         const collector = replyMsg.createMessageComponentCollector({
             filter: i => i.user.id === interaction.user.id,
-            time: 60000
+            time: 120000
         });
 
-        collector.on("collect", async iSelect => {
-            await iSelect.deferUpdate();
-            const destinoId = parseInt(iSelect.values[0]);
-            const destinoAlt = meusAlts.find(a => a.id === destinoId);
+        let itemId = null;
+        let altId = null;
+        let processando = false;
 
-            await AltService.transferirItemDiverso(charAtivo.id, destinoId, nomeItem, charAtivo.nome, destinoAlt.nome);
+        collector.on("collect", async iComp => {
+            if (processando) return;
 
-            await interaction.channel.send({
-                content: `🔀 **Transferência de Equipamento (Alts)**\nO personagem **${charAtivo.nome}** guardou os pertences e enviou o item **[${nomeItem}](${linkItem})** para o inventário de **${destinoAlt.nome}**.`
-            });
+            if (iComp.isStringSelectMenu()) {
+                if (iComp.customId.startsWith("menu_alt_equip_")) itemId = parseInt(iComp.values[0]);
+                if (iComp.customId.startsWith("menu_alt_destequip_")) altId = parseInt(iComp.values[0]);
 
-            await interaction.editReply({
-                content: `✅ Item **${nomeItem}** enviado com sucesso para **${destinoAlt.nome}**!\nUma mensagem foi enviada no canal.`,
-                components: []
-            });
-            collector.stop();
+                if (itemId && altId) {
+                    btnConfirmar.setDisabled(false);
+                    btnConfirmar.setStyle(ButtonStyle.Success);
+                }
+                await iComp.update({ components: buildComponents() });
+            }
+
+            if (iComp.isButton() && iComp.customId.startsWith("btn_conf_equip_")) {
+                const itemSelecionado = inventario.find(i => i.id === itemId);
+                const destinoAlt = meusAlts.find(a => a.id === altId);
+
+                const modalId = `mod_qtd_equip_${interaction.id}`;
+                const modal = new ModalBuilder()
+                    .setCustomId(modalId)
+                    .setTitle(`Enviar ${itemSelecionado.nome.substring(0, 20)}`)
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("inp_qtd")
+                                .setLabel(`Quantidade (Máx: ${itemSelecionado.quantidade})`)
+                                .setStyle(TextInputStyle.Short)
+                                .setValue("1")
+                                .setRequired(true)
+                        )
+                    );
+
+                await iComp.showModal(modal);
+
+                try {
+                    const modalSubmit = await iComp.awaitModalSubmit({
+                        filter: m => m.customId === modalId && m.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    processando = true; // Trava de segurança no DB
+                    await modalSubmit.deferUpdate();
+
+                    const qtdEnviar = parseInt(modalSubmit.fields.getTextInputValue("inp_qtd"));
+                    if (isNaN(qtdEnviar) || qtdEnviar <= 0 || qtdEnviar > itemSelecionado.quantidade) {
+                        processando = false;
+                        return modalSubmit.followUp({
+                            content: `🚫 Quantidade inválida.`,
+                            flags: MessageFlags.Ephemeral
+                        });
+                    }
+
+                    await ItensRepository.removerItem(itemSelecionado.id, qtdEnviar);
+                    await ItensRepository.adicionarItem(
+                        destinoAlt.id,
+                        itemSelecionado.nome,
+                        itemSelecionado.tipo,
+                        qtdEnviar,
+                        itemSelecionado.descricao
+                    );
+
+                    try {
+                        await AltService.transferirItemDiverso(
+                            charAtivo.id,
+                            destinoAlt.id,
+                            `${qtdEnviar}x ${itemSelecionado.nome}`,
+                            charAtivo.nome,
+                            destinoAlt.nome
+                        );
+                        // eslint-disable-next-line no-unused-vars
+                    } catch (e) {
+                        /* empty */
+                    }
+
+                    await interaction.channel.send({
+                        content: `🔀 **Transferência de Inventário (Alts)**\nO personagem **${charAtivo.nome}** enviou **${qtdEnviar}x ${itemSelecionado.nome}** para o inventário de **${destinoAlt.nome}**.`
+                    });
+
+                    await interaction.editReply({
+                        content: `✅ **Transferência Concluída!**\nO item **${itemSelecionado.nome}** foi enviado com sucesso para **${destinoAlt.nome}**.`,
+                        components: []
+                    });
+                    collector.stop();
+                    // eslint-disable-next-line no-unused-vars
+                } catch (err) {
+                    processando = false;
+                }
+            }
         });
     }
 };

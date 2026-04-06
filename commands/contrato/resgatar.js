@@ -38,7 +38,7 @@ module.exports = {
         }
 
         const menu = new StringSelectMenuBuilder()
-            .setCustomId("menu_resgate")
+            .setCustomId(`menu_resgate_${interaction.id}`)
             .setPlaceholder("Selecione a missão para resgatar");
 
         pendentes.forEach(insc => {
@@ -57,13 +57,23 @@ module.exports = {
             fetchReply: true
         });
 
-        const collector = msg.createMessageComponentCollector({ time: 60000 });
+        const collector = msg.createMessageComponentCollector({
+            filter: i => i.user.id === interaction.user.id,
+            time: 60000
+        });
+
+        let processandoClique = false;
 
         collector.on("collect", async i => {
+            if (processandoClique) return;
+            processandoClique = true;
+
             const [inscId, nd] = i.values[0].split("_").map(Number);
 
+            const modalId = `mod_resgate_${inscId}_${interaction.id}`;
+
             const modal = new ModalBuilder()
-                .setCustomId(`mod_resgate_${inscId}`)
+                .setCustomId(modalId)
                 .setTitle("Relatório da Missão")
                 .addComponents(
                     new ActionRowBuilder().addComponents(
@@ -78,17 +88,24 @@ module.exports = {
 
             await i.showModal(modal);
 
-            const sub = await i.awaitModalSubmit({ time: 60000 }).catch(() => null);
-            if (!sub) return;
-
-            await sub.deferReply();
-
-            const pontosGanhos = parseFloat(sub.fields.getTextInputValue("pontos").replace(",", "."));
-            if (isNaN(pontosGanhos) || pontosGanhos < 0) {
-                return sub.editReply({ content: "🚫 Valor inválido.", flags: MessageFlags.Ephemeral });
-            }
-
             try {
+                const sub = await i.awaitModalSubmit({
+                    filter: subI => subI.customId === modalId && subI.user.id === interaction.user.id,
+                    time: 60000
+                });
+
+                await sub.deferReply();
+
+                const pontosGanhos = parseFloat(sub.fields.getTextInputValue("pontos").replace(",", "."));
+
+                if (isNaN(pontosGanhos) || pontosGanhos < 0) {
+                    processandoClique = false;
+                    return sub.editReply({
+                        content: "🚫 Valor inválido. Digite apenas números.",
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+
                 const charAtual = await getPersonagemAtivo(interaction.user.id);
 
                 const resultado = await ContratoService.processarResgateMissao(
@@ -101,20 +118,28 @@ module.exports = {
 
                 let msgFinal = `🎊 **RECOMPENSA RESGATADA!** 🎊\n👤 **Mercenário:** ${interaction.user}\n💰 **Kwanzas:** +K$ ${resultado.ouroGanho}\n📈 **Pontos de Missão:** +${pontosGanhos} (Total: ${resultado.novosPontos})`;
 
-                if (resultado.niveisGanhos > 0)
+                if (resultado.niveisGanhos > 0) {
                     msgFinal += `\n\n⏫ **LEVEL UP!** O personagem subiu para o nível **${resultado.novoNivel}**!`;
+                }
 
-                await sub.editReply({
-                    content: msgFinal,
-                    components: []
-                });
+                await sub.editReply({ content: msgFinal });
 
                 await interaction
                     .editReply({ content: "✅ Resgate processado com sucesso.", components: [] })
                     .catch(() => {});
+
+                collector.stop();
             } catch (err) {
-                console.error(err);
-                await sub.editReply({ content: "❌ Erro ao processar resgate.", flags: MessageFlags.Ephemeral });
+                processandoClique = false;
+                if (err.code === "InteractionCollectorError") return;
+
+                console.error("Erro no resgate:", err);
+                await i
+                    .followUp({
+                        content: "❌ Ocorreu um erro crítico ao processar o seu resgate.",
+                        flags: MessageFlags.Ephemeral
+                    })
+                    .catch(() => {});
             }
         });
     }
