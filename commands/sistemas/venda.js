@@ -27,12 +27,19 @@ module.exports = {
                 .setDescription("O valor total da venda em Kwanzas")
                 .setRequired(true)
                 .setMinValue(0.1)
+        )
+        .addStringOption(option =>
+            option
+                .setName("filtro")
+                .setDescription("Opcional: Buscar por nome ou tipo (Ex: Espada, Consumível)")
+                .setRequired(false)
         ),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         const vendedorUser = interaction.user;
         const compradorUser = interaction.options.getUser("comprador");
         const valorVenda = interaction.options.getNumber("valor");
+        const filtro = interaction.options.getString("filtro"); // Capturamos o filtro digitado
 
         if (compradorUser.bot)
             return interaction.reply({ content: "🚫 Bots não compram itens.", flags: MessageFlags.Ephemeral });
@@ -77,11 +84,29 @@ module.exports = {
                 });
             }
 
+            let itensFiltrados = inventario;
+            if (filtro) {
+                const termoBusca = filtro.toLowerCase();
+                itensFiltrados = inventario.filter(
+                    item => item.nome.toLowerCase().includes(termoBusca) || item.tipo.toLowerCase().includes(termoBusca)
+                );
+
+                if (itensFiltrados.length === 0) {
+                    return interaction.reply({
+                        content: `🎒 Nenhum item encontrado no seu inventário com o filtro **"${filtro}"**.`,
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
+            }
+
             const menuItens = new StringSelectMenuBuilder()
                 .setCustomId(`menu_venda_item_${interaction.id}`)
-                .setPlaceholder("Selecione o item que deseja vender...");
+                .setPlaceholder(
+                    filtro ? `Itens filtrados por "${filtro}"...` : "Selecione o item que deseja vender..."
+                );
 
-            const itensMenu = inventario.slice(0, 25);
+            const itensMenu = itensFiltrados.slice(0, 25);
+
             itensMenu.forEach(item => {
                 menuItens.addOptions(
                     new StringSelectMenuOptionBuilder()
@@ -108,6 +133,7 @@ module.exports = {
             collectorMenu.on("collect", async iSelect => {
                 if (iSelect.isStringSelectMenu() && iSelect.customId.startsWith("menu_venda_item_")) {
                     const itemId = parseInt(iSelect.values[0]);
+
                     const itemSelecionado = inventario.find(item => item.id === itemId);
 
                     if (!itemSelecionado)
