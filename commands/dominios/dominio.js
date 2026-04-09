@@ -13,6 +13,7 @@ const {
 } = require("discord.js");
 
 const CATALOGO_CONSTRUCOES = require("../../data/construcoesData.js");
+const CATALOGO_TROPAS = require("../../data/unidadesMilitaresData.js");
 const DominioService = require("../../services/DominioService.js");
 
 module.exports = {
