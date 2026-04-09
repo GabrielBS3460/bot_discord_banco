@@ -372,6 +372,46 @@ module.exports = {
                 }
 
                 else if (iBtn.customId.startsWith("dom_btn_exercito_")) {
+                    const exercitoEmbed = new EmbedBuilder()
+                        .setColor("#E74C3C")
+                        .setTitle(`⚔️ Forças Armadas: ${dominio.nome}`)
+                        .setDescription("Visão geral das suas unidades militares atuais e custos de manutenção.");
+
+                    let poderTotal = 0;
+                    let manutencaoTotal = 0;
+                    let listaTropas = "";
+
+                    if (dominio.tropas.length === 0) {
+                        listaTropas = "*Nenhuma unidade militar recrutada no momento.*";
+                    } else {
+                        dominio.tropas.forEach(t => {
+                            const stats = CATALOGO_TROPAS[t.nome];
+                            if (stats) {
+                                const poderTropa = stats.poder * t.quantidade;
+                                const manutencaoTropa = stats.manutencao * t.quantidade;
+                                
+                                poderTotal += poderTropa;
+                                manutencaoTotal += manutencaoTropa;
+                                
+                                listaTropas += `**${t.quantidade}x ${t.nome}** (Poder: ${poderTropa} | Manut: ${manutencaoTropa} LO)\n`;
+                            }
+                        });
+                    }
+
+                    exercitoEmbed.addFields(
+                        { name: "Unidades", value: listaTropas, inline: false },
+                        { name: "Estatísticas Totais", value: `**Poder Militar:** ${poderTotal}\n**Manutenção Mensal:** ${manutencaoTotal} LO`, inline: false }
+                    );
+
+                    const botoesRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`dom_btn_recrutar_${interaction.id}`).setLabel("Recrutar Tropas").setStyle(ButtonStyle.Primary).setEmoji("➕"),
+                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar ao Painel").setStyle(ButtonStyle.Secondary).setEmoji("🔙")
+                    );
+
+                    await iBtn.update({ content: null, embeds: [exercitoEmbed], components: [botoesRow] });
+                }
+                
+                else if (iBtn.customId.startsWith("dom_btn_recrutar_")) {
                     if (dominio.acoes_disponiveis <= 0) {
                         return iBtn.reply({ content: "🚫 Você precisa de 1 Ação de Regente para treinar tropas.", flags: MessageFlags.Ephemeral });
                     }
@@ -392,62 +432,14 @@ module.exports = {
                     });
 
                     const voltarRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+                        new ButtonBuilder().setCustomId(`dom_btn_exercito_${interaction.id}`).setLabel("Cancelar / Voltar").setStyle(ButtonStyle.Secondary)
                     );
 
                     await iBtn.update({
-                        content: `**Quartel General** ⚔️\nVocê pode recrutar até **${dominio.nivel} unidades** por Ação de Regente.\n*Selecione o pelotão que deseja convocar:*`,
+                        content: `**Centro de Recrutamento** ⚔️\nVocê pode recrutar até **${dominio.nivel} unidades** por Ação de Regente.\n*Selecione o pelotão que deseja convocar:*`,
                         components: [new ActionRowBuilder().addComponents(menuTropas), voltarRow],
                         embeds: []
                     });
-                }
-                
-                else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_tropa_")) {
-                    const nomeTropa = iBtn.values[0];
-                    const tropa = CATALOGO_TROPAS[nomeTropa];
-
-                    if (tropa.req) {
-                        const possuiReq = dominio.construcoes.some(c => c.nome.toLowerCase() === tropa.req.toLowerCase());
-                        if (!possuiReq) {
-                            return iBtn.reply({ content: `🚫 Requisito não atendido: Você precisa construir o(a) **${tropa.req}** antes de poder recrutar ${nomeTropa}.`, flags: MessageFlags.Ephemeral });
-                        }
-                    }
-
-                    const modalId = `mod_tropa_${iBtn.id}`;
-                    const modal = new ModalBuilder()
-                        .setCustomId(modalId)
-                        .setTitle(`Recrutar ${nomeTropa}`)
-                        .addComponents(
-                            new ActionRowBuilder().addComponents(
-                                new TextInputBuilder()
-                                    .setCustomId("inp_qtd_tropa")
-                                    .setLabel(`Quantidade (Máx por ação: ${dominio.nivel})`)
-                                    .setStyle(TextInputStyle.Short)
-                                    .setPlaceholder(`Custa ${tropa.custo} LO cada.`)
-                                    .setRequired(true)
-                            )
-                        );
-
-                    await iBtn.showModal(modal);
-
-                    try {
-                        const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId && m.user.id === interaction.user.id, time: 60000 });
-                        await mSubmit.deferUpdate();
-                        
-                        const qtd = parseInt(mSubmit.fields.getTextInputValue("inp_qtd_tropa"));
-
-                        if (isNaN(qtd) || qtd <= 0) return mSubmit.followUp({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
-
-                        try {
-                            const log = await DominioService.recrutar(dominio.id, nomeTropa, qtd);
-                            dominio = await DominioService.buscarPainel(char.id); 
-                            
-                            await mSubmit.followUp({ content: `✅ ${log}` });
-                            await msgPainel.edit(renderizarPainel());
-                        } catch (err) {
-                            await mSubmit.followUp({ content: `❌ **Falha no Recrutamento:** ${err.message}`, flags: MessageFlags.Ephemeral });
-                        }
-                    } catch (e) { /* ignora timeout da janelinha */ }
                 }
 
                 else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
