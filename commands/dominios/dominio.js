@@ -102,7 +102,7 @@ module.exports = {
         else if (subcomando === "painel") {
             await interaction.deferReply();
 
-            const dominio = await DominioService.buscarPainel(char.id);
+            let dominio = await DominioService.buscarPainel(char.id);
 
             if (!dominio) {
                 return interaction.editReply({ 
