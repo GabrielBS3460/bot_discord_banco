@@ -1,4 +1,14 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const { 
+    SlashCommandBuilder, 
+    EmbedBuilder, 
+    ActionRowBuilder, 
+    ButtonBuilder, 
+    ButtonStyle, 
+    MessageFlags,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder
+} = require("discord.js");
+
 const DominioService = require("../../services/DominioService.js");
 
 module.exports = {
