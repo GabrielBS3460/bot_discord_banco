@@ -1,4 +1,5 @@
 const prisma = require("../database.js");
+const transacaoService = require("../services/TransacaoService.js")
 
 const CLASSES_MISTICAS = [
     "Arcanista", "Necromante", "Magimarcialista", "Bardo",
@@ -26,10 +27,7 @@ class DominioService {
         }
 
         const novoDominio = await prisma.$transaction(async (tx) => {
-            await tx.personagem.update({
-                where: { id: char.id },
-                data: { tibares: { decrement: PRECO_FUNDACAO } }
-            });
+            transacaoService.registrarGasto(char, PRECO_FUNDACAO, "FUNDACAO_DOMINIO");
 
             const dominio = await tx.dominio.create({
                 data: {
