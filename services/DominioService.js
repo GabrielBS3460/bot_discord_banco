@@ -1,6 +1,7 @@
 const prisma = require("../database.js");
 const transacaoService = require("../services/TransacaoService.js")
-const CATALOGO_CONSTRUCOES = require("../utils/Construcoes.js");
+const CATALOGO_CONSTRUCOES = require("../data/construcoesData.js");
+const CATALOGO_TROPAS = require("../data/unidadesMilitaresData.js");
 
 const CLASSES_MISTICAS = [
     "Arcanista", "Necromante", "Magimarcialista", "Bardo",
@@ -264,6 +265,59 @@ class DominioService {
         ]);
 
         return `🏗️ A construção de **${nomeConstrucao}** foi concluída com sucesso! (Benefício: ${obra.beneficio})`;
+    }
+
+    async recrutar(dominioId, nomeTropa, quantidade) {
+        const dominio = await prisma.dominio.findUnique({
+            where: { id: dominioId },
+            include: { construcoes: true }
+        });
+
+        if (dominio.acoes_disponiveis <= 0) throw new Error("Sem ações disponíveis este mês.");
+        
+        if (quantidade > dominio.nivel) throw new Error(`Seu Quartel-General (Nível ${dominio.nivel}) só consegue treinar ${dominio.nivel} unidades por ação!`);
+
+        const tropaData = CATALOGO_TROPAS[nomeTropa];
+        if (!tropaData) throw new Error("Tropa não encontrada no catálogo militar.");
+
+        const custoTotal = tropaData.custo * quantidade;
+        if (dominio.tesouro_lo < custoTotal) throw new Error(`O tesouro precisa de ${custoTotal} LO para bancar ${quantidade}x ${nomeTropa}.`);
+
+        if (tropaData.req) {
+            const possuiReq = dominio.construcoes.some(c => c.nome.toLowerCase() === tropaData.req.toLowerCase());
+            if (!possuiReq) throw new Error(`Para recrutar **${nomeTropa}**, você precisa ter a construção: **${tropaData.req}**.`);
+        }
+
+        const tropaExistente = await prisma.dominioTropa.findFirst({
+            where: { dominio_id: dominioId, nome: nomeTropa }
+        });
+
+        await prisma.$transaction(async (tx) => {
+            await tx.dominio.update({
+                where: { id: dominioId },
+                data: {
+                    acoes_disponiveis: { decrement: 1 },
+                    tesouro_lo: { decrement: custoTotal }
+                }
+            });
+
+            if (tropaExistente) {
+                await tx.dominioTropa.update({
+                    where: { id: tropaExistente.id },
+                    data: { quantidade: { increment: quantidade } }
+                });
+            } else {
+                await tx.dominioTropa.create({
+                    data: {
+                        dominio_id: dominioId,
+                        nome: nomeTropa,
+                        quantidade: quantidade
+                    }
+                });
+            }
+        });
+
+        return `⚔️ As cornetas soaram! Você recrutou **${quantidade}x ${nomeTropa}** com sucesso! (Custo: ${custoTotal} LO)`;
     }
 }
 

@@ -12,7 +12,7 @@ const {
     TextInputStyle
 } = require("discord.js");
 
-const CATALOGO_CONSTRUCOES = require("../../utils/Construcoes.js");
+const CATALOGO_CONSTRUCOES = require("../../data/construcoesData.js");
 const DominioService = require("../../services/DominioService.js");
 
 module.exports = {
@@ -368,6 +368,85 @@ module.exports = {
                     } catch (err) {
                         await iBtn.followUp({ content: `❌ **Obras Embargadas:** ${err.message}`, flags: MessageFlags.Ephemeral });
                     }
+                }
+
+                else if (iBtn.customId.startsWith("dom_btn_exercito_")) {
+                    if (dominio.acoes_disponiveis <= 0) {
+                        return iBtn.reply({ content: "🚫 Você precisa de 1 Ação de Regente para treinar tropas.", flags: MessageFlags.Ephemeral });
+                    }
+
+                    const menuTropas = new StringSelectMenuBuilder()
+                        .setCustomId(`dom_menu_tropa_${interaction.id}`)
+                        .setPlaceholder("Selecione a Tropa para recrutar...");
+
+                    Object.keys(CATALOGO_TROPAS).forEach(nome => {
+                        const tropa = CATALOGO_TROPAS[nome];
+                        const reqText = tropa.req ? `Req: ${tropa.req}` : "Sem requisito";
+                        menuTropas.addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(`${nome} (Custo: ${tropa.custo} LO)`)
+                                .setDescription(`Poder: ${tropa.poder} | Manut: ${tropa.manutencao} LO/mês | ${reqText}`)
+                                .setValue(nome)
+                        );
+                    });
+
+                    const voltarRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+                    );
+
+                    await iBtn.update({
+                        content: `**Quartel General** ⚔️\nVocê pode recrutar até **${dominio.nivel} unidades** por Ação de Regente.\n*Selecione o pelotão que deseja convocar:*`,
+                        components: [new ActionRowBuilder().addComponents(menuTropas), voltarRow],
+                        embeds: []
+                    });
+                }
+                
+                else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_tropa_")) {
+                    const nomeTropa = iBtn.values[0];
+                    const tropa = CATALOGO_TROPAS[nomeTropa];
+
+                    if (tropa.req) {
+                        const possuiReq = dominio.construcoes.some(c => c.nome.toLowerCase() === tropa.req.toLowerCase());
+                        if (!possuiReq) {
+                            return iBtn.reply({ content: `🚫 Requisito não atendido: Você precisa construir o(a) **${tropa.req}** antes de poder recrutar ${nomeTropa}.`, flags: MessageFlags.Ephemeral });
+                        }
+                    }
+
+                    const modalId = `mod_tropa_${iBtn.id}`;
+                    const modal = new ModalBuilder()
+                        .setCustomId(modalId)
+                        .setTitle(`Recrutar ${nomeTropa}`)
+                        .addComponents(
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId("inp_qtd_tropa")
+                                    .setLabel(`Quantidade (Máx por ação: ${dominio.nivel})`)
+                                    .setStyle(TextInputStyle.Short)
+                                    .setPlaceholder(`Custa ${tropa.custo} LO cada.`)
+                                    .setRequired(true)
+                            )
+                        );
+
+                    await iBtn.showModal(modal);
+
+                    try {
+                        const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId && m.user.id === interaction.user.id, time: 60000 });
+                        await mSubmit.deferUpdate();
+                        
+                        const qtd = parseInt(mSubmit.fields.getTextInputValue("inp_qtd_tropa"));
+
+                        if (isNaN(qtd) || qtd <= 0) return mSubmit.followUp({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
+
+                        try {
+                            const log = await DominioService.recrutar(dominio.id, nomeTropa, qtd);
+                            dominio = await DominioService.buscarPainel(char.id); 
+                            
+                            await mSubmit.followUp({ content: `✅ ${log}` });
+                            await msgPainel.edit(renderizarPainel());
+                        } catch (err) {
+                            await mSubmit.followUp({ content: `❌ **Falha no Recrutamento:** ${err.message}`, flags: MessageFlags.Ephemeral });
+                        }
+                    } catch (e) { /* ignora timeout da janelinha */ }
                 }
 
                 else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
