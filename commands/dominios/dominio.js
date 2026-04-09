@@ -74,6 +74,8 @@ module.exports = {
                 return interaction.editReply({ embeds: [embed] });
 
             } catch (err) {
+                console.error("Erro ao fundar domínio:", err);
+                
                 let msgErro = "❌ Ocorreu um erro ao fundar o domínio.";
                 
                 if (err.message === "SALDO_INSUFICIENTE") msgErro = "💸 Você precisa de **T$ 5.000** para fundar um domínio.";
@@ -95,7 +97,6 @@ module.exports = {
                 });
             }
 
-            // Cálculos básicos
             const maxConstrucoes = dominio.nivel * 3;
             const qtdConstrucoes = dominio.construcoes.length;
             const qtdTropas = dominio.tropas.reduce((acc, tropa) => acc + tropa.quantidade, 0);
