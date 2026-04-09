@@ -68,6 +68,7 @@ class DominioService {
             let popNova = dominio.popularidade;
             let nivelNovo = dominio.nivel;
             let tesouroNovo = dominio.tesouro_lo;
+            let acoesNovo = dominio.acoes_disponiveis
             
             if (dominio.nivel >= 3) {
                 let rolagem = Math.floor(Math.random() * 100) + 1; 
@@ -78,7 +79,7 @@ class DominioService {
                 if (rolagem < 1) rolagem = 1;
 
                 if (rolagem <= 2) {
-                    logEvento = "🐉 **ATAQUE DE DRAGÃO!** Uma fera despejou chamas em suas terras! Você perdeu 1 Nível e algumas unidades militares fugiram!";
+                    logEvento = "🐉 **ATAQUE DE DRAGÃO!** Uma fera despejou chamas em suas terras! Você perdeu 1 Nível";
                     nivelNovo = Math.max(1, nivelNovo - 1);
                 } 
                 else if (rolagem <= 7) {
@@ -87,9 +88,10 @@ class DominioService {
                 } 
                 else if (rolagem <= 11) {
                     logEvento = "🐺 **MONSTRO!** Uma criatura está aterrorizando as fazendas. Você precisa gastar uma ação para caçá-la nesta sessão!";
+                    acoesNovo--;
                 } 
                 else if (rolagem <= 15) {
-                    logEvento = "🤢 **PESTE!** Uma doença assolou o domínio. Você perdeu popularidade e algumas tropas baixaram enfermaria.";
+                    logEvento = "🤢 **PESTE!** Uma doença assolou o domínio. Você perdeu popularidade.";
                     popNova = this.mudarPopularidade(dominio, -1);
                 } 
                 else if (rolagem <= 20) {
@@ -98,33 +100,39 @@ class DominioService {
                         logEvento = "🌪️ **DESASTRE NATURAL!** Um terremoto/tornado atingiu suas terras. O Domínio perdeu 1 Nível!";
                         nivelNovo = Math.max(1, nivelNovo - 1);
                     } else if (d6 <= 3) {
-                        logEvento = "🔥 **INCÊNDIO/ENCHENTE!** Parte da infraestrutura foi danificada. Uma construção foi perdida (Mestre decide qual).";
+                        logEvento = "🔥 **INCÊNDIO/ENCHENTE!** Parte da infraestrutura foi danificada. Perdeu 1d3 LO.";
                     } else {
                         logEvento = "❄️ **PROBLEMA MENOR!** Uma seca ou nevasca afetou os cofres. Perdeu 1d6 LO.";
                         tesouroNovo = Math.max(0, tesouroNovo - (Math.floor(Math.random() * 6) + 1));
                     }
                 } 
                 else if (rolagem <= 22) {
-                    logEvento = "✨ **FENÔMENO MÁGICO!** Algo bizarro aconteceu. Suas ações de regente sofrerão penalidades neste mês!";
+                    logEvento = "✨ **FENÔMENO MÁGICO!** Algo bizarro aconteceu. Durante esse Mês, o regente ganha uma ação adicional!";
+                    acoesNovo++;
                 } 
                 else if (rolagem <= 26) {
-                    logEvento = "📜 **QUESTÃO DIPLOMÁTICA!** Um emissário de outro reino exige favores ou tributos. Fale com o Mestre!";
+                    logEvento = "📜 **QUESTÃO DIPLOMÁTICA!** Um emissário de outro reino exige favores ou tributos. Voce gastou 1d3 LO com suborno!";
+                    tesouroNovo = Math.max(0, tesouroNovo - (Math.floor(Math.random() * 3) + 1));
                 } 
                 else if (rolagem <= 30) {
                     logEvento = "🔥 **LEVANTE!** A população se enfureceu com boatos. Sua popularidade caiu 2 categorias!";
                     popNova = this.mudarPopularidade(dominio, -2);
                 } 
                 else if (rolagem <= 35) {
-                    logEvento = "🗡️ **INTRIGA!** Há espiões na corte. Resolva isso na sessão ou perderá apoio popular.";
+                    logEvento = "🗡️ **INTRIGA!** Há espiões na corte. Sua popularidade caiu 1 categoria!";
+                    popNova = this.mudarPopularidade(dominio, -1);
                 } 
                 else if (rolagem <= 42) {
-                    logEvento = "⚖️ **QUESTÃO DE JUSTIÇA!** Uma disputa legal exige seu julgamento como regente.";
+                    logEvento = "⚖️ **QUESTÃO DE JUSTIÇA!** Uma disputa legal exige seu julgamento como regente. Você gastou uma ação para resolver.";
+                    acoesNovo--;
                 } 
                 else if (rolagem <= 52) {
-                    logEvento = "🥷 **BANDIDOS!** Salteadores estão roubando o povo. Sua popularidade vai cair todo mês até que sejam caçados!";
+                    logEvento = "🥷 **BANDIDOS!** Salteadores estão roubando o povo. Você gastou uma ação para caça-los.";
+                    acoesNovo--;
                 } 
                 else if (rolagem <= 56) {
-                    logEvento = "🪙 **CORRUPÇÃO!** Desvios de verba na sua corte. Os ganhos do domínio diminuíram neste mês.";
+                    logEvento = "🪙 **CORRUPÇÃO!** Desvios de verba na sua corte. Você perde 1LO por nível de domínio";
+                    tesouroNovo = Math.max(0, tesouroNovo - dominio.nivel);
                 } 
                 else if (rolagem <= 61) {
                     logEvento = "📉 **QUESTÃO COMERCIAL!** Uma crise de abastecimento estourou. Exige uma ação diplomática sua.";
@@ -161,7 +169,8 @@ class DominioService {
                     mes_ultimo_turno: mesAtual,
                     popularidade: popNova,
                     nivel: nivelNovo,
-                    tesouro_lo: tesouroNovo
+                    tesouro_lo: tesouroNovo,
+                    acoes_disponiveis: acoesNovo
                 },
                 include: { construcoes: true, tropas: true }
             });
