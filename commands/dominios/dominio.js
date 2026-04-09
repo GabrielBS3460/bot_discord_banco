@@ -7,7 +7,8 @@ const {
     MessageFlags,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
-    ModalBuilder
+    ModalBuilder,
+    TextInputBuilder
 } = require("discord.js");
 
 const DominioService = require("../../services/DominioService.js");
