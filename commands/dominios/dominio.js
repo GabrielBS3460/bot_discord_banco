@@ -182,38 +182,92 @@ module.exports = {
                         .setCustomId(`dom_menu_acoes_${interaction.id}`)
                         .setPlaceholder("Selecione uma Ação de Domínio (Custa 1 Ação)")
                         .addOptions(
-                            new StringSelectMenuOptionBuilder().setLabel("💰 Finanças").setDescription("Converter LO para T$ ou vice-versa [Req: Nobreza]").setValue("acao_financas"),
-                            new StringSelectMenuOptionBuilder().setLabel("👑 Governar").setDescription("Elevar o Nível do Domínio [Req: Nobreza]").setValue("acao_governar"),
-                            new StringSelectMenuOptionBuilder().setLabel("🎭 Festival").setDescription("Aumentar Popularidade (Custa 1 LO) [Req: Atuação]").setValue("acao_festival"),
-                            new StringSelectMenuOptionBuilder().setLabel("🗡️ Extorquir").setDescription("Ganhar 1d6 + Nível em LO, mas perder Popularidade [Req: Intimidação]").setValue("acao_extorquir")
+                            new StringSelectMenuOptionBuilder().setLabel("👑 Governar").setDescription(`Nível +1 | Custa: 5 LO x Prox. Nível | Req: Nobreza`).setValue("Governar").setEmoji("👑"),
+                            new StringSelectMenuOptionBuilder().setLabel("💰 Finanças (Comprar LO)").setDescription("1.000 T$ = 1 LO | Req: Nobreza").setValue("Financas_Compra").setEmoji("💰"),
+                            new StringSelectMenuOptionBuilder().setLabel("💰 Finanças (Vender LO)").setDescription("1 LO = 1.000 T$ | Req: Nobreza").setValue("Financas_Venda").setEmoji("🪙"),
+                            new StringSelectMenuOptionBuilder().setLabel("🎭 Festival").setDescription("Popularidade +1 | Custa: 1 LO | Req: Atuação").setValue("Festival").setEmoji("🎭"),
+                            new StringSelectMenuOptionBuilder().setLabel("🗡️ Extorquir").setDescription("Ganha 1d6+Nv LO | Pop -1 | Req: Intimidação").setValue("Extorquir").setEmoji("🗡️"),
+                            new StringSelectMenuOptionBuilder().setLabel("🏰 Aumentar Corte").setDescription("Sobe Corte | Custa: 1 LO | Req: Nobreza").setValue("Aumentar_Corte").setEmoji("🏰"),
+                            new StringSelectMenuOptionBuilder().setLabel("🌾 Convocar Camponeses").setDescription("Ganha 1d6 Tropas | Pop -1 | Custa: 1 LO | Req: Nenhuma").setValue("Convocar_Camponeses").setEmoji("🌾")
                         );
 
                     const voltarRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Cancelar / Voltar").setStyle(ButtonStyle.Secondary)
                     );
 
                     await iBtn.update({ 
-                        content: `**Ações Restantes este mês:** ${dominio.acoes_disponiveis}\n*Atenção: Seu personagem precisa ser treinado na perícia indicada para realizar a ação.*`,
+                        content: `**Ações Restantes:** ${dominio.acoes_disponiveis}\n*Nota: Se falhar nos requisitos ou não tiver LO suficiente, a ação será cancelada sem gastar seu turno.*`,
                         embeds: [], 
                         components: [new ActionRowBuilder().addComponents(menuAcoes), voltarRow] 
                     });
                 }
 
                 else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_acoes_")) {
-                    const acaoEscolhida = iBtn.values[0];
-                    const periciasChar = char.pericias || []; // Puxa as perícias salvas no DB
+                    const acao = iBtn.values[0];
+                    const pChar = char.pericias || []; 
 
-                    if (["acao_financas", "acao_governar"].includes(acaoEscolhida) && !periciasChar.includes("Nobreza")) {
-                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado na perícia **Nobreza** para realizar esta ação.", flags: MessageFlags.Ephemeral });
+                    if (["Governar", "Financas_Compra", "Financas_Venda", "Aumentar_Corte"].includes(acao) && !pChar.includes("Nobreza")) {
+                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado em **Nobreza**.", flags: MessageFlags.Ephemeral });
                     }
-                    if (acaoEscolhida === "acao_festival" && !periciasChar.includes("Atuação")) {
-                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado na perícia **Atuação** para organizar um Festival.", flags: MessageFlags.Ephemeral });
+                    if (acao === "Festival" && !pChar.includes("Atuação")) {
+                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado em **Atuação**.", flags: MessageFlags.Ephemeral });
                     }
-                    if (acaoEscolhida === "acao_extorquir" && !periciasChar.includes("Intimidação")) {
-                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado na perícia **Intimidação** para extorquir o povo.", flags: MessageFlags.Ephemeral });
+                    if (acao === "Extorquir" && !pChar.includes("Intimidação")) {
+                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado em **Intimidação**.", flags: MessageFlags.Ephemeral });
                     }
 
-                    await iBtn.reply({ content: `✅ Você possui a perícia necessária! Preparando o sistema para a ação: **${acaoEscolhida}**... (Lógica em construção)`, flags: MessageFlags.Ephemeral });
+                    if (acao === "Financas_Compra" || acao === "Financas_Venda") {
+                        const ehCompra = acao === "Financas_Compra";
+                        const modalId = `mod_financas_${iBtn.id}`;
+                        const modal = new ModalBuilder()
+                            .setCustomId(modalId)
+                            .setTitle(ehCompra ? "Comprar LO" : "Sacar LO")
+                            .addComponents(
+                                new ActionRowBuilder().addComponents(
+                                    new TextInputBuilder()
+                                        .setCustomId("inp_qtd_lo")
+                                        .setLabel(`Quantos LO deseja ${ehCompra ? "comprar" : "sacar"}?`)
+                                        .setStyle(TextInputStyle.Short)
+                                        .setPlaceholder(ehCompra ? "1 LO = 1000 T$" : "1 LO = 1000 T$")
+                                        .setRequired(true)
+                                )
+                            );
+
+                        await iBtn.showModal(modal);
+
+                        try {
+                            const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId && m.user.id === interaction.user.id, time: 60000 });
+                            await mSubmit.deferUpdate();
+                            const qtd = parseInt(mSubmit.fields.getTextInputValue("inp_qtd_lo"));
+
+                            if (isNaN(qtd) || qtd <= 0) return mSubmit.followUp({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
+
+                            try {
+                                const log = await DominioService.executarAcaoRegente(dominio.id, acao, { qtd: qtd });
+                                dominio = await DominioService.buscarPainel(char.id); 
+                                await mSubmit.followUp({ content: `✅ ${log}` });
+                                await msgPainel.edit(renderizarPainel());
+                            } catch (err) {
+                                mSubmit.followUp({ content: `❌ Erro: ${err.message}`, flags: MessageFlags.Ephemeral });
+                            }
+                        } catch (e) { /* ignora timeout do modal */ }
+                        return;
+                    }
+
+                    await iBtn.deferUpdate();
+                    try {
+                        const log = await DominioService.executarAcaoRegente(dominio.id, acao);
+                        dominio = await DominioService.buscarPainel(char.id); 
+                        
+                        await iBtn.followUp({ content: `✅ ${log}` });
+                        await msgPainel.edit(renderizarPainel()); 
+                    } catch (err) {
+                        let msgErro = err.message;
+                        if (msgErro.startsWith("LO_INSUFICIENTE")) msgErro = `Você não tem LO suficiente no Tesouro.`;
+                        if (msgErro === "CORTE_MAXIMA") msgErro = `Sua Corte já atingiu o nível máximo (Rica).`;
+                        
+                        await iBtn.followUp({ content: `❌ **Ação Falhou:** ${msgErro}`, flags: MessageFlags.Ephemeral });
+                    }
                 }
 
                 else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
