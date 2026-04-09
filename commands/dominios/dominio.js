@@ -8,7 +8,8 @@ const {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
     ModalBuilder,
-    TextInputBuilder
+    TextInputBuilder,
+    TextInputStyle
 } = require("discord.js");
 
 const DominioService = require("../../services/DominioService.js");
