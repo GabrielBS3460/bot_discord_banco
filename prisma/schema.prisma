@@ -1,11 +1,15 @@
 datasource db {
   provider = "postgresql"
-  url      =  env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
+
+//====================================
+// Usuários, Personagens e transacoes
+//====================================
 
 model Usuarios {
   discord_id     String  @id
@@ -78,6 +82,8 @@ model Personagens {
   agenda  Json?
 
   inventario        Item[]
+
+  dominio    Dominio?
 }
 
 model PersonagemClasse {
@@ -103,6 +109,10 @@ model Transacao {
   personagem_id Int
 }
 
+//====================================
+// Sistema de Missões
+//====================================
+
 model Missoes {
   id          String   @id @default(uuid()) 
   nome        String   @unique
@@ -126,6 +136,23 @@ model Inscricoes {
   @@unique([missao_id, personagem_id]) 
 }
 
+model Avaliacao {
+  id              Int      @id @default(autoincrement())
+  mestre_id       String
+  avaliador_id    String
+  link_missao     String
+  nota_ritmo      Int
+  nota_imersao    Int
+  nota_preparo    Int
+  nota_conhecimento Int
+  nota_geral      Int
+  data_avaliacao  DateTime @default(now())
+}
+
+//====================================
+// Jogo do Bicho
+//====================================
+
 model ApostasBicho {
   id            String      @id @default(uuid())
   personagem    Personagens @relation(fields: [personagem_id], references: [id], onDelete: Cascade)
@@ -145,18 +172,9 @@ model SorteiosBicho {
   resultados  String[] 
 }
 
-model Avaliacao {
-  id              Int      @id @default(autoincrement())
-  mestre_id       String
-  avaliador_id    String
-  link_missao     String
-  nota_ritmo      Int
-  nota_imersao    Int
-  nota_preparo    Int
-  nota_conhecimento Int
-  nota_geral      Int
-  data_avaliacao  DateTime @default(now())
-}
+//====================================
+// Sistema de Bases
+//====================================
 
 model Base {
   id              Int       @id @default(autoincrement())
@@ -207,6 +225,10 @@ model BaseMobilia {
   comodo      BaseComodo? @relation(fields: [comodo_id], references: [id], onDelete: Cascade)
 }
 
+//====================================
+// Sistema de Inventário
+//====================================
+
 model Item {
   id            Int         @id @default(autoincrement())
   nome          String
@@ -230,4 +252,51 @@ model Mercado {
   descricao     String?  
   preco         Float
   criado_em     DateTime @default(now())
+}
+
+//====================================
+// Sistema de Domínios
+//====================================
+
+model Dominio {
+  id              Int                 @id @default(autoincrement())
+  personagem_id   Int                 @unique 
+  personagem      Personagens          @relation(fields: [personagem_id], references: [id])
+  
+  nome            String
+  terreno         String              
+  mistico         Boolean             @default(false) 
+  
+  nivel           Int                 @default(1)
+  tesouro_lo      Float               @default(0) 
+  
+  corte           String              @default("Inexistente") 
+  popularidade    String              @default("Tolerado") 
+  
+  acoes_disponiveis Int               @default(2) 
+  mes_ultimo_turno  Int               @default(0) 
+  
+  construcoes     DominioConstrucao[]
+  tropas          DominioTropa[]
+  
+  criado_em       DateTime            @default(now())
+}
+
+model DominioConstrucao {
+  id              Int       @id @default(autoincrement())
+  dominio_id      Int
+  dominio         Dominio   @relation(fields: [dominio_id], references: [id], onDelete: Cascade)
+  
+  nome            String    
+  tipo            String    
+  beneficio       String    
+}
+
+model DominioTropa {
+  id              Int       @id @default(autoincrement())
+  dominio_id      Int
+  dominio         Dominio   @relation(fields: [dominio_id], references: [id], onDelete: Cascade)
+  
+  nome            String    
+  quantidade      Int       @default(1)
 }
