@@ -12,6 +12,7 @@ const {
     TextInputStyle
 } = require("discord.js");
 
+const CATALOGO_CONSTRUCOES = require("../../utils/Construcoes.js");
 const DominioService = require("../../services/DominioService.js");
 
 module.exports = {
@@ -270,6 +271,81 @@ module.exports = {
                         if (msgErro === "CORTE_MAXIMA") msgErro = `Sua Corte já atingiu o nível máximo (Rica).`;
                         
                         await iBtn.followUp({ content: `❌ **Ação Falhou:** ${msgErro}`, flags: MessageFlags.Ephemeral });
+                    }
+                }
+
+                else if (iBtn.customId.startsWith("dom_btn_construir_")) {
+                    const maxConstrucoes = dominio.nivel * 3;
+                    if (dominio.construcoes.length >= maxConstrucoes) {
+                        return iBtn.reply({ content: `🚫 Limite de prédios atingido! Eleve o Nível do Domínio para construir mais.`, flags: MessageFlags.Ephemeral });
+                    }
+                    if (dominio.acoes_disponiveis <= 0) {
+                        return iBtn.reply({ content: "🚫 Você precisa de 1 Ação de Regente disponível para construir.", flags: MessageFlags.Ephemeral });
+                    }
+
+                    const menuCategorias = new StringSelectMenuBuilder()
+                        .setCustomId(`dom_menu_cat_${interaction.id}`)
+                        .setPlaceholder("Selecione o Setor da Obra...")
+                        .addOptions(
+                            new StringSelectMenuOptionBuilder().setLabel("Nobreza").setDescription("Fazendas, Fortes, Castelos... (Req: Nobreza)").setValue("Nobreza").setEmoji("👑"),
+                            new StringSelectMenuOptionBuilder().setLabel("Guerra").setDescription("Quartéis, Estrebarias... (Req: Guerra)").setValue("Guerra").setEmoji("⚔️"),
+                            new StringSelectMenuOptionBuilder().setLabel("Enganação").setDescription("Tavernas, Esconderijos... (Req: Enganação)").setValue("Enganação").setEmoji("🎭"),
+                            new StringSelectMenuOptionBuilder().setLabel("Religião").setDescription("Templos, Capelas... (Req: Religião)").setValue("Religião").setEmoji("📿"),
+                            new StringSelectMenuOptionBuilder().setLabel("Misticismo").setDescription("Torres, Círculos Arcanos... (Req: Misticismo)").setValue("Misticismo").setEmoji("🔮")
+                        );
+
+                    const voltarRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+                    );
+
+                    await iBtn.update({ 
+                        content: `**Obras de Engenharia**\nEscolha o setor do seu novo empreendimento. Lembre-se que você precisará da perícia equivalente ao setor.`, 
+                        embeds: [], 
+                        components: [new ActionRowBuilder().addComponents(menuCategorias), voltarRow] 
+                    });
+                }
+
+                else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_cat_")) {
+                    const categoria = iBtn.values[0];
+                    
+                    const menuPredios = new StringSelectMenuBuilder()
+                        .setCustomId(`dom_menu_bld_${interaction.id}`)
+                        .setPlaceholder(`Obras de ${categoria}...`);
+
+                    Object.keys(CATALOGO_CONSTRUCOES).forEach(nome => {
+                        const obra = CATALOGO_CONSTRUCOES[nome];
+                        if (obra.tipo === categoria) {
+                            menuPredios.addOptions(
+                                new StringSelectMenuOptionBuilder()
+                                    .setLabel(`${nome} (Custo: ${obra.custo} LO)`)
+                                    .setDescription(obra.req ? `Requer: ${obra.req}` : "Sem pré-requisitos estruturais")
+                                    .setValue(nome)
+                            );
+                        }
+                    });
+
+                    const voltarRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`dom_btn_construir_${interaction.id}`).setLabel("Trocar Setor").setStyle(ButtonStyle.Secondary)
+                    );
+
+                    await iBtn.update({
+                        content: `**Setor de ${categoria}**\n*Selecione o projeto para iniciar as obras (Custa 1 Ação de Regente).*`,
+                        components: [new ActionRowBuilder().addComponents(menuPredios), voltarRow]
+                    });
+                }
+
+                else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_bld_")) {
+                    const nomeObra = iBtn.values[0];
+                    await iBtn.deferUpdate();
+
+                    try {
+                        const log = await DominioService.construir(dominio.id, char.id, nomeObra);
+                        dominio = await DominioService.buscarPainel(char.id); // Atualiza os dados locais para a tela nova
+
+                        await iBtn.followUp({ content: `✅ ${log}` });
+                        await msgPainel.edit(renderizarPainel());
+                    } catch (err) {
+                        await iBtn.followUp({ content: `❌ **Obras Embargadas:** ${err.message}`, flags: MessageFlags.Ephemeral });
                     }
                 }
 

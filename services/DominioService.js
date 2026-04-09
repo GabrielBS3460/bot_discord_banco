@@ -1,5 +1,6 @@
 const prisma = require("../database.js");
 const transacaoService = require("../services/TransacaoService.js")
+const CATALOGO_CONSTRUCOES = require("../utils/Construcoes.js");
 
 const CLASSES_MISTICAS = [
     "Arcanista", "Necromante", "Magimarcialista", "Bardo",
@@ -205,6 +206,64 @@ class DominioService {
         });
 
         return logAcao;
+    }
+
+    async construir(dominioId, charId, nomeConstrucao) {
+        const dominio = await prisma.dominio.findUnique({
+            where: { id: dominioId },
+            include: { construcoes: true }
+        });
+
+        const char = await prisma.personagens.findUnique({ where: { id: charId } });
+        const pChar = char.pericias || [];
+        const maxConstrucoes = dominio.nivel * 3;
+
+        if (dominio.acoes_disponiveis <= 0) throw new Error("Sem ações disponíveis este mês.");
+        if (dominio.construcoes.length >= maxConstrucoes) throw new Error(`Seu domínio (Nível ${dominio.nivel}) já atingiu o limite de ${maxConstrucoes} construções.`);
+        
+        const obra = CATALOGO_CONSTRUCOES[nomeConstrucao];
+        if (!obra) throw new Error("Construção não encontrada nos projetos arquitetônicos.");
+        if (dominio.tesouro_lo < obra.custo) throw new Error(`O tesouro não possui os ${obra.custo} LO necessários.`);
+
+        if (!pChar.includes(obra.tipo)) throw new Error(`Você precisa ser treinado em **${obra.tipo}** para liderar esta obra.`);
+
+        if (obra.req) {
+            const requisitos = Array.isArray(obra.req) ? obra.req : [obra.req];
+            for (const reqNome of requisitos) {
+                const possuiReq = dominio.construcoes.some(c => c.nome === reqNome);
+                if (!possuiReq) throw new Error(`Você precisa primeiro construir **${reqNome}**.`);
+            }
+        }
+
+        if (obra.reqTerreno) {
+            const terrenosValidos = Array.isArray(obra.reqTerreno) ? obra.reqTerreno : [obra.reqTerreno];
+            if (!terrenosValidos.includes(dominio.terreno)) {
+                const temPovoado = dominio.construcoes.some(c => c.nome === "Povoado Afastado");
+                if (!temPovoado) {
+                    throw new Error(`Esta obra exige o terreno: ${terrenosValidos.join(" ou ")} (Ou possuir a construção "Povoado Afastado").`);
+                }
+            }
+        }
+
+        await prisma.$transaction([
+            prisma.dominio.update({
+                where: { id: dominioId },
+                data: {
+                    acoes_disponiveis: { decrement: 1 },
+                    tesouro_lo: { decrement: obra.custo }
+                }
+            }),
+            prisma.dominioConstrucao.create({
+                data: {
+                    dominio_id: dominioId,
+                    nome: nomeConstrucao,
+                    tipo: obra.tipo,
+                    beneficio: obra.beneficio
+                }
+            })
+        ]);
+
+        return `🏗️ A construção de **${nomeConstrucao}** foi concluída com sucesso! (Benefício: ${obra.beneficio})`;
     }
 }
 
