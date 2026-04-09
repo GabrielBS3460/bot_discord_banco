@@ -55,34 +55,128 @@ class DominioService {
     async buscarPainel(personagemId) {
         let dominio = await prisma.dominio.findUnique({
             where: { personagem_id: personagemId },
-            include: {
-                construcoes: true,
-                tropas: true
-            }
+            include: { construcoes: true, tropas: true }
         });
 
-        if (!dominio) return null;
+        if (!dominio) return { dominio: null, relatorioTurno: null };
 
-        const mesAtual = new Date().getMonth() + 1;
+        const mesAtual = new Date().getMonth() + 1; 
+        let relatorioTurno = null;
 
         if (dominio.mes_ultimo_turno !== mesAtual) {
+            let logEvento = "Nenhum evento incomum ocorreu em suas terras neste mês.";
+            let popNova = dominio.popularidade;
+            let nivelNovo = dominio.nivel;
+            let tesouroNovo = dominio.tesouro_lo;
             
+            if (dominio.nivel >= 3) {
+                let rolagem = Math.floor(Math.random() * 100) + 1; 
+                
+                if (dominio.construcoes.some(c => c.nome === "Madeireira")) rolagem -= 10;
+                if (dominio.construcoes.some(c => c.nome === "Mina")) rolagem -= 20;
+                
+                if (rolagem < 1) rolagem = 1;
+
+                if (rolagem <= 2) {
+                    logEvento = "🐉 **ATAQUE DE DRAGÃO!** Uma fera despejou chamas em suas terras! Você perdeu 1 Nível e algumas unidades militares fugiram!";
+                    nivelNovo = Math.max(1, nivelNovo - 1);
+                } 
+                else if (rolagem <= 7) {
+                    const poderInvasor = Math.floor(Math.random() * 12) + 1 * dominio.nivel;
+                    logEvento = `⚔️ **INVASORES!** Uma força hostil com Poder ${poderInvasor} está marchando para seu domínio. Reúna o Exército e avise o Mestre!`;
+                } 
+                else if (rolagem <= 11) {
+                    logEvento = "🐺 **MONSTRO!** Uma criatura está aterrorizando as fazendas. Você precisa gastar uma ação para caçá-la nesta sessão!";
+                } 
+                else if (rolagem <= 15) {
+                    logEvento = "🤢 **PESTE!** Uma doença assolou o domínio. Você perdeu popularidade e algumas tropas baixaram enfermaria.";
+                    popNova = this.mudarPopularidade(dominio, -1);
+                } 
+                else if (rolagem <= 20) {
+                    const d6 = Math.floor(Math.random() * 6) + 1;
+                    if (d6 === 1) {
+                        logEvento = "🌪️ **DESASTRE NATURAL!** Um terremoto/tornado atingiu suas terras. O Domínio perdeu 1 Nível!";
+                        nivelNovo = Math.max(1, nivelNovo - 1);
+                    } else if (d6 <= 3) {
+                        logEvento = "🔥 **INCÊNDIO/ENCHENTE!** Parte da infraestrutura foi danificada. Uma construção foi perdida (Mestre decide qual).";
+                    } else {
+                        logEvento = "❄️ **PROBLEMA MENOR!** Uma seca ou nevasca afetou os cofres. Perdeu 1d6 LO.";
+                        tesouroNovo = Math.max(0, tesouroNovo - (Math.floor(Math.random() * 6) + 1));
+                    }
+                } 
+                else if (rolagem <= 22) {
+                    logEvento = "✨ **FENÔMENO MÁGICO!** Algo bizarro aconteceu. Suas ações de regente sofrerão penalidades neste mês!";
+                } 
+                else if (rolagem <= 26) {
+                    logEvento = "📜 **QUESTÃO DIPLOMÁTICA!** Um emissário de outro reino exige favores ou tributos. Fale com o Mestre!";
+                } 
+                else if (rolagem <= 30) {
+                    logEvento = "🔥 **LEVANTE!** A população se enfureceu com boatos. Sua popularidade caiu 2 categorias!";
+                    popNova = this.mudarPopularidade(dominio, -2);
+                } 
+                else if (rolagem <= 35) {
+                    logEvento = "🗡️ **INTRIGA!** Há espiões na corte. Resolva isso na sessão ou perderá apoio popular.";
+                } 
+                else if (rolagem <= 42) {
+                    logEvento = "⚖️ **QUESTÃO DE JUSTIÇA!** Uma disputa legal exige seu julgamento como regente.";
+                } 
+                else if (rolagem <= 52) {
+                    logEvento = "🥷 **BANDIDOS!** Salteadores estão roubando o povo. Sua popularidade vai cair todo mês até que sejam caçados!";
+                } 
+                else if (rolagem <= 56) {
+                    logEvento = "🪙 **CORRUPÇÃO!** Desvios de verba na sua corte. Os ganhos do domínio diminuíram neste mês.";
+                } 
+                else if (rolagem <= 61) {
+                    logEvento = "📉 **QUESTÃO COMERCIAL!** Uma crise de abastecimento estourou. Exige uma ação diplomática sua.";
+                } 
+                else if (rolagem <= 70) {
+                    const poderSaque = Math.floor(Math.random() * 8) + 1 * dominio.nivel;
+                    logEvento = `🏴‍☠️ **SAQUEADORES!** Grupos menores com Poder ${poderSaque} atacaram as fronteiras. Defenda-se!`;
+                } 
+                else if (rolagem <= 90) {
+                    logEvento = "🕊️ **Mês Pacífico.** Nenhum evento fora do comum aconteceu.";
+                } 
+                else { 
+                    const d6 = Math.floor(Math.random() * 6) + 1;
+                    if (d6 <= 2) {
+                        logEvento = "☀️ **REGALIA: CLIMA PERFEITO!** Colheitas fartas encheram os cofres. (+1d6 LO)";
+                        tesouroNovo += Math.floor(Math.random() * 6) + 1;
+                    } else if (d6 <= 4) {
+                        logEvento = "💡 **REGALIA: BOAS IDEIAS!** O povo ajudou o regente. Bônus em testes do domínio este mês.";
+                    } else {
+                        logEvento = "🎉 **REGALIA: ARCO-ÍRIS!** Um clima de felicidade geral. A popularidade subiu 1 categoria!";
+                        popNova = this.mudarPopularidade(dominio, 1);
+                    }
+                }
+            } else {
+                logEvento = "🏕️ Seu domínio ainda é muito pacato e isolado para atrair a atenção do mundo (Eventos ocorrem a partir do Nível 3).";
+            }
+
             const acoesTotais = dominio.corte === "Rica" ? 3 : 2;
 
             dominio = await prisma.dominio.update({
                 where: { id: dominio.id },
                 data: {
                     acoes_disponiveis: acoesTotais,
-                    mes_ultimo_turno: mesAtual
+                    mes_ultimo_turno: mesAtual,
+                    popularidade: popNova,
+                    nivel: nivelNovo,
+                    tesouro_lo: tesouroNovo
                 },
-                include: {
-                    construcoes: true,
-                    tropas: true
-                }
+                include: { construcoes: true, tropas: true }
             });
+
+            relatorioTurno = `📆 **O mês virou! Turno de Domínio renovado!**\n\n${logEvento}`;
         }
 
-        return dominio;
+        return { dominio, relatorioTurno };
+    }
+
+    mudarPopularidade(dominio, qtd) {
+        if (dominio.mistico) return "N/A";
+        let index = DominioService.POPULARIDADES.indexOf(dominio.popularidade);
+        index = Math.max(0, Math.min(4, index + qtd));
+        return DominioService.POPULARIDADES[index];
     }
 
     static POPULARIDADES = ["Odiado", "Impopular", "Tolerado", "Popular", "Adorado"];

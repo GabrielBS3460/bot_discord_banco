@@ -104,7 +104,16 @@ module.exports = {
         else if (subcomando === "painel") {
             await interaction.deferReply();
 
-            let dominio = await DominioService.buscarPainel(char.id);
+            let { dominio, relatorioTurno } = await DominioService.buscarPainel(char.id);
+
+            if (relatorioTurno) {
+                const alertaEmbed = new EmbedBuilder()
+                    .setColor("#E67E22")
+                    .setTitle("🗞️ Relatório do Reino")
+                    .setDescription(relatorioTurno);
+                
+                await interaction.channel.send({ content: `<@${interaction.user.id}>, mensageiros chegaram das suas terras!`, embeds: [alertaEmbed] });
+            }
 
             if (!dominio) {
                 return interaction.editReply({ 
