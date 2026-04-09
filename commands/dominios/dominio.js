@@ -287,7 +287,8 @@ module.exports = {
                         .setCustomId(`dom_menu_cat_${interaction.id}`)
                         .setPlaceholder("Selecione o Setor da Obra...")
                         .addOptions(
-                            new StringSelectMenuOptionBuilder().setLabel("Nobreza").setDescription("Fazendas, Fortes, Castelos... (Req: Nobreza)").setValue("Nobreza").setEmoji("👑"),
+                            new StringSelectMenuOptionBuilder().setLabel("Nobreza (A - M)").setDescription("Fazendas, Castelos... (Parte 1) [Req: Nobreza]").setValue("Nobreza_1").setEmoji("👑"),
+                            new StringSelectMenuOptionBuilder().setLabel("Nobreza (N - Z)").setDescription("Oficinas, Torres... (Parte 2) [Req: Nobreza]").setValue("Nobreza_2").setEmoji("👑"),
                             new StringSelectMenuOptionBuilder().setLabel("Guerra").setDescription("Quartéis, Estrebarias... (Req: Guerra)").setValue("Guerra").setEmoji("⚔️"),
                             new StringSelectMenuOptionBuilder().setLabel("Enganação").setDescription("Tavernas, Esconderijos... (Req: Enganação)").setValue("Enganação").setEmoji("🎭"),
                             new StringSelectMenuOptionBuilder().setLabel("Religião").setDescription("Templos, Capelas... (Req: Religião)").setValue("Religião").setEmoji("📿"),
@@ -306,22 +307,42 @@ module.exports = {
                 }
 
                 else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_cat_")) {
-                    const categoria = iBtn.values[0];
+                    const valorSelecionado = iBtn.values[0];
+                    let categoriaReal = valorSelecionado;
                     
-                    const menuPredios = new StringSelectMenuBuilder()
-                        .setCustomId(`dom_menu_bld_${interaction.id}`)
-                        .setPlaceholder(`Obras de ${categoria}...`);
-
+                    if (valorSelecionado.startsWith("Nobreza")) {
+                        categoriaReal = "Nobreza";
+                    }
+                    
+                    let obrasDestaCategoria = [];
                     Object.keys(CATALOGO_CONSTRUCOES).forEach(nome => {
                         const obra = CATALOGO_CONSTRUCOES[nome];
-                        if (obra.tipo === categoria) {
-                            menuPredios.addOptions(
-                                new StringSelectMenuOptionBuilder()
-                                    .setLabel(`${nome} (Custo: ${obra.custo} LO)`)
-                                    .setDescription(obra.req ? `Requer: ${obra.req}` : "Sem pré-requisitos estruturais")
-                                    .setValue(nome)
-                            );
+                        if (obra.tipo === categoriaReal) {
+                            obrasDestaCategoria.push({ nome: nome, ...obra });
                         }
+                    });
+
+                    obrasDestaCategoria.sort((a, b) => a.nome.localeCompare(b.nome));
+
+                    if (valorSelecionado === "Nobreza_1") {
+                        obrasDestaCategoria = obrasDestaCategoria.slice(0, 23);
+                    } else if (valorSelecionado === "Nobreza_2") {
+                        obrasDestaCategoria = obrasDestaCategoria.slice(23, 50); 
+                    } else {
+                        obrasDestaCategoria = obrasDestaCategoria.slice(0, 25); 
+                    }
+
+                    const menuPredios = new StringSelectMenuBuilder()
+                        .setCustomId(`dom_menu_bld_${interaction.id}`)
+                        .setPlaceholder(`Obras de ${categoriaReal}...`);
+
+                    obrasDestaCategoria.forEach(obra => {
+                        menuPredios.addOptions(
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel(`${obra.nome} (Custo: ${obra.custo} LO)`)
+                                .setDescription(obra.req ? `Requer: ${Array.isArray(obra.req) ? obra.req.join(" E ") : obra.req}` : "Sem pré-requisitos estruturais")
+                                .setValue(obra.nome)
+                        );
                     });
 
                     const voltarRow = new ActionRowBuilder().addComponents(
@@ -329,7 +350,7 @@ module.exports = {
                     );
 
                     await iBtn.update({
-                        content: `**Setor de ${categoria}**\n*Selecione o projeto para iniciar as obras (Custa 1 Ação de Regente).*`,
+                        content: `**Setor de ${categoriaReal}**\n*Selecione o projeto para iniciar as obras (Custa 1 Ação de Regente).*`,
                         components: [new ActionRowBuilder().addComponents(menuPredios), voltarRow]
                     });
                 }
@@ -340,7 +361,7 @@ module.exports = {
 
                     try {
                         const log = await DominioService.construir(dominio.id, char.id, nomeObra);
-                        dominio = await DominioService.buscarPainel(char.id); // Atualiza os dados locais para a tela nova
+                        dominio = await DominioService.buscarPainel(char.id); 
 
                         await iBtn.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
