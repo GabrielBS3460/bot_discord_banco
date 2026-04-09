@@ -27,7 +27,7 @@ class DominioService {
         }
 
         const novoDominio = await prisma.$transaction(async (tx) => {
-            transacaoService.registrarGasto(char, PRECO_FUNDACAO, "FUNDACAO_DOMINIO");
+            transacaoService.registrarGasto(char, PRECO_FUNDACAO, "Fundou um dominio");
 
             const dominio = await tx.dominio.create({
                 data: {

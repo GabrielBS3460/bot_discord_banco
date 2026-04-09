@@ -75,7 +75,7 @@ module.exports = {
 
             } catch (err) {
                 console.error("Erro ao fundar domínio:", err);
-                
+
                 let msgErro = "❌ Ocorreu um erro ao fundar o domínio.";
                 
                 if (err.message === "SALDO_INSUFICIENTE") msgErro = "💸 Você precisa de **T$ 5.000** para fundar um domínio.";
@@ -97,48 +97,123 @@ module.exports = {
                 });
             }
 
-            const maxConstrucoes = dominio.nivel * 3;
-            const qtdConstrucoes = dominio.construcoes.length;
-            const qtdTropas = dominio.tropas.reduce((acc, tropa) => acc + tropa.quantidade, 0);
+            const renderizarPainel = () => {
+                const maxConstrucoes = dominio.nivel * 3;
+                const qtdConstrucoes = dominio.construcoes.length;
+                const qtdTropas = dominio.tropas.reduce((acc, tropa) => acc + tropa.quantidade, 0);
 
-            const embed = new EmbedBuilder()
-                .setColor(dominio.mistico ? "#9B59B6" : "#F1C40F")
-                .setTitle(`🏰 Domínio: ${dominio.nome}`)
-                .setDescription(`*Regido por ${char.nome}*`)
-                .addFields(
-                    { name: "📊 Geral", value: `**Nível:** ${dominio.nivel}\n**Terreno:** ${dominio.terreno}\n**Tipo:** ${dominio.mistico ? "Místico ✨" : "Padrão 🛡️"}`, inline: true },
-                    { name: "👑 Status Público", value: `**Corte:** ${dominio.corte}\n**Popularidade:** ${dominio.popularidade}`, inline: true },
-                    { name: "💰 Economia", value: `**Tesouro:** ${dominio.tesouro_lo} LO\n*(1 LO = T$ 1.000)*`, inline: false },
-                    { name: "⚙️ Administração", value: `**Ações:** ${dominio.acoes_disponiveis} / ${dominio.corte === "Rica" ? 3 : 2}\n*(Reseta mês que vem)*`, inline: true },
-                    { name: "🏗️ Infra & Guerra", value: `**Construções:** ${qtdConstrucoes}/${maxConstrucoes}\n**Unidades Militares:** ${qtdTropas}`, inline: true }
-                )
-                .setFooter({ text: "Utilize os botões abaixo para gerenciar seu território." })
-                .setTimestamp();
+                const embed = new EmbedBuilder()
+                    .setColor(dominio.mistico ? "#9B59B6" : "#F1C40F")
+                    .setTitle(`🏰 Domínio: ${dominio.nome}`)
+                    .setDescription(`*Regido por ${char.nome}*`)
+                    .addFields(
+                        { name: "📊 Geral", value: `**Nível:** ${dominio.nivel}\n**Terreno:** ${dominio.terreno}\n**Tipo:** ${dominio.mistico ? "Místico ✨" : "Padrão 🛡️"}`, inline: true },
+                        { name: "👑 Status Público", value: `**Corte:** ${dominio.corte}\n**Popularidade:** ${dominio.popularidade}`, inline: true },
+                        { name: "💰 Economia", value: `**Tesouro:** ${dominio.tesouro_lo} LO\n*(1 LO = T$ 1.000)*`, inline: false },
+                        { name: "⚙️ Administração", value: `**Ações:** ${dominio.acoes_disponiveis} / ${dominio.corte === "Rica" ? 3 : 2}\n*(Reseta mês que vem)*`, inline: true },
+                        { name: "🏗️ Infra & Guerra", value: `**Construções:** ${qtdConstrucoes}/${maxConstrucoes}\n**Unidades Militares:** ${qtdTropas}`, inline: true }
+                    )
+                    .setFooter({ text: "Utilize os botões abaixo para gerenciar seu território." })
+                    .setTimestamp();
 
-            const botoesRow = new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`dom_btn_acoes_${interaction.id}`)
-                    .setLabel("Ações de Regente")
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji("📜"),
-                new ButtonBuilder()
-                    .setCustomId(`dom_btn_construir_${interaction.id}`)
-                    .setLabel("Construir")
-                    .setStyle(ButtonStyle.Success)
-                    .setEmoji("🏗️"),
-                new ButtonBuilder()
-                    .setCustomId(`dom_btn_exercito_${interaction.id}`)
-                    .setLabel("Exército")
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji("⚔️"),
-                new ButtonBuilder()
-                    .setCustomId(`dom_btn_bonus_${interaction.id}`)
-                    .setLabel("Meus Bônus")
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji("✨")
-            );
+                const botoesRow = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`dom_btn_acoes_${interaction.id}`).setLabel("Ações").setStyle(ButtonStyle.Primary).setEmoji("📜"),
+                    new ButtonBuilder().setCustomId(`dom_btn_construir_${interaction.id}`).setLabel("Construir").setStyle(ButtonStyle.Success).setEmoji("🏗️"),
+                    new ButtonBuilder().setCustomId(`dom_btn_exercito_${interaction.id}`).setLabel("Exército").setStyle(ButtonStyle.Danger).setEmoji("⚔️"),
+                    new ButtonBuilder().setCustomId(`dom_btn_bonus_${interaction.id}`).setLabel("Bônus").setStyle(ButtonStyle.Secondary).setEmoji("✨")
+                );
 
-            return interaction.editReply({ embeds: [embed], components: [botoesRow] });
+                return { embeds: [embed], components: [botoesRow] };
+            };
+
+            const msgPainel = await interaction.editReply({ ...renderizarPainel(), fetchReply: true });
+
+            const collector = msgPainel.createMessageComponentCollector({
+                filter: i => i.user.id === interaction.user.id,
+                time: 300000 
+            });
+
+            collector.on("collect", async iBtn => {
+                
+                if (iBtn.customId.startsWith("dom_btn_bonus_")) {
+                    const bonusEmbed = new EmbedBuilder()
+                        .setColor("#3498DB")
+                        .setTitle(`✨ Bônus Ativos: ${dominio.nome}`)
+                        .setDescription("Estes são os bônus passivos concedidos pela sua estrutura atual. Lembre-se de aplicá-los na sua ficha ou durante as sessões.");
+
+                    if (dominio.mistico) {
+                        const pmExtra = dominio.nivel * dominio.nivel;
+                        bonusEmbed.addFields({ name: "🔮 Fluxo Místico", value: `Concede **+${pmExtra} PM** máximos adicionais ao regente (Nível²).`, inline: false });
+                    }
+
+                    if (dominio.construcoes.length === 0) {
+                        bonusEmbed.addFields({ name: "🏗️ Construções", value: "*Nenhuma construção erguida ainda.*", inline: false });
+                    } else {
+                        let listaConstrucoes = "";
+                        dominio.construcoes.forEach(c => {
+                            listaConstrucoes += `**${c.nome}:** ${c.beneficio}\n`;
+                        });
+                        bonusEmbed.addFields({ name: "🏗️ Construções", value: listaConstrucoes, inline: false });
+                    }
+
+                    const voltarRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar ao Painel").setStyle(ButtonStyle.Secondary).setEmoji("🔙")
+                    );
+
+                    await iBtn.update({ embeds: [bonusEmbed], components: [voltarRow] });
+                }
+
+                else if (iBtn.customId.startsWith("dom_btn_acoes_")) {
+                    if (dominio.acoes_disponiveis <= 0) {
+                        return iBtn.reply({ content: "🚫 Você já usou todas as suas ações de domínio neste mês!", flags: MessageFlags.Ephemeral });
+                    }
+
+                    const menuAcoes = new StringSelectMenuBuilder()
+                        .setCustomId(`dom_menu_acoes_${interaction.id}`)
+                        .setPlaceholder("Selecione uma Ação de Domínio (Custa 1 Ação)")
+                        .addOptions(
+                            new StringSelectMenuOptionBuilder().setLabel("💰 Finanças").setDescription("Converter LO para T$ ou vice-versa [Req: Nobreza]").setValue("acao_financas"),
+                            new StringSelectMenuOptionBuilder().setLabel("👑 Governar").setDescription("Elevar o Nível do Domínio [Req: Nobreza]").setValue("acao_governar"),
+                            new StringSelectMenuOptionBuilder().setLabel("🎭 Festival").setDescription("Aumentar Popularidade (Custa 1 LO) [Req: Atuação]").setValue("acao_festival"),
+                            new StringSelectMenuOptionBuilder().setLabel("🗡️ Extorquir").setDescription("Ganhar 1d6 + Nível em LO, mas perder Popularidade [Req: Intimidação]").setValue("acao_extorquir")
+                        );
+
+                    const voltarRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+                    );
+
+                    await iBtn.update({ 
+                        content: `**Ações Restantes este mês:** ${dominio.acoes_disponiveis}\n*Atenção: Seu personagem precisa ser treinado na perícia indicada para realizar a ação.*`,
+                        embeds: [], 
+                        components: [new ActionRowBuilder().addComponents(menuAcoes), voltarRow] 
+                    });
+                }
+
+                else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_acoes_")) {
+                    const acaoEscolhida = iBtn.values[0];
+                    const periciasChar = char.pericias || []; // Puxa as perícias salvas no DB
+
+                    if (["acao_financas", "acao_governar"].includes(acaoEscolhida) && !periciasChar.includes("Nobreza")) {
+                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado na perícia **Nobreza** para realizar esta ação.", flags: MessageFlags.Ephemeral });
+                    }
+                    if (acaoEscolhida === "acao_festival" && !periciasChar.includes("Atuação")) {
+                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado na perícia **Atuação** para organizar um Festival.", flags: MessageFlags.Ephemeral });
+                    }
+                    if (acaoEscolhida === "acao_extorquir" && !periciasChar.includes("Intimidação")) {
+                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado na perícia **Intimidação** para extorquir o povo.", flags: MessageFlags.Ephemeral });
+                    }
+
+                    await iBtn.reply({ content: `✅ Você possui a perícia necessária! Preparando o sistema para a ação: **${acaoEscolhida}**... (Lógica em construção)`, flags: MessageFlags.Ephemeral });
+                }
+
+                else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
+                    await iBtn.update({ content: null, ...renderizarPainel() });
+                }
+            });
+
+            collector.on("end", () => {
+                msgPainel.edit({ components: [] }).catch(() => {});
+            });
         }
     }
 };
