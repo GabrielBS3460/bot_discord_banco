@@ -233,32 +233,88 @@ module.exports = {
                         }
                         await iAction.update({ components: gerarComponentes(paginaAtual) });
                     } else if (iAction.isStringSelectMenu() && iAction.customId.startsWith("menu_comprar_mercado")) {
-                        await iAction.deferUpdate();
                         const anuncioId = parseInt(iAction.values[0]);
 
-                        try {
-                            const { anuncio, vendedor } = await MercadoService.comprarItem(char.id, anuncioId);
+                        const anuncioSelecionado = vitrine.find(a => a.id === anuncioId);
 
-                            await iAction.followUp({
-                                content: `🛍️ **Compra Concluída!**\nVocê comprou **${anuncio.quantidade}x ${anuncio.item_nome}** por **${formatarMoeda(anuncio.preco)}**.\nO item já está no seu inventário!`,
+                        if (!anuncioSelecionado) {
+                            return iAction.reply({
+                                content: "🚫 Anúncio não encontrado ou já expirado.",
                                 flags: MessageFlags.Ephemeral
                             });
+                        }
 
-                            const discordIdVendedor = vendedor.usuario_id || vendedor.discord_id;
-                            await interaction.channel.send({
-                                content: `🤝 **Negócio Fechado no Mercado!** <@${discordIdVendedor}>\n**${char.nome}** comprou **${anuncio.quantidade}x ${anuncio.item_nome}** por **K$ ${anuncio.preco}** e o dinheiro já está na sua conta!`
+                        const precoUnitario = anuncioSelecionado.preco / anuncioSelecionado.quantidade;
+
+                        const modalId = `mod_compra_${iAction.id}`;
+                        const modal = new ModalBuilder()
+                            .setCustomId(modalId)
+                            .setTitle(`Comprar: ${anuncioSelecionado.item_nome.substring(0, 30)}`)
+                            .addComponents(
+                                new ActionRowBuilder().addComponents(
+                                    new TextInputBuilder()
+                                        .setCustomId("inp_qtd_compra")
+                                        .setLabel(
+                                            `Máx: ${anuncioSelecionado.quantidade} | Unidade: K$ ${precoUnitario.toFixed(2)}`
+                                        )
+                                        .setStyle(TextInputStyle.Short)
+                                        .setValue("1")
+                                        .setRequired(true)
+                                )
+                            );
+
+                        await iAction.showModal(modal);
+
+                        try {
+                            const submit = await iAction.awaitModalSubmit({
+                                filter: m => m.customId === modalId && m.user.id === interaction.user.id,
+                                time: 60000
                             });
 
-                            await msg.edit({ components: [] }).catch(() => null);
-                            collector.stop();
-                        } catch (err) {
-                            let erroMsg = "❌ Erro ao realizar a compra.";
-                            if (err.message === "SALDO_INSUFICIENTE")
-                                erroMsg = "🚫 Você não tem saldo suficiente para comprar este item.";
-                            if (err.message === "ANUNCIO_NAO_ENCONTRADO")
-                                erroMsg = "🚫 Este item já foi vendido ou retirado do mercado.";
+                            const qtdCompra = parseInt(submit.fields.getTextInputValue("inp_qtd_compra"));
 
-                            await iAction.followUp({ content: erroMsg, flags: MessageFlags.Ephemeral });
+                            if (isNaN(qtdCompra) || qtdCompra <= 0 || qtdCompra > anuncioSelecionado.quantidade) {
+                                return submit.reply({
+                                    content: "🚫 Quantidade inválida.",
+                                    flags: MessageFlags.Ephemeral
+                                });
+                            }
+
+                            await submit.deferUpdate();
+
+                            try {
+                                const { vendedor, custoTotal } = await MercadoService.comprarItem(
+                                    char.id,
+                                    anuncioId,
+                                    qtdCompra
+                                );
+
+                                const precoPago = custoTotal || precoUnitario * qtdCompra;
+
+                                await submit.followUp({
+                                    content: `🛍️ **Compra Concluída!**\nVocê comprou **${qtdCompra}x ${anuncioSelecionado.item_nome}** por **${formatarMoeda(precoPago)}**.\nO item já está no seu inventário!`,
+                                    flags: MessageFlags.Ephemeral
+                                });
+
+                                const discordIdVendedor = vendedor.usuario_id || vendedor.discord_id;
+                                await interaction.channel.send({
+                                    content: `🤝 **Negócio Fechado no Mercado!** <@${discordIdVendedor}>\n**${char.nome}** comprou **${qtdCompra}x ${anuncioSelecionado.item_nome}** por **${formatarMoeda(precoPago)}** e o dinheiro já está na sua conta!`
+                                });
+
+                                await msg.edit({ components: [] }).catch(() => null);
+                                collector.stop();
+                            } catch (err) {
+                                let erroMsg = "❌ Erro ao realizar a compra.";
+                                if (err.message === "SALDO_INSUFICIENTE")
+                                    erroMsg = "🚫 Você não tem saldo suficiente para comprar essa quantidade.";
+                                if (err.message === "ANUNCIO_NAO_ENCONTRADO")
+                                    erroMsg = "🚫 Este item já foi vendido ou retirado do mercado.";
+
+                                await submit.followUp({ content: erroMsg, flags: MessageFlags.Ephemeral });
+                            }
+                            // eslint-disable-next-line no-unused-vars
+                        } catch (err) {
+                            // Ignora o erro se o usuário fechar o modal ou demorar mais de 60 segundos
                         }
                     }
                 });
@@ -311,6 +367,7 @@ module.exports = {
 
                         await msg.edit({ components: [] }).catch(() => null);
                         collector.stop();
+                        // eslint-disable-next-line no-unused-vars
                     } catch (err) {
                         await iSelect.followUp({
                             content: "❌ Ocorreu um erro ao cancelar o anúncio. Ele pode já ter sido vendido.",

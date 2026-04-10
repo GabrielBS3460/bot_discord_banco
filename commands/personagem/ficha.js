@@ -161,7 +161,12 @@ module.exports = {
                     .setCustomId("btn_usar_consumivel")
                     .setLabel("Consumíveis")
                     .setStyle(ButtonStyle.Primary)
-                    .setEmoji("🎒")
+                    .setEmoji("🎒"),
+                new ButtonBuilder()
+                    .setCustomId("btn_usar_municao")
+                    .setLabel("Munição")
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji("🏹")
             );
 
             const msg = await interaction.reply({
@@ -192,6 +197,9 @@ module.exports = {
                     } else if (iBtn.customId === "btn_usar_consumivel") {
                         tiposValidos = ["Consumíveis", "Consumível"];
                         icone = "🎒";
+                    } else if (iBtn.customId === "btn_usar_municao") {
+                        tiposValidos = ["Munição"];
+                        icone = "🏹";
                     }
 
                     const itensFiltrados = inventario.filter(item => tiposValidos.includes(item.tipo));

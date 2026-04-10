@@ -5,6 +5,7 @@ const CUSTO_FORJA = {
     Alimento: 0.2,
     Consumíveis: 1,
     "Itens Permanentes": 2,
+    Munição: 2,
     Melhorias: 16,
     Encantamento: 64,
     "Item Mágico": 64,

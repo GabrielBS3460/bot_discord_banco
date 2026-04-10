@@ -113,9 +113,9 @@ class ApostaService {
 
     _obterMultiplicador(aposta) {
         let mult = 0;
-        if (aposta.tipo === "DEZENA") mult = 2;
-        if (aposta.tipo === "CENTENA") mult = 5;
-        if (aposta.tipo === "MILHAR") mult = 10;
+        if (aposta.tipo === "DEZENA") mult = 60;
+        if (aposta.tipo === "CENTENA") mult = 600;
+        if (aposta.tipo === "MILHAR") mult = 4000;
 
         return aposta.posicao === "TODAS" ? mult / 5 : mult;
     }
