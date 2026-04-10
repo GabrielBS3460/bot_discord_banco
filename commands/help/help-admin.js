@@ -23,12 +23,28 @@ module.exports = {
         };
 
         const criarCategoria = cat => {
-            const lista = cat.comandos.map(c => `**${c.cmd}**\n${c.desc}\n\`${c.syntax}\``).join("\n\n");
+            const embed = new EmbedBuilder().setColor("#FF5555").setTitle(`${cat.emoji} ${cat.titulo}`);
 
-            return new EmbedBuilder().setColor("#FF5555").setTitle(`${cat.emoji} ${cat.titulo}`).addFields({
-                name: "Comandos",
-                value: lista
+            let textoCampo = "";
+            let parte = 1;
+
+            cat.comandos.forEach(c => {
+                const linha = `**${c.cmd}**\n${c.desc}\n\`${c.syntax}\`\n\n`;
+
+                if ((textoCampo + linha).length > 1024) {
+                    embed.addFields({ name: parte === 1 ? "Comandos" : "Comandos (Cont.)", value: textoCampo });
+                    textoCampo = linha;
+                    parte++;
+                } else {
+                    textoCampo += linha;
+                }
             });
+
+            if (textoCampo) {
+                embed.addFields({ name: parte === 1 ? "Comandos" : "Comandos (Cont.)", value: textoCampo });
+            }
+
+            return embed;
         };
 
         const rowMenu = new ActionRowBuilder().addComponents(

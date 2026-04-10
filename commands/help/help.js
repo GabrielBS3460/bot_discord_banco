@@ -25,13 +25,34 @@ module.exports = {
         };
 
         const criarEmbedCategoria = cat => {
-            const lista = cat.comandos.map(c => `**${c.cmd}**\n${c.desc}\n\`${c.syntax}\``).join("\n\n");
-
-            return new EmbedBuilder()
+            const embed = new EmbedBuilder()
                 .setColor("#0099FF")
                 .setTitle(`${cat.emoji} ${cat.titulo}`)
-                .setDescription(cat.descricao)
-                .addFields({ name: "Comandos Disponíveis", value: lista });
+                .setDescription(cat.descricao);
+
+            let textoCampo = "";
+            let parte = 1;
+
+            cat.comandos.forEach(c => {
+                const linha = `**${c.cmd}**\n${c.desc}\n\`${c.syntax}\`\n\n`;
+
+                if ((textoCampo + linha).length > 1024) {
+                    embed.addFields({
+                        name: parte === 1 ? "Comandos Disponíveis" : "Comandos (Cont.)",
+                        value: textoCampo
+                    });
+                    textoCampo = linha;
+                    parte++;
+                } else {
+                    textoCampo += linha;
+                }
+            });
+
+            if (textoCampo) {
+                embed.addFields({ name: parte === 1 ? "Comandos Disponíveis" : "Comandos (Cont.)", value: textoCampo });
+            }
+
+            return embed;
         };
 
         const rowMenu1 = new ActionRowBuilder().addComponents(
