@@ -40,11 +40,25 @@ module.exports = {
                 .setLabel("Personagem")
                 .setEmoji("👤")
                 .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder().setCustomId("help_base").setLabel("Bases").setEmoji("🏰").setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId("help_dominio")
+                .setLabel("Domínios")
+                .setEmoji("👑")
+                .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
                 .setCustomId("help_contrato")
                 .setLabel("Contratos")
                 .setEmoji("🛡️")
                 .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId("help_comercio")
+                .setLabel("Comércio")
+                .setEmoji("⚖️")
+                .setStyle(ButtonStyle.Primary)
+        );
+
+        const rowMenu2 = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
                 .setCustomId("help_sistemas")
                 .setLabel("Ofícios")
@@ -56,18 +70,14 @@ module.exports = {
                 .setEmoji("🎲")
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
-                .setCustomId("help_mestre")
-                .setLabel("Mestre")
-                .setEmoji("👑")
-                .setStyle(ButtonStyle.Primary)
-        );
-
-        const rowMenu2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId("help_base").setLabel("Bases").setEmoji("🏰").setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
                 .setCustomId("help_agenda")
                 .setLabel("Agenda")
                 .setEmoji("📅")
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
+                .setCustomId("help_mestre")
+                .setLabel("Mestre")
+                .setEmoji("👑")
                 .setStyle(ButtonStyle.Primary)
         );
 

@@ -43,6 +43,11 @@ module.exports = {
                 .setEmoji("👤")
                 .setStyle(ButtonStyle.Danger),
             new ButtonBuilder()
+                .setCustomId("admin_inventario")
+                .setLabel("Inventário")
+                .setEmoji("🎒")
+                .setStyle(ButtonStyle.Danger),
+            new ButtonBuilder()
                 .setCustomId("admin_contratos")
                 .setLabel("Contratos")
                 .setEmoji("📜")
