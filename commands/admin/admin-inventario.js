@@ -12,7 +12,7 @@ const prisma = require("../../database.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("admin-inventario")
+        .setName("admin_inventario")
         .setDescription("🛠️ [Mestre] Gerencia o inventário de um jogador.")
         .addSubcommand(sub =>
             sub

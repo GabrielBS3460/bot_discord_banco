@@ -35,9 +35,35 @@ const CATEGORIAS = {
                 syntax: "/admin-excluir jogador:@usuario nome:<nome_exato>"
             },
             {
+                cmd: "/admin_personagem listar",
+                desc: "Lista todos os personagens criados por um jogador específico.",
+                syntax: "/admin_personagem listar jogador:@usuario"
+            },
+            {
                 cmd: "/admin-modificar-pontos",
                 desc: "Modifica os pontos de contrato de um personagem alvo de um player alvo",
                 syntax: "/admin-modificar-pontos jogador:@usuario nome:<nome_exato> operacao:<tipo_operacao> valor:<valor_a_modificar>"
+            }
+        ]
+    },
+    inventario: {
+        emoji: "🎒",
+        titulo: "Administração de Inventário",
+        comandos: [
+            {
+                cmd: "/admin_inventario ver",
+                desc: "Visualiza o inventário completo de um jogador alvo.",
+                syntax: "/admin_inventario ver jogador:@usuario"
+            },
+            {
+                cmd: "/admin_inventario remover",
+                desc: "Remove uma quantidade de um item do inventário alvo.",
+                syntax: "/admin_inventario remover jogador:@usuario item:<nome_exato> quantidade:[opcional]"
+            },
+            {
+                cmd: "/admin_inventario limpar_tudo",
+                desc: "Apaga TODOS os itens da mochila de um jogador.",
+                syntax: "/admin_inventario limpar_tudo jogador:@usuario"
             },
             {
                 cmd: "/admin-dar-item",

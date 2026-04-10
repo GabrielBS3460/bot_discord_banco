@@ -4,7 +4,7 @@ const PersonagemService = require("../../services/PersonagemService.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("admin-personagem")
+        .setName("admin_personagem")
         .setDescription("🛠️ Gerencia os personagens de um jogador alvo.")
         .addSubcommand(sub =>
             sub

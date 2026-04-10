@@ -47,6 +47,23 @@ module.exports = {
             { cmd: "/base upgrade", desc: "Melhora o porte de uma base Criada", syntax: "/base upgrade" }
         ]
     },
+    dominio: {
+        emoji: "👑",
+        titulo: "Domínios & Reinados",
+        descricao: "Sistema de gestão de feudos, construções e exércitos.",
+        comandos: [
+            {
+                cmd: "/dominio fundar",
+                desc: "Funda um novo domínio de nível 1 (K$ 5.000).",
+                syntax: "/dominio fundar nome:<nome> terreno:<terreno> mistico:<sim/nao>"
+            },
+            {
+                cmd: "/dominio painel",
+                desc: "Abre o painel interativo de gestão do seu domínio.",
+                syntax: "/dominio painel"
+            }
+        ]
+    },
     agenda: {
         emoji: "📅",
         titulo: "Agenda & Horários",
@@ -164,8 +181,8 @@ module.exports = {
             },
             {
                 cmd: "/loot",
-                desc: "Entrega K$ diretamente a um jogador.",
-                syntax: "/loot jogador:@usuario valor:<valor>"
+                desc: "Concede K$, Itens ou Ingredientes a um jogador.",
+                syntax: "/loot <dinheiro | item | ingrediente>"
             }
         ]
     }
