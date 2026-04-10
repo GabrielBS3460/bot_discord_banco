@@ -10,11 +10,12 @@ const {
 
 const TransacaoService = require("../../services/TransacaoService.js");
 const ItensRepository = require("../../repositories/ItensRepository.js");
+const prisma = require("../../database.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("loot")
-        .setDescription("Concede uma recompensa (Dinheiro ou Item) para um jogador.")
+        .setDescription("Concede uma recompensa (Dinheiro, Item ou Ingrediente) para um jogador.")
         .addSubcommand(sub =>
             sub
                 .setName("dinheiro")
@@ -46,6 +47,49 @@ module.exports = {
                 )
                 .addIntegerOption(option =>
                     option.setName("quantidade").setDescription("Quantidade de itens").setRequired(true).setMinValue(1)
+                )
+        )
+        .addSubcommand(sub =>
+            sub
+                .setName("ingrediente")
+                .setDescription("Concede ingredientes culinários diretamente para a despensa do jogador.")
+                .addUserOption(option =>
+                    option.setName("jogador").setDescription("O jogador que vai receber").setRequired(true)
+                )
+                .addStringOption(option =>
+                    option
+                        .setName("nome")
+                        .setDescription("Selecione qual ingrediente deseja enviar")
+                        .setRequired(true)
+                        .addChoices(
+                            { name: "Açúcar das fadas", value: "Açúcar das fadas" },
+                            { name: "Ave", value: "Ave" },
+                            { name: "Avelã de Norba", value: "Avelã de Norba" },
+                            { name: "Carne", value: "Carne" },
+                            { name: "Carne de caça", value: "Carne de caça" },
+                            { name: "Cereal", value: "Cereal" },
+                            { name: "Cogumelo", value: "Cogumelo" },
+                            { name: "Especiarias", value: "Especiarias" },
+                            { name: "Farinha", value: "Farinha" },
+                            { name: "Fruta", value: "Fruta" },
+                            { name: "Gorad", value: "Gorad" },
+                            { name: "Legume", value: "Legume" },
+                            { name: "Leite", value: "Leite" },
+                            { name: "Molho tamuraniano", value: "Molho tamuraniano" },
+                            { name: "Óleo", value: "Óleo" },
+                            { name: "Ovo de monstro", value: "Ovo de monstro" },
+                            { name: "Peixe", value: "Peixe" },
+                            { name: "Porco", value: "Porco" },
+                            { name: "Queijo", value: "Queijo" },
+                            { name: "Verdura", value: "Verdura" }
+                        )
+                )
+                .addIntegerOption(option =>
+                    option
+                        .setName("quantidade")
+                        .setDescription("Quantidade do ingrediente")
+                        .setRequired(true)
+                        .setMinValue(1)
                 )
         ),
 
@@ -176,6 +220,45 @@ module.exports = {
             } catch (err) {
                 if (err.code === "InteractionCollectorError") return;
                 console.error("Erro no processamento do loot de item:", err);
+            }
+        } else if (subcomando === "ingrediente") {
+            await interaction.deferReply();
+
+            const nomeIngrediente = interaction.options.getString("nome");
+            const quantidade = interaction.options.getInteger("quantidade");
+
+            try {
+                let estoqueAtual = charDestinatario.estoque_ingredientes || {};
+                if (typeof estoqueAtual === "string") estoqueAtual = JSON.parse(estoqueAtual);
+
+                estoqueAtual[nomeIngrediente] = (estoqueAtual[nomeIngrediente] || 0) + quantidade;
+
+                await prisma.personagens.update({
+                    where: { id: charDestinatario.id },
+                    data: { estoque_ingredientes: estoqueAtual }
+                });
+
+                const embed = new EmbedBuilder()
+                    .setColor("#2ECC71")
+                    .setTitle("🥬 Loot de Ingrediente")
+                    .setDescription(
+                        `Novos mantimentos foram entregues diretamente na despensa de **${charDestinatario.nome}**!`
+                    )
+                    .addFields(
+                        { name: "Adicionado", value: `${quantidade}x **${nomeIngrediente}**`, inline: true },
+                        {
+                            name: "Estoque Total",
+                            value: `Agora possui **${estoqueAtual[nomeIngrediente]}** no total.`,
+                            inline: true
+                        }
+                    )
+                    .setFooter({ text: `Concedido por ${interaction.user.username}` })
+                    .setTimestamp();
+
+                return await interaction.editReply({ content: `<@${destinatarioUser.id}>`, embeds: [embed] });
+            } catch (err) {
+                console.error("Erro ao enviar loot de ingrediente:", err);
+                return interaction.editReply({ content: "❌ Ocorreu um erro ao atualizar o estoque do jogador." });
             }
         }
     }
