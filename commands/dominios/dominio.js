@@ -1,9 +1,9 @@
-const { 
-    SlashCommandBuilder, 
-    EmbedBuilder, 
-    ActionRowBuilder, 
-    ButtonBuilder, 
-    ButtonStyle, 
+const {
+    SlashCommandBuilder,
+    EmbedBuilder,
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     MessageFlags,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
@@ -50,17 +50,18 @@ module.exports = {
                 )
         )
         .addSubcommand(sub =>
-            sub
-                .setName("painel")
-                .setDescription("Abre o painel de controle interativo do seu domínio.")
+            sub.setName("painel").setDescription("Abre o painel de controle interativo do seu domínio.")
         ),
 
-    async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
+    async execute({ interaction, getPersonagemAtivo }) {
         const subcomando = interaction.options.getSubcommand();
         const char = await getPersonagemAtivo(interaction.user.id);
 
         if (!char) {
-            return interaction.reply({ content: "🚫 Você não tem um personagem ativo.", flags: MessageFlags.Ephemeral });
+            return interaction.reply({
+                content: "🚫 Você não tem um personagem ativo.",
+                flags: MessageFlags.Ephemeral
+            });
         }
 
         if (subcomando === "fundar") {
@@ -76,7 +77,9 @@ module.exports = {
                 const embed = new EmbedBuilder()
                     .setColor(mistico ? "#9B59B6" : "#2ECC71")
                     .setTitle("🏰 Novo Domínio Fundado!")
-                    .setDescription(`**${char.nome}** reivindicou terras virgens e estabeleceu um novo centro de poder.`)
+                    .setDescription(
+                        `**${char.nome}** reivindicou terras virgens e estabeleceu um novo centro de poder.`
+                    )
                     .addFields(
                         { name: "Nome do Domínio", value: nome, inline: true },
                         { name: "Terreno", value: terreno, inline: true },
@@ -87,21 +90,21 @@ module.exports = {
                     .setFooter({ text: "Use /dominio painel para gerenciar suas terras." });
 
                 return interaction.editReply({ embeds: [embed] });
-
             } catch (err) {
                 console.error("Erro ao fundar domínio:", err);
 
                 let msgErro = "❌ Ocorreu um erro ao fundar o domínio.";
-                
-                if (err.message === "SALDO_INSUFICIENTE") msgErro = "💸 Você precisa de **T$ 5.000** para fundar um domínio.";
-                if (err.message === "JA_POSSUI_DOMINIO") msgErro = "🚫 Você já é regente de um domínio! Cada personagem só pode ter um.";
-                if (err.message === "CLASSE_INVALIDA_MISTICO") msgErro = "🔮 Apenas Conjuradores (Arcanos ou Divinos) podem criar um Domínio Místico.";
+
+                if (err.message === "SALDO_INSUFICIENTE")
+                    msgErro = "💸 Você precisa de **T$ 5.000** para fundar um domínio.";
+                if (err.message === "JA_POSSUI_DOMINIO")
+                    msgErro = "🚫 Você já é regente de um domínio! Cada personagem só pode ter um.";
+                if (err.message === "CLASSE_INVALIDA_MISTICO")
+                    msgErro = "🔮 Apenas Conjuradores (Arcanos ou Divinos) podem criar um Domínio Místico.";
 
                 return interaction.editReply({ content: msgErro });
             }
-        }
-
-        else if (subcomando === "painel") {
+        } else if (subcomando === "painel") {
             await interaction.deferReply();
 
             let { dominio, relatorioTurno } = await DominioService.buscarPainel(char.id);
@@ -111,13 +114,16 @@ module.exports = {
                     .setColor("#E67E22")
                     .setTitle("🗞️ Relatório do Reino")
                     .setDescription(relatorioTurno);
-                
-                await interaction.channel.send({ content: `<@${interaction.user.id}>, mensageiros chegaram das suas terras!`, embeds: [alertaEmbed] });
+
+                await interaction.channel.send({
+                    content: `<@${interaction.user.id}>, mensageiros chegaram das suas terras!`,
+                    embeds: [alertaEmbed]
+                });
             }
 
             if (!dominio) {
-                return interaction.editReply({ 
-                    content: "🚫 Você ainda não é um regente. Use `/dominio fundar` para reivindicar suas terras." 
+                return interaction.editReply({
+                    content: "🚫 Você ainda não é um regente. Use `/dominio fundar` para reivindicar suas terras."
                 });
             }
 
@@ -131,20 +137,56 @@ module.exports = {
                     .setTitle(`🏰 Domínio: ${dominio.nome}`)
                     .setDescription(`*Regido por ${char.nome}*`)
                     .addFields(
-                        { name: "📊 Geral", value: `**Nível:** ${dominio.nivel}\n**Terreno:** ${dominio.terreno}\n**Tipo:** ${dominio.mistico ? "Místico ✨" : "Padrão 🛡️"}`, inline: true },
-                        { name: "👑 Status Público", value: `**Corte:** ${dominio.corte}\n**Popularidade:** ${dominio.popularidade}`, inline: true },
-                        { name: "💰 Economia", value: `**Tesouro:** ${dominio.tesouro_lo} LO\n*(1 LO = T$ 1.000)*`, inline: false },
-                        { name: "⚙️ Administração", value: `**Ações:** ${dominio.acoes_disponiveis} / ${dominio.corte === "Rica" ? 3 : 2}\n*(Reseta mês que vem)*`, inline: true },
-                        { name: "🏗️ Infra & Guerra", value: `**Construções:** ${qtdConstrucoes}/${maxConstrucoes}\n**Unidades Militares:** ${qtdTropas}`, inline: true }
+                        {
+                            name: "📊 Geral",
+                            value: `**Nível:** ${dominio.nivel}\n**Terreno:** ${dominio.terreno}\n**Tipo:** ${dominio.mistico ? "Místico ✨" : "Padrão 🛡️"}`,
+                            inline: true
+                        },
+                        {
+                            name: "👑 Status Público",
+                            value: `**Corte:** ${dominio.corte}\n**Popularidade:** ${dominio.popularidade}`,
+                            inline: true
+                        },
+                        {
+                            name: "💰 Economia",
+                            value: `**Tesouro:** ${dominio.tesouro_lo} LO\n*(1 LO = T$ 1.000)*`,
+                            inline: false
+                        },
+                        {
+                            name: "⚙️ Administração",
+                            value: `**Ações:** ${dominio.acoes_disponiveis} / ${dominio.corte === "Rica" ? 3 : 2}\n*(Reseta mês que vem)*`,
+                            inline: true
+                        },
+                        {
+                            name: "🏗️ Infra & Guerra",
+                            value: `**Construções:** ${qtdConstrucoes}/${maxConstrucoes}\n**Unidades Militares:** ${qtdTropas}`,
+                            inline: true
+                        }
                     )
                     .setFooter({ text: "Utilize os botões abaixo para gerenciar seu território." })
                     .setTimestamp();
 
                 const botoesRow = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder().setCustomId(`dom_btn_acoes_${interaction.id}`).setLabel("Ações").setStyle(ButtonStyle.Primary).setEmoji("📜"),
-                    new ButtonBuilder().setCustomId(`dom_btn_construir_${interaction.id}`).setLabel("Construir").setStyle(ButtonStyle.Success).setEmoji("🏗️"),
-                    new ButtonBuilder().setCustomId(`dom_btn_exercito_${interaction.id}`).setLabel("Exército").setStyle(ButtonStyle.Danger).setEmoji("⚔️"),
-                    new ButtonBuilder().setCustomId(`dom_btn_bonus_${interaction.id}`).setLabel("Bônus").setStyle(ButtonStyle.Secondary).setEmoji("✨")
+                    new ButtonBuilder()
+                        .setCustomId(`dom_btn_acoes_${interaction.id}`)
+                        .setLabel("Ações")
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji("📜"),
+                    new ButtonBuilder()
+                        .setCustomId(`dom_btn_construir_${interaction.id}`)
+                        .setLabel("Construir")
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji("🏗️"),
+                    new ButtonBuilder()
+                        .setCustomId(`dom_btn_exercito_${interaction.id}`)
+                        .setLabel("Exército")
+                        .setStyle(ButtonStyle.Danger)
+                        .setEmoji("⚔️"),
+                    new ButtonBuilder()
+                        .setCustomId(`dom_btn_bonus_${interaction.id}`)
+                        .setLabel("Bônus")
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji("✨")
                 );
 
                 return { embeds: [embed], components: [botoesRow] };
@@ -154,24 +196,33 @@ module.exports = {
 
             const collector = msgPainel.createMessageComponentCollector({
                 filter: i => i.user.id === interaction.user.id,
-                time: 300000 
+                time: 300000
             });
 
             collector.on("collect", async iBtn => {
-                
                 if (iBtn.customId.startsWith("dom_btn_bonus_")) {
                     const bonusEmbed = new EmbedBuilder()
                         .setColor("#3498DB")
                         .setTitle(`✨ Bônus Ativos: ${dominio.nome}`)
-                        .setDescription("Estes são os bônus passivos concedidos pela sua estrutura atual. Lembre-se de aplicá-los na sua ficha ou durante as sessões.");
+                        .setDescription(
+                            "Estes são os bônus passivos concedidos pela sua estrutura atual. Lembre-se de aplicá-los na sua ficha ou durante as sessões."
+                        );
 
                     if (dominio.mistico) {
                         const pmExtra = dominio.nivel * dominio.nivel;
-                        bonusEmbed.addFields({ name: "🔮 Fluxo Místico", value: `Concede **+${pmExtra} PM** máximos adicionais ao regente (Nível²).`, inline: false });
+                        bonusEmbed.addFields({
+                            name: "🔮 Fluxo Místico",
+                            value: `Concede **+${pmExtra} PM** máximos adicionais ao regente (Nível²).`,
+                            inline: false
+                        });
                     }
 
                     if (dominio.construcoes.length === 0) {
-                        bonusEmbed.addFields({ name: "🏗️ Construções", value: "*Nenhuma construção erguida ainda.*", inline: false });
+                        bonusEmbed.addFields({
+                            name: "🏗️ Construções",
+                            value: "*Nenhuma construção erguida ainda.*",
+                            inline: false
+                        });
                     } else {
                         let listaConstrucoes = "";
                         dominio.construcoes.forEach(c => {
@@ -181,53 +232,99 @@ module.exports = {
                     }
 
                     const voltarRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar ao Painel").setStyle(ButtonStyle.Secondary).setEmoji("🔙")
+                        new ButtonBuilder()
+                            .setCustomId(`dom_btn_voltar_${interaction.id}`)
+                            .setLabel("Voltar ao Painel")
+                            .setStyle(ButtonStyle.Secondary)
+                            .setEmoji("🔙")
                     );
 
                     await iBtn.update({ embeds: [bonusEmbed], components: [voltarRow] });
-                }
-
-                else if (iBtn.customId.startsWith("dom_btn_acoes_")) {
+                } else if (iBtn.customId.startsWith("dom_btn_acoes_")) {
                     if (dominio.acoes_disponiveis <= 0) {
-                        return iBtn.reply({ content: "🚫 Você já usou todas as suas ações de domínio neste mês!", flags: MessageFlags.Ephemeral });
+                        return iBtn.reply({
+                            content: "🚫 Você já usou todas as suas ações de domínio neste mês!",
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
 
                     const menuAcoes = new StringSelectMenuBuilder()
                         .setCustomId(`dom_menu_acoes_${interaction.id}`)
                         .setPlaceholder("Selecione uma Ação de Domínio (Custa 1 Ação)")
                         .addOptions(
-                            new StringSelectMenuOptionBuilder().setLabel("👑 Governar").setDescription(`Nível +1 | Custa: 5 LO x Prox. Nível | Req: Nobreza`).setValue("Governar").setEmoji("👑"),
-                            new StringSelectMenuOptionBuilder().setLabel("💰 Finanças (Comprar LO)").setDescription("1.000 T$ = 1 LO | Req: Nobreza").setValue("Financas_Compra").setEmoji("💰"),
-                            new StringSelectMenuOptionBuilder().setLabel("💰 Finanças (Vender LO)").setDescription("1 LO = 1.000 T$ | Req: Nobreza").setValue("Financas_Venda").setEmoji("🪙"),
-                            new StringSelectMenuOptionBuilder().setLabel("🎭 Festival").setDescription("Popularidade +1 | Custa: 1 LO | Req: Atuação").setValue("Festival").setEmoji("🎭"),
-                            new StringSelectMenuOptionBuilder().setLabel("🗡️ Extorquir").setDescription("Ganha 1d6+Nv LO | Pop -1 | Req: Intimidação").setValue("Extorquir").setEmoji("🗡️"),
-                            new StringSelectMenuOptionBuilder().setLabel("🏰 Aumentar Corte").setDescription("Sobe Corte | Custa: 1 LO | Req: Nobreza").setValue("Aumentar_Corte").setEmoji("🏰"),
-                            new StringSelectMenuOptionBuilder().setLabel("🌾 Convocar Camponeses").setDescription("Ganha 1d6 Tropas | Pop -1 | Custa: 1 LO | Req: Nenhuma").setValue("Convocar_Camponeses").setEmoji("🌾")
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("👑 Governar")
+                                .setDescription(`Nível +1 | Custa: 5 LO x Prox. Nível | Req: Nobreza`)
+                                .setValue("Governar")
+                                .setEmoji("👑"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("💰 Finanças (Comprar LO)")
+                                .setDescription("1.000 T$ = 1 LO | Req: Nobreza")
+                                .setValue("Financas_Compra")
+                                .setEmoji("💰"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("💰 Finanças (Vender LO)")
+                                .setDescription("1 LO = 1.000 T$ | Req: Nobreza")
+                                .setValue("Financas_Venda")
+                                .setEmoji("🪙"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("🎭 Festival")
+                                .setDescription("Popularidade +1 | Custa: 1 LO | Req: Atuação")
+                                .setValue("Festival")
+                                .setEmoji("🎭"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("🗡️ Extorquir")
+                                .setDescription("Ganha 1d6+Nv LO | Pop -1 | Req: Intimidação")
+                                .setValue("Extorquir")
+                                .setEmoji("🗡️"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("🏰 Aumentar Corte")
+                                .setDescription("Sobe Corte | Custa: 1 LO | Req: Nobreza")
+                                .setValue("Aumentar_Corte")
+                                .setEmoji("🏰"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("🌾 Convocar Camponeses")
+                                .setDescription("Ganha 1d6 Tropas | Pop -1 | Custa: 1 LO | Req: Nenhuma")
+                                .setValue("Convocar_Camponeses")
+                                .setEmoji("🌾")
                         );
 
                     const voltarRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Cancelar / Voltar").setStyle(ButtonStyle.Secondary)
+                        new ButtonBuilder()
+                            .setCustomId(`dom_btn_voltar_${interaction.id}`)
+                            .setLabel("Cancelar / Voltar")
+                            .setStyle(ButtonStyle.Secondary)
                     );
 
-                    await iBtn.update({ 
+                    await iBtn.update({
                         content: `**Ações Restantes:** ${dominio.acoes_disponiveis}\n*Nota: Se falhar nos requisitos ou não tiver LO suficiente, a ação será cancelada sem gastar seu turno.*`,
-                        embeds: [], 
-                        components: [new ActionRowBuilder().addComponents(menuAcoes), voltarRow] 
+                        embeds: [],
+                        components: [new ActionRowBuilder().addComponents(menuAcoes), voltarRow]
                     });
-                }
-
-                else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_acoes_")) {
+                } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_acoes_")) {
                     const acao = iBtn.values[0];
-                    const pChar = char.pericias || []; 
+                    const pChar = char.pericias || [];
 
-                    if (["Governar", "Financas_Compra", "Financas_Venda", "Aumentar_Corte"].includes(acao) && !pChar.includes("Nobreza")) {
-                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado em **Nobreza**.", flags: MessageFlags.Ephemeral });
+                    if (
+                        ["Governar", "Financas_Compra", "Financas_Venda", "Aumentar_Corte"].includes(acao) &&
+                        !pChar.includes("Nobreza")
+                    ) {
+                        return iBtn.reply({
+                            content: "🚫 **Falha:** Você precisa ser treinado em **Nobreza**.",
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
                     if (acao === "Festival" && !pChar.includes("Atuação")) {
-                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado em **Atuação**.", flags: MessageFlags.Ephemeral });
+                        return iBtn.reply({
+                            content: "🚫 **Falha:** Você precisa ser treinado em **Atuação**.",
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
                     if (acao === "Extorquir" && !pChar.includes("Intimidação")) {
-                        return iBtn.reply({ content: "🚫 **Falha:** Você precisa ser treinado em **Intimidação**.", flags: MessageFlags.Ephemeral });
+                        return iBtn.reply({
+                            content: "🚫 **Falha:** Você precisa ser treinado em **Intimidação**.",
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
 
                     if (acao === "Financas_Compra" || acao === "Financas_Venda") {
@@ -250,80 +347,122 @@ module.exports = {
                         await iBtn.showModal(modal);
 
                         try {
-                            const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId && m.user.id === interaction.user.id, time: 60000 });
+                            const mSubmit = await iBtn.awaitModalSubmit({
+                                filter: m => m.customId === modalId && m.user.id === interaction.user.id,
+                                time: 60000
+                            });
                             await mSubmit.deferUpdate();
                             const qtd = parseInt(mSubmit.fields.getTextInputValue("inp_qtd_lo"));
 
-                            if (isNaN(qtd) || qtd <= 0) return mSubmit.followUp({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
+                            if (isNaN(qtd) || qtd <= 0)
+                                return mSubmit.followUp({
+                                    content: "🚫 Quantidade inválida.",
+                                    flags: MessageFlags.Ephemeral
+                                });
 
                             try {
                                 const log = await DominioService.executarAcaoRegente(dominio.id, acao, { qtd: qtd });
-                                dominio = await DominioService.buscarPainel(char.id); 
+                                dominio = await DominioService.buscarPainel(char.id);
                                 await mSubmit.followUp({ content: `✅ ${log}` });
                                 await msgPainel.edit(renderizarPainel());
                             } catch (err) {
                                 mSubmit.followUp({ content: `❌ Erro: ${err.message}`, flags: MessageFlags.Ephemeral });
                             }
-                        } catch (e) { /* ignora timeout do modal */ }
+                            // eslint-disable-next-line no-unused-vars
+                        } catch (e) {
+                            /* ignora timeout do modal */
+                        }
                         return;
                     }
 
                     await iBtn.deferUpdate();
                     try {
                         const log = await DominioService.executarAcaoRegente(dominio.id, acao);
-                        dominio = await DominioService.buscarPainel(char.id); 
-                        
+                        dominio = await DominioService.buscarPainel(char.id);
+
                         await iBtn.followUp({ content: `✅ ${log}` });
-                        await msgPainel.edit(renderizarPainel()); 
+                        await msgPainel.edit(renderizarPainel());
                     } catch (err) {
                         let msgErro = err.message;
                         if (msgErro.startsWith("LO_INSUFICIENTE")) msgErro = `Você não tem LO suficiente no Tesouro.`;
                         if (msgErro === "CORTE_MAXIMA") msgErro = `Sua Corte já atingiu o nível máximo (Rica).`;
-                        
-                        await iBtn.followUp({ content: `❌ **Ação Falhou:** ${msgErro}`, flags: MessageFlags.Ephemeral });
-                    }
-                }
 
-                else if (iBtn.customId.startsWith("dom_btn_construir_")) {
+                        await iBtn.followUp({
+                            content: `❌ **Ação Falhou:** ${msgErro}`,
+                            flags: MessageFlags.Ephemeral
+                        });
+                    }
+                } else if (iBtn.customId.startsWith("dom_btn_construir_")) {
                     const maxConstrucoes = dominio.nivel * 3;
                     if (dominio.construcoes.length >= maxConstrucoes) {
-                        return iBtn.reply({ content: `🚫 Limite de prédios atingido! Eleve o Nível do Domínio para construir mais.`, flags: MessageFlags.Ephemeral });
+                        return iBtn.reply({
+                            content: `🚫 Limite de prédios atingido! Eleve o Nível do Domínio para construir mais.`,
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
                     if (dominio.acoes_disponiveis <= 0) {
-                        return iBtn.reply({ content: "🚫 Você precisa de 1 Ação de Regente disponível para construir.", flags: MessageFlags.Ephemeral });
+                        return iBtn.reply({
+                            content: "🚫 Você precisa de 1 Ação de Regente disponível para construir.",
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
 
                     const menuCategorias = new StringSelectMenuBuilder()
                         .setCustomId(`dom_menu_cat_${interaction.id}`)
                         .setPlaceholder("Selecione o Setor da Obra...")
                         .addOptions(
-                            new StringSelectMenuOptionBuilder().setLabel("Nobreza (A - M)").setDescription("Fazendas, Castelos... (Parte 1) [Req: Nobreza]").setValue("Nobreza_1").setEmoji("👑"),
-                            new StringSelectMenuOptionBuilder().setLabel("Nobreza (N - Z)").setDescription("Oficinas, Torres... (Parte 2) [Req: Nobreza]").setValue("Nobreza_2").setEmoji("👑"),
-                            new StringSelectMenuOptionBuilder().setLabel("Guerra").setDescription("Quartéis, Estrebarias... (Req: Guerra)").setValue("Guerra").setEmoji("⚔️"),
-                            new StringSelectMenuOptionBuilder().setLabel("Enganação").setDescription("Tavernas, Esconderijos... (Req: Enganação)").setValue("Enganação").setEmoji("🎭"),
-                            new StringSelectMenuOptionBuilder().setLabel("Religião").setDescription("Templos, Capelas... (Req: Religião)").setValue("Religião").setEmoji("📿"),
-                            new StringSelectMenuOptionBuilder().setLabel("Misticismo").setDescription("Torres, Círculos Arcanos... (Req: Misticismo)").setValue("Misticismo").setEmoji("🔮")
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("Nobreza (A - M)")
+                                .setDescription("Fazendas, Castelos... (Parte 1) [Req: Nobreza]")
+                                .setValue("Nobreza_1")
+                                .setEmoji("👑"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("Nobreza (N - Z)")
+                                .setDescription("Oficinas, Torres... (Parte 2) [Req: Nobreza]")
+                                .setValue("Nobreza_2")
+                                .setEmoji("👑"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("Guerra")
+                                .setDescription("Quartéis, Estrebarias... (Req: Guerra)")
+                                .setValue("Guerra")
+                                .setEmoji("⚔️"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("Enganação")
+                                .setDescription("Tavernas, Esconderijos... (Req: Enganação)")
+                                .setValue("Enganação")
+                                .setEmoji("🎭"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("Religião")
+                                .setDescription("Templos, Capelas... (Req: Religião)")
+                                .setValue("Religião")
+                                .setEmoji("📿"),
+                            new StringSelectMenuOptionBuilder()
+                                .setLabel("Misticismo")
+                                .setDescription("Torres, Círculos Arcanos... (Req: Misticismo)")
+                                .setValue("Misticismo")
+                                .setEmoji("🔮")
                         );
 
                     const voltarRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+                        new ButtonBuilder()
+                            .setCustomId(`dom_btn_voltar_${interaction.id}`)
+                            .setLabel("Voltar")
+                            .setStyle(ButtonStyle.Secondary)
                     );
 
-                    await iBtn.update({ 
-                        content: `**Obras de Engenharia**\nEscolha o setor do seu novo empreendimento. Lembre-se que você precisará da perícia equivalente ao setor.`, 
-                        embeds: [], 
-                        components: [new ActionRowBuilder().addComponents(menuCategorias), voltarRow] 
+                    await iBtn.update({
+                        content: `**Obras de Engenharia**\nEscolha o setor do seu novo empreendimento. Lembre-se que você precisará da perícia equivalente ao setor.`,
+                        embeds: [],
+                        components: [new ActionRowBuilder().addComponents(menuCategorias), voltarRow]
                     });
-                }
-
-                else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_cat_")) {
+                } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_cat_")) {
                     const valorSelecionado = iBtn.values[0];
                     let categoriaReal = valorSelecionado;
-                    
+
                     if (valorSelecionado.startsWith("Nobreza")) {
                         categoriaReal = "Nobreza";
                     }
-                    
+
                     let obrasDestaCategoria = [];
                     Object.keys(CATALOGO_CONSTRUCOES).forEach(nome => {
                         const obra = CATALOGO_CONSTRUCOES[nome];
@@ -337,9 +476,9 @@ module.exports = {
                     if (valorSelecionado === "Nobreza_1") {
                         obrasDestaCategoria = obrasDestaCategoria.slice(0, 23);
                     } else if (valorSelecionado === "Nobreza_2") {
-                        obrasDestaCategoria = obrasDestaCategoria.slice(23, 50); 
+                        obrasDestaCategoria = obrasDestaCategoria.slice(23, 50);
                     } else {
-                        obrasDestaCategoria = obrasDestaCategoria.slice(0, 25); 
+                        obrasDestaCategoria = obrasDestaCategoria.slice(0, 25);
                     }
 
                     const menuPredios = new StringSelectMenuBuilder()
@@ -350,37 +489,43 @@ module.exports = {
                         menuPredios.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(`${obra.nome} (Custo: ${obra.custo} LO)`)
-                                .setDescription(obra.req ? `Requer: ${Array.isArray(obra.req) ? obra.req.join(" E ") : obra.req}` : "Sem pré-requisitos estruturais")
+                                .setDescription(
+                                    obra.req
+                                        ? `Requer: ${Array.isArray(obra.req) ? obra.req.join(" E ") : obra.req}`
+                                        : "Sem pré-requisitos estruturais"
+                                )
                                 .setValue(obra.nome)
                         );
                     });
 
                     const voltarRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`dom_btn_construir_${interaction.id}`).setLabel("Trocar Setor").setStyle(ButtonStyle.Secondary)
+                        new ButtonBuilder()
+                            .setCustomId(`dom_btn_construir_${interaction.id}`)
+                            .setLabel("Trocar Setor")
+                            .setStyle(ButtonStyle.Secondary)
                     );
 
                     await iBtn.update({
                         content: `**Setor de ${categoriaReal}**\n*Selecione o projeto para iniciar as obras (Custa 1 Ação de Regente).*`,
                         components: [new ActionRowBuilder().addComponents(menuPredios), voltarRow]
                     });
-                }
-
-                else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_bld_")) {
+                } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_bld_")) {
                     const nomeObra = iBtn.values[0];
                     await iBtn.deferUpdate();
 
                     try {
                         const log = await DominioService.construir(dominio.id, char.id, nomeObra);
-                        dominio = await DominioService.buscarPainel(char.id); 
+                        dominio = await DominioService.buscarPainel(char.id);
 
                         await iBtn.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
-                        await iBtn.followUp({ content: `❌ **Obras Embargadas:** ${err.message}`, flags: MessageFlags.Ephemeral });
+                        await iBtn.followUp({
+                            content: `❌ **Obras Embargadas:** ${err.message}`,
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
-                }
-
-                else if (iBtn.customId.startsWith("dom_btn_exercito_")) {
+                } else if (iBtn.customId.startsWith("dom_btn_exercito_")) {
                     const exercitoEmbed = new EmbedBuilder()
                         .setColor("#E74C3C")
                         .setTitle(`⚔️ Forças Armadas: ${dominio.nome}`)
@@ -398,10 +543,10 @@ module.exports = {
                             if (stats) {
                                 const poderTropa = stats.poder * t.quantidade;
                                 const manutencaoTropa = stats.manutencao * t.quantidade;
-                                
+
                                 poderTotal += poderTropa;
                                 manutencaoTotal += manutencaoTropa;
-                                
+
                                 listaTropas += `**${t.quantidade}x ${t.nome}** (Poder: ${poderTropa} | Manut: ${manutencaoTropa} LO)\n`;
                             }
                         });
@@ -409,20 +554,33 @@ module.exports = {
 
                     exercitoEmbed.addFields(
                         { name: "Unidades", value: listaTropas, inline: false },
-                        { name: "Estatísticas Totais", value: `**Poder Militar:** ${poderTotal}\n**Manutenção Mensal:** ${manutencaoTotal} LO`, inline: false }
+                        {
+                            name: "Estatísticas Totais",
+                            value: `**Poder Militar:** ${poderTotal}\n**Manutenção Mensal:** ${manutencaoTotal} LO`,
+                            inline: false
+                        }
                     );
 
                     const botoesRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`dom_btn_recrutar_${interaction.id}`).setLabel("Recrutar Tropas").setStyle(ButtonStyle.Primary).setEmoji("➕"),
-                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar ao Painel").setStyle(ButtonStyle.Secondary).setEmoji("🔙")
+                        new ButtonBuilder()
+                            .setCustomId(`dom_btn_recrutar_${interaction.id}`)
+                            .setLabel("Recrutar Tropas")
+                            .setStyle(ButtonStyle.Primary)
+                            .setEmoji("➕"),
+                        new ButtonBuilder()
+                            .setCustomId(`dom_btn_voltar_${interaction.id}`)
+                            .setLabel("Voltar ao Painel")
+                            .setStyle(ButtonStyle.Secondary)
+                            .setEmoji("🔙")
                     );
 
                     await iBtn.update({ content: null, embeds: [exercitoEmbed], components: [botoesRow] });
-                }
-                
-                else if (iBtn.customId.startsWith("dom_btn_recrutar_")) {
+                } else if (iBtn.customId.startsWith("dom_btn_recrutar_")) {
                     if (dominio.acoes_disponiveis <= 0) {
-                        return iBtn.reply({ content: "🚫 Você precisa de 1 Ação de Regente para treinar tropas.", flags: MessageFlags.Ephemeral });
+                        return iBtn.reply({
+                            content: "🚫 Você precisa de 1 Ação de Regente para treinar tropas.",
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
 
                     const menuTropas = new StringSelectMenuBuilder()
@@ -435,13 +593,18 @@ module.exports = {
                         menuTropas.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(`${nome} (Custo: ${tropa.custo} LO)`)
-                                .setDescription(`Poder: ${tropa.poder} | Manut: ${tropa.manutencao} LO/mês | ${reqText}`)
+                                .setDescription(
+                                    `Poder: ${tropa.poder} | Manut: ${tropa.manutencao} LO/mês | ${reqText}`
+                                )
                                 .setValue(nome)
                         );
                     });
 
                     const voltarRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder().setCustomId(`dom_btn_exercito_${interaction.id}`).setLabel("Cancelar / Voltar").setStyle(ButtonStyle.Secondary)
+                        new ButtonBuilder()
+                            .setCustomId(`dom_btn_exercito_${interaction.id}`)
+                            .setLabel("Cancelar / Voltar")
+                            .setStyle(ButtonStyle.Secondary)
                     );
 
                     await iBtn.update({
@@ -449,9 +612,7 @@ module.exports = {
                         components: [new ActionRowBuilder().addComponents(menuTropas), voltarRow],
                         embeds: []
                     });
-                }
-
-                else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
+                } else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
                     await iBtn.update({ content: null, ...renderizarPainel() });
                 }
             });
