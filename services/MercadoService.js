@@ -2,7 +2,7 @@ const MercadoRepository = require("../repositories/MercadoRepository.js");
 const ItensRepository = require("../repositories/ItensRepository.js");
 const PersonagemRepository = require("../repositories/PersonagemRepository.js");
 const TransacaoRepository = require("../repositories/TransacaoRepository.js");
-const prisma = require("../../database.js");
+const prisma = require("../database.js");
 
 class MercadoService {
     async comprarItem(compradorId, anuncioId, qtdCompra) {
