@@ -94,6 +94,11 @@ module.exports = {
         descricao: "Compre, venda e negocie itens com jogadores ou NPCs.",
         comandos: [
             {
+                cmd: "/comprar",
+                desc: "Compra um item do livro pelo preço cheio x2.",
+                syntax: "/comprar"
+            },
+            {
                 cmd: "/mercado anunciar",
                 desc: "Coloca um item da sua mochila à venda na Casa de Leilões.",
                 syntax: "/mercado anunciar preco:<valor>"
