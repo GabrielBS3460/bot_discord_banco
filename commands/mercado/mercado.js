@@ -36,6 +36,8 @@ module.exports = {
         ),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         const subcomando = interaction.options.getSubcommand();
 
         try {
@@ -114,13 +116,12 @@ module.exports = {
                                 time: 60000
                             });
 
+                            await submit.deferReply({ flags: MessageFlags.Ephemeral });
+
                             let qtd = parseInt(submit.fields.getTextInputValue("inp_qtd_mercado"));
 
                             if (isNaN(qtd) || qtd <= 0 || qtd > itemSelecionado.quantidade) {
-                                return submit.reply({
-                                    content: "🚫 Quantidade inválida.",
-                                    flags: MessageFlags.Ephemeral
-                                });
+                                return submit.editReply({ content: "🚫 Quantidade inválida." });
                             }
 
                             await ItensRepository.removerItem(itemSelecionado.id, qtd);
@@ -135,9 +136,8 @@ module.exports = {
                             );
 
                             await msg.edit({ components: [] }).catch(() => null);
-                            await submit.reply({
-                                content: `✅ **${qtd}x ${itemSelecionado.nome}** foi enviado para o Mercado por **${formatarMoeda(preco)}**!`,
-                                flags: MessageFlags.Ephemeral
+                            await submit.editReply({
+                                content: `✅ **${qtd}x ${itemSelecionado.nome}** foi enviado para o Mercado por **${formatarMoeda(preco)}**!`
                             });
 
                             const embedPublico = new EmbedBuilder()
@@ -271,6 +271,8 @@ module.exports = {
                                 time: 60000
                             });
 
+                            await submit.deferReply({ flags: MessageFlags.Ephemeral });
+
                             const qtdCompra = parseInt(submit.fields.getTextInputValue("inp_qtd_compra"));
 
                             if (isNaN(qtdCompra) || qtdCompra <= 0 || qtdCompra > anuncioSelecionado.quantidade) {
@@ -279,8 +281,6 @@ module.exports = {
                                     flags: MessageFlags.Ephemeral
                                 });
                             }
-
-                            await submit.deferUpdate();
 
                             try {
                                 const { vendedor, custoTotal } = await MercadoService.comprarItem(
@@ -291,9 +291,8 @@ module.exports = {
 
                                 const precoPago = custoTotal || precoUnitario * qtdCompra;
 
-                                await submit.followUp({
-                                    content: `🛍️ **Compra Concluída!**\nVocê comprou **${qtdCompra}x ${anuncioSelecionado.item_nome}** por **${formatarMoeda(precoPago)}**.\nO item já está no seu inventário!`,
-                                    flags: MessageFlags.Ephemeral
+                                await submit.editReply({
+                                    content: `🛍️ **Compra Concluída!**\nVocê comprou **${qtdCompra}x ${anuncioSelecionado.item_nome}** por **${formatarMoeda(precoPago)}**.\nO item já está no seu inventário!`
                                 });
 
                                 const discordIdVendedor = vendedor.usuario_id || vendedor.discord_id;
@@ -322,9 +321,8 @@ module.exports = {
                 const meusAnuncios = await MercadoRepository.buscarAnunciosPorVendedor(char.id);
 
                 if (meusAnuncios.length === 0) {
-                    return interaction.reply({
-                        content: "📋 Você não possui nenhum item anunciado no mercado no momento.",
-                        flags: MessageFlags.Ephemeral
+                    return interaction.editReply({
+                        content: "📋 Você não possui nenhum item anunciado no mercado no momento."
                     });
                 }
 
@@ -341,10 +339,9 @@ module.exports = {
                     );
                 });
 
-                const msg = await interaction.reply({
-                    content: `📦 **Seus Anúncios Ativos**\n*Selecione um item abaixo se desejar retirá-lo do mercado e devolvê-locpara sua mochila:*`,
+                const msg = await interaction.editReply({
+                    content: `📦 **Seus Anúncios Ativos**\n*Selecione um item abaixo se desejar retirá-lo do mercado e devolvê-lo para sua mochila:*`,
                     components: [new ActionRowBuilder().addComponents(menuMeus)],
-                    flags: MessageFlags.Ephemeral,
                     fetchReply: true
                 });
 

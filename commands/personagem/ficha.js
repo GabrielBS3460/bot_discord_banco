@@ -183,7 +183,11 @@ module.exports = {
             collector.on("collect", async iBtn => {
                 const uniqueID = `_${msg.id}`;
 
-                if (["btn_usar_alimento", "btn_usar_pocao", "btn_usar_consumivel"].includes(iBtn.customId)) {
+                if (
+                    ["btn_usar_alimento", "btn_usar_pocao", "btn_usar_consumivel", "btn_usar_municao"].includes(
+                        iBtn.customId
+                    )
+                ) {
                     const inventario = await ItensRepository.buscarInventario(char.id);
                     let tiposValidos = [];
                     let icone = "";
