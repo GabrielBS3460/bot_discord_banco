@@ -29,13 +29,14 @@ module.exports = {
         .setDescription("Exibe e permite editar a ficha do seu personagem ativo."),
 
     async execute({ interaction, getPersonagemAtivo }) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         try {
             const ativo = await getPersonagemAtivo(interaction.user.id);
 
             if (!ativo) {
-                return interaction.reply({
-                    content: "🚫 Você não tem um personagem ativo. Use `/cadastrar` ou `/personagem trocar`.",
-                    flags: MessageFlags.Ephemeral
+                return interaction.editReply({
+                    content: "🚫 Você não tem um personagem ativo. Use `/cadastrar` ou `/personagem trocar`."
                 });
             }
 
@@ -169,7 +170,7 @@ module.exports = {
                     .setEmoji("🏹")
             );
 
-            const msg = await interaction.reply({
+            const msg = await interaction.editReply({
                 embeds: [montarEmbedFicha(char)],
                 components: [botoes1, botoes2, botoes3],
                 fetchReply: true
@@ -188,6 +189,8 @@ module.exports = {
                         iBtn.customId
                     )
                 ) {
+                    await iBtn.deferReply({ flags: MessageFlags.Ephemeral });
+
                     const inventario = await ItensRepository.buscarInventario(char.id);
                     let tiposValidos = [];
                     let icone = "";
@@ -209,9 +212,8 @@ module.exports = {
                     const itensFiltrados = inventario.filter(item => tiposValidos.includes(item.tipo));
 
                     if (itensFiltrados.length === 0) {
-                        return iBtn.reply({
-                            content: `🚫 Você não possui itens da categoria selecionada no inventário.`,
-                            flags: MessageFlags.Ephemeral
+                        return iBtn.editReply({
+                            content: `🚫 Você não possui itens da categoria selecionada no inventário.`
                         });
                     }
 
@@ -227,10 +229,9 @@ module.exports = {
                         );
                     });
 
-                    const responseMenu = await iBtn.reply({
+                    const responseMenu = await iBtn.editReply({
                         content: `Mochila Aberta! Selecione o que deseja usar:`,
                         components: [new ActionRowBuilder().addComponents(menuItens)],
-                        flags: MessageFlags.Ephemeral,
                         fetchReply: true
                     });
 
@@ -628,10 +629,7 @@ module.exports = {
             });
         } catch (err) {
             console.error("Erro no ficha:", err);
-            const msg = { content: "❌ Ocorreu um erro ao carregar sua ficha.", flags: MessageFlags.Ephemeral };
-            interaction.replied
-                ? await interaction.followUp(msg).catch(() => {})
-                : await interaction.reply(msg).catch(() => {});
+            await interaction.editReply({ content: "❌ Ocorreu um erro ao carregar sua ficha." }).catch(() => {});
         }
     }
 };
