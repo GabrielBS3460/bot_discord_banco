@@ -15,9 +15,17 @@ const ItensRepository = require("../../repositories/ItensRepository.js");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("forjar")
-        .setDescription("Abre a oficina para forjar ou aprimorar itens no seu inventário."),
+        .setDescription("Abre a oficina para forjar ou aprimorar itens no seu inventário.")
+        .addStringOption(opt =>
+            opt
+                .setName("filtro")
+                .setDescription("Pesquise parte do nome do item base (usado para Melhorias ou Encantamentos)")
+                .setRequired(false)
+        ),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda, CUSTO_FORJA }) {
+        const filtroNome = interaction.options.getString("filtro")?.toLowerCase();
+
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
 
@@ -38,8 +46,12 @@ module.exports = {
                 );
             }
 
+            const msgFiltroAviso = filtroNome
+                ? `\n🔍 *Filtro ativo:* "**${interaction.options.getString("filtro")}**"`
+                : "";
+
             const msg = await interaction.reply({
-                content: `🔨 **Oficina de Forja**\n💰 Saldo: ${formatarMoeda(char.saldo)}\n🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}\n\nSelecione o **TIPO** de item que deseja criar ou aprimorar:`,
+                content: `🔨 **Oficina de Forja**\n💰 Saldo: ${formatarMoeda(char.saldo)}\n🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}${msgFiltroAviso}\n\nSelecione o **TIPO** de item que deseja criar ou aprimorar:`,
                 components: [new ActionRowBuilder().addComponents(menuTipos)],
                 flags: MessageFlags.Ephemeral,
                 fetchReply: true
@@ -183,14 +195,22 @@ module.exports = {
 
                     if (tipoSelecionado === "Melhorias" || tipoSelecionado === "Encantamento") {
                         const inventario = await ItensRepository.buscarInventario(char.id);
-                        const itensValidos = inventario.filter(
+
+                        let itensValidos = inventario.filter(
                             item => item.tipo === "Itens Permanentes" || item.tipo === "Munição"
                         );
 
+                        if (filtroNome) {
+                            itensValidos = itensValidos.filter(item => item.nome.toLowerCase().includes(filtroNome));
+                        }
+
                         if (itensValidos.length === 0) {
+                            const msgErro = filtroNome
+                                ? `🚫 Você não possui nenhum item base contendo "**${interaction.options.getString("filtro")}**" no inventário.`
+                                : "🚫 Você não possui nenhum **Item Permanente** ou **Munição** no inventário para usar como base.";
+
                             return i.reply({
-                                content:
-                                    "🚫 Você não possui nenhum **Item Permanente** ou **Munição** no inventário para usar como base.",
+                                content: msgErro,
                                 flags: MessageFlags.Ephemeral
                             });
                         }

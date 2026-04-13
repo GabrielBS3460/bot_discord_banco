@@ -20,7 +20,9 @@ module.exports = {
                     { name: "✏️ Definir Exato", value: "SET" }
                 )
         )
-        .addNumberOption(opt => opt.setName("valor").setDescription("Quantidade de pontos").setRequired(true)),
+        .addStringOption(opt =>
+            opt.setName("valor").setDescription("Quantidade de pontos (ex: 4.5 ou 4,5)").setRequired(true)
+        ),
 
     async execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
         const temPermissao =
@@ -39,7 +41,15 @@ module.exports = {
             const alvoUser = interaction.options.getUser("jogador");
             const nomeChar = interaction.options.getString("nome");
             const operacao = interaction.options.getString("operacao");
-            const valor = interaction.options.getNumber("valor");
+
+            const valorString = interaction.options.getString("valor");
+            const valor = parseFloat(valorString.replace(",", "."));
+
+            if (isNaN(valor)) {
+                return interaction.editReply({
+                    content: "🚫 Valor numérico inválido! Certifique-se de digitar apenas números (ex: 4.5 ou 4,5)."
+                });
+            }
 
             const char = await PersonagemRepository.buscarPorNomeEJogador(nomeChar, alvoUser.id);
 
