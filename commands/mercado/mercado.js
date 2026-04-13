@@ -44,9 +44,8 @@ module.exports = {
             const char = await getPersonagemAtivo(interaction.user.id);
 
             if (!char) {
-                return interaction.reply({
-                    content: "🚫 Você não tem um personagem ativo para acessar o mercado.",
-                    flags: MessageFlags.Ephemeral
+                return interaction.editReply({
+                    content: "🚫 Você não tem um personagem ativo para acessar o mercado."
                 });
             }
 
@@ -55,9 +54,8 @@ module.exports = {
                 const inventario = await ItensRepository.buscarInventario(char.id);
 
                 if (!inventario || inventario.length === 0) {
-                    return interaction.reply({
-                        content: "🎒 Sua mochila está vazia. Não há nada para vender.",
-                        flags: MessageFlags.Ephemeral
+                    return interaction.editReply({
+                        content: "🎒 Sua mochila está vazia. Não há nada para vender."
                     });
                 }
 
@@ -74,10 +72,9 @@ module.exports = {
                     );
                 });
 
-                const msg = await interaction.reply({
+                const msg = await interaction.editReply({
                     content: `⚖️ **Anunciar no Mercado**\nSelecione o item que deseja anunciar por **${formatarMoeda(preco)}**:`,
                     components: [new ActionRowBuilder().addComponents(menuItens)],
-                    flags: MessageFlags.Ephemeral,
                     fetchReply: true
                 });
 
@@ -136,6 +133,7 @@ module.exports = {
                             );
 
                             await msg.edit({ components: [] }).catch(() => null);
+
                             await submit.editReply({
                                 content: `✅ **${qtd}x ${itemSelecionado.nome}** foi enviado para o Mercado por **${formatarMoeda(preco)}**!`
                             });
@@ -154,7 +152,8 @@ module.exports = {
 
                             collector.stop();
                         } catch (err) {
-                            console.error("Erro no modal de anúncio:", err);
+                            if (err.code !== "InteractionCollectorError")
+                                console.error("Erro no modal de anúncio:", err);
                         }
                     }
                 });
@@ -163,9 +162,8 @@ module.exports = {
                 const vitrine = anuncios.filter(a => a.vendedor_id !== char.id);
 
                 if (vitrine.length === 0) {
-                    return interaction.reply({
-                        content: "🏚️ O mercado está completamente vazio no momento.",
-                        flags: MessageFlags.Ephemeral
+                    return interaction.editReply({
+                        content: "🏚️ O mercado está completamente vazio no momento."
                     });
                 }
 
@@ -212,10 +210,9 @@ module.exports = {
                     return componentes;
                 };
 
-                const msg = await interaction.reply({
+                const msg = await interaction.editReply({
                     content: `🛒 **Mercado Global**\nSeu Saldo: **${formatarMoeda(char.saldo)}**\n*Navegue pelas páginas e selecione o item (a compra é imediata):*`,
                     components: gerarComponentes(paginaAtual),
-                    flags: MessageFlags.Ephemeral,
                     fetchReply: true
                 });
 
@@ -234,7 +231,6 @@ module.exports = {
                         await iAction.update({ components: gerarComponentes(paginaAtual) });
                     } else if (iAction.isStringSelectMenu() && iAction.customId.startsWith("menu_comprar_mercado")) {
                         const anuncioId = parseInt(iAction.values[0]);
-
                         const anuncioSelecionado = vitrine.find(a => a.id === anuncioId);
 
                         if (!anuncioSelecionado) {
@@ -276,10 +272,7 @@ module.exports = {
                             const qtdCompra = parseInt(submit.fields.getTextInputValue("inp_qtd_compra"));
 
                             if (isNaN(qtdCompra) || qtdCompra <= 0 || qtdCompra > anuncioSelecionado.quantidade) {
-                                return submit.reply({
-                                    content: "🚫 Quantidade inválida.",
-                                    flags: MessageFlags.Ephemeral
-                                });
+                                return submit.editReply({ content: "🚫 Quantidade inválida." });
                             }
 
                             try {
@@ -309,11 +302,11 @@ module.exports = {
                                 if (err.message === "ANUNCIO_NAO_ENCONTRADO")
                                     erroMsg = "🚫 Este item já foi vendido ou retirado do mercado.";
 
-                                await submit.followUp({ content: erroMsg, flags: MessageFlags.Ephemeral });
+                                await submit.editReply({ content: erroMsg });
                             }
                             // eslint-disable-next-line no-unused-vars
                         } catch (err) {
-                            // Ignora o erro se o usuário fechar o modal ou demorar mais de 60 segundos
+                            // Ignora erro se o modal expirar
                         }
                     }
                 });
@@ -375,10 +368,7 @@ module.exports = {
             }
         } catch (err) {
             console.error("Erro no comando mercado:", err);
-            const msgErro = { content: "❌ Ocorreu um erro interno no Mercado.", flags: MessageFlags.Ephemeral };
-            interaction.replied
-                ? await interaction.followUp(msgErro).catch(() => {})
-                : await interaction.reply(msgErro).catch(() => {});
+            await interaction.editReply({ content: "❌ Ocorreu um erro interno no Mercado." }).catch(() => {});
         }
     }
 };
