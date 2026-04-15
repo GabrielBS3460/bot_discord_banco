@@ -21,6 +21,7 @@ module.exports = {
                     { name: "🪄 Item Mágico", value: "Item Mágico" },
                     { name: "✨ Encantamento", value: "Encantamento" },
                     { name: "⚒️ Melhoria", value: "Melhorias" },
+                    { name: "🏹 Munição", value: "Munição" },
                     { name: "🧪 Poção/Pergaminho (1-2)", value: "Poções/Pergaminhos (1-2)" },
                     { name: "🧪 Poção/Pergaminho (3-5)", value: "Poções/Pergaminhos (3-5)" }
                 )
