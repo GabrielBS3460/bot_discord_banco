@@ -9,8 +9,8 @@ const DropData = {
             if (roll <= 90) return { tipo: "DINHEIRO" };
             return { tipo: "SUPERIOR", slots: 1 };
         } else if (nd <= 10) {
-            if (roll <= 50) return { tipo: "DINHEIRO" };
-            if (roll <= 70) return { tipo: "SUPERIOR", slots: 1 };
+            //if (roll <= 50) return { tipo: "DINHEIRO" };
+            //if (roll <= 70) return { tipo: "SUPERIOR", slots: 1 };
             return { tipo: "SUPERIOR", slots: 2 };
         } else if (nd <= 16) {
             if (roll <= 50) return { tipo: "DINHEIRO" };
@@ -31,20 +31,189 @@ const DropData = {
         { max: 200, tipo: "CONSUMIVEIS" }
     ],
     ITENS: {
-        ARMAS: ["Adaga", "Adaga Oposta", "Azagaia", "Lança", "Arco Curto", "Besta Leve", "Espada Longa", "Espada Larga", "Presa da Serpente", "Pistola-Punhal", "Machado de Batalha", "Martelo de Guerra", "Florete", "Chicote", "Montante", "Machado de Guerra", "Arco Longo", "Besta Pesada", "Pistola", "Mosquete", "Sifão Cáustico", "Katana", "Machado Táurico", "Manopla de Ataque", "Corrente de Espinhos", "Picareta"],
-        ARMADURAS: ["Armadura de Couro", "Couro Batido", "Colete Fora da Lei", "Gibão de Peles", "Armadura de Ossos", "Veste de Teia de Aranha", "Brunea", "Cota de Moedas", "Loriga de Segmentos", "Armadura de Quitina", "Armadura Completa", "Escudo Leve", "Escudo Pesado", "Escudo de Duelo", "Escudo de Couro", "Traje de Infiltrador"],
-        ESOTERICOS: ["Cajado Arcano", "Varinha", "Medalhão Sagrado", "Orbe Cristalino", "Luva de Ferro", "Bolsa de Pó", "Cetro Elemental", "Costela de Lich", "Dedo de Ente", "Tomo Hermético Evocação", "Tomo Hermético Necromancia", "Tomo Hermético Abjuração", "Tomo Hermético Encantamento", "Tomo Hermético Transmutação", "Tomo Hermético Adivinhação"],
-        CONSUMIVEIS: ["Bálsamo restaurador", "Essência de Mana", "Balsamo da Drogradora", "Bomba de Fumaça", "Granada", "Pó Azul", "Venenos: Peçonha de Serpente", "Venenos: Essência de Sszzaas"]
+        ARMAS: [
+            "Adaga",
+            "Adaga Oposta",
+            "Azagaia",
+            "Lança",
+            "Arco Curto",
+            "Besta Leve",
+            "Espada Longa",
+            "Espada Larga",
+            "Presa da Serpente",
+            "Pistola-Punhal",
+            "Machado de Batalha",
+            "Martelo de Guerra",
+            "Florete",
+            "Chicote",
+            "Montante",
+            "Machado de Guerra",
+            "Arco Longo",
+            "Besta Pesada",
+            "Pistola",
+            "Mosquete",
+            "Sifão Cáustico",
+            "Katana",
+            "Machado Táurico",
+            "Manopla de Ataque",
+            "Corrente de Espinhos",
+            "Picareta"
+        ],
+        ARMADURAS: [
+            "Armadura de Couro",
+            "Couro Batido",
+            "Colete Fora da Lei",
+            "Gibão de Peles",
+            "Armadura de Ossos",
+            "Veste de Teia de Aranha",
+            "Brunea",
+            "Cota de Moedas",
+            "Loriga de Segmentos",
+            "Armadura de Quitina",
+            "Armadura Completa",
+            "Escudo Leve",
+            "Escudo Pesado",
+            "Escudo de Duelo",
+            "Escudo de Couro",
+            "Traje de Infiltrador"
+        ],
+        ESOTERICOS: [
+            "Cajado Arcano",
+            "Varinha",
+            "Medalhão Sagrado",
+            "Orbe Cristalino",
+            "Luva de Ferro",
+            "Bolsa de Pó",
+            "Cetro Elemental",
+            "Costela de Lich",
+            "Dedo de Ente",
+            "Tomo Hermético Evocação",
+            "Tomo Hermético Necromancia",
+            "Tomo Hermético Abjuração",
+            "Tomo Hermético Encantamento",
+            "Tomo Hermético Transmutação",
+            "Tomo Hermético Adivinhação"
+        ],
+        CONSUMIVEIS: [
+            "Bálsamo restaurador",
+            "Essência de Mana",
+            "Balsamo da Drogradora",
+            "Bomba de Fumaça",
+            "Granada",
+            "Pó Azul",
+            "Venenos: Peçonha de Serpente",
+            "Venenos: Essência de Sszzaas"
+        ]
     },
     MELHORIAS: {
-        ARMAS: ["Certeira (+1 atq)", "Pungente (+2 atq)", "Cruel (+1 dano)", "Atroz (+2 dano)", "Equilibrada (+2 manobra)", "Harmonizada (-1 PM)", "Injeção Alquímica", "Maciça (+1 mult)", "Mira Telescópica", "Precisa (+1 margem)", "Farpada (Sangramento)", "Fósforo (Ofuscar)", "Guarda (+1 def)", "Incendiária (Fogo)", "Pressurizada (+2 atq/dano mecânica)", "Afiada", "Banhada a Ouro", "Cravejada de Joias", "Macabro", "Deslumbrante"],
-        ARMADURAS: ["Ajustada (-1 pen)", "Sob Medida (-2 pen)", "Delicada (Des na Def)", "Espinhosa (Dano garra/escudo)", "Polida (+5 def 1ª rodada)", "Reforçada (+1 def)", "Selada (+1 resist)", "Balístico (Dano escudo)", "Injetora (Usa poção)", "Prudente (Atenua crítica)", "Banhada a Ouro", "Cravejada de Joias", "Macabro", "Deslumbrante"],
-        ESOTERICOS: ["Canalizador (+1 lim PM)", "Energético (+1d6 dano)", "Harmonizado (-1 PM)", "Poderoso (+1 CD)", "Vigilante (+2 Def)", "Potencializador (+2 lim PM)", "Macabro", "Deslumbrante"],
+        ARMAS: [
+            "Certeira (+1 atq)",
+            "Pungente (+2 atq)",
+            "Cruel (+1 dano)",
+            "Atroz (+2 dano)",
+            "Equilibrada (+2 manobra)",
+            "Harmonizada (-1 PM)",
+            "Injeção Alquímica",
+            "Maciça (+1 mult)",
+            "Mira Telescópica",
+            "Precisa (+1 margem)",
+            "Farpada (Sangramento)",
+            "Fósforo (Ofuscar)",
+            "Guarda (+1 def)",
+            "Incendiária (Fogo)",
+            "Pressurizada (+2 atq/dano mecânica)",
+            "Afiada",
+            "Banhada a Ouro",
+            "Cravejada de Joias",
+            "Macabro",
+            "Deslumbrante"
+        ],
+        ARMADURAS: [
+            "Ajustada (-1 pen)",
+            "Sob Medida (-2 pen)",
+            "Delicada (Des na Def)",
+            "Espinhosa (Dano garra/escudo)",
+            "Polida (+5 def 1ª rodada)",
+            "Reforçada (+1 def)",
+            "Selada (+1 resist)",
+            "Balístico (Dano escudo)",
+            "Injetora (Usa poção)",
+            "Prudente (Atenua crítica)",
+            "Banhada a Ouro",
+            "Cravejada de Joias",
+            "Macabro",
+            "Deslumbrante"
+        ],
+        ESOTERICOS: [
+            "Canalizador (+1 lim PM)",
+            "Energético (+1d6 dano)",
+            "Harmonizado (-1 PM)",
+            "Poderoso (+1 CD)",
+            "Vigilante (+2 Def)",
+            "Potencializador (+2 lim PM)",
+            "Macabro",
+            "Deslumbrante"
+        ],
         MATERIAIS: ["Adamante", "Mitral", "Aço-Rubi", "Gelo Eterno", "Matéria Vermelha"]
     },
     ENCANTOS: {
-        ARMAS: ["Ameaçadora (x2 margem)", "Anticriatura", "Arremesso", "Assassina", "Caçadora (Ignora camuflagem)", "Congelante (+1d6 frio)", "Conjuradora", "Corrosiva (+1d6 ácido)", "Dançarina", "Defensora (+2 def)", "Destruidora (Construtos)", "Dilacerante (+10 crit)", "Drenante", "Elétrica (+1d6)", "Energética (+Atq)", "Excruciante (Fraqueza)", "Flamejante (+1d6 fogo)", "Formidável (+2 atq/dano)", "Lancinante (Crit terrível)", "Magnífica (+4 atq/dano)", "Piedosa", "Profana", "Sagrada", "Sanguinária", "Trovejante", "Tumular (+1d8 trevas)", "Veloz (Atq extra)", "Venenosa"],
-        ARMADURAS: ["Abascanto (Res Magia)", "Abençoado (Res Trevas)", "Acrobático", "Alado (Voo)", "Animado (Escudo)", "Assustador", "Cáustica (Res Ácido)", "Defensor (+2 Def)", "Escorregadio", "Esmagador (Escudo)", "Fantasmagórico", "Fortificado (Ignora crit)", "Gélido (Res Frio)", "Guardião (+4 Def)", "Hipnótico", "Ilusório", "Incandescente (Res Fogo)", "Invulnerável (RD)", "Opaco (Res Energia)", "Protetor (+2 Res)", "Refletor", "Relampejante (Res Eletricidade)", "Reluzente (Cegueira)", "Sombrio (Furtividade)", "Zeloso"]
+        ARMAS: [
+            "Ameaçadora (x2 margem)",
+            "Anticriatura",
+            "Arremesso",
+            "Assassina",
+            "Caçadora (Ignora camuflagem)",
+            "Congelante (+1d6 frio)",
+            "Conjuradora",
+            "Corrosiva (+1d6 ácido)",
+            "Dançarina",
+            "Defensora (+2 def)",
+            "Destruidora (Construtos)",
+            "Dilacerante (+10 crit)",
+            "Drenante",
+            "Elétrica (+1d6)",
+            "Energética (+Atq)",
+            "Excruciante (Fraqueza)",
+            "Flamejante (+1d6 fogo)",
+            "Formidável (+2 atq/dano)",
+            "Lancinante (Crit terrível)",
+            "Magnífica (+4 atq/dano)",
+            "Piedosa",
+            "Profana",
+            "Sagrada",
+            "Sanguinária",
+            "Trovejante",
+            "Tumular (+1d8 trevas)",
+            "Veloz (Atq extra)",
+            "Venenosa"
+        ],
+        ARMADURAS: [
+            "Abascanto (Res Magia)",
+            "Abençoado (Res Trevas)",
+            "Acrobático",
+            "Alado (Voo)",
+            "Animado (Escudo)",
+            "Assustador",
+            "Cáustica (Res Ácido)",
+            "Defensor (+2 Def)",
+            "Escorregadio",
+            "Esmagador (Escudo)",
+            "Fantasmagórico",
+            "Fortificado (Ignora crit)",
+            "Gélido (Res Frio)",
+            "Guardião (+4 Def)",
+            "Hipnótico",
+            "Ilusório",
+            "Incandescente (Res Fogo)",
+            "Invulnerável (RD)",
+            "Opaco (Res Energia)",
+            "Protetor (+2 Res)",
+            "Refletor",
+            "Relampejante (Res Eletricidade)",
+            "Reluzente (Cegueira)",
+            "Sombrio (Furtividade)",
+            "Zeloso"
+        ]
     },
     DINHEIRO_POR_ND: nd => {
         const d100 = Math.floor(Math.random() * 100) + 1;
@@ -110,14 +279,14 @@ function processarSorteio(nd) {
 
     if (raridade.tipo === "DINHEIRO") {
         const din = DropData.DINHEIRO_POR_ND(nd);
-        
+
         if (din.riqueza) {
             const riq = sortear(DropData.RIQUEZAS[din.riqueza]);
-            resultado.itens.push({ 
-                nome: riq.nome, 
-                tipo: "Itens Permanentes", 
-                qtd: din.qtd, 
-                desc: `Riqueza (Avaliado em aprox. K$ ${riq.val} a unidade)` 
+            resultado.itens.push({
+                nome: riq.nome,
+                tipo: "Itens Permanentes",
+                qtd: din.qtd,
+                desc: `Riqueza (Avaliado em aprox. K$ ${riq.val} a unidade)`
             });
             resultado.mensagem += `\n💎 Encontrou **${din.qtd}x ${riq.nome}** (Guarde para vender!)`;
         }
@@ -125,11 +294,11 @@ function processarSorteio(nd) {
             resultado.valor += din.val;
             resultado.mensagem += `\n💰 Encontrou **K$ ${din.val}** em moedas.`;
         }
-        
+
         if (!din.riqueza && (!din.val || din.val === 0)) {
             resultado.mensagem = "💨 Não havia nada de valor...";
         }
-        
+
         return resultado;
     }
 
@@ -142,12 +311,11 @@ function processarSorteio(nd) {
     let complementos = [];
 
     if (raridade.tipo === "SUPERIOR" && DropData.MELHORIAS[categoriaStr]) {
-        for(let i=0; i < raridade.slots; i++) {
+        for (let i = 0; i < raridade.slots; i++) {
             complementos.push(sortear(DropData.MELHORIAS[categoriaStr]));
         }
-    } 
-    else if (raridade.tipo === "MAGIC" && DropData.ENCANTOS[categoriaStr]) {
-        tipoItem = "Item Mágico"; 
+    } else if (raridade.tipo === "MAGIC" && DropData.ENCANTOS[categoriaStr]) {
+        tipoItem = "Item Mágico";
         complementos.push(sortear(DropData.ENCANTOS[categoriaStr]));
     }
 
@@ -205,10 +373,12 @@ module.exports = {
                 .setFooter({ text: footerTexto });
 
             return interaction.reply({ embeds: [embed] });
-
         } catch (err) {
             console.error("Erro no comando drop:", err);
-            const erroMsg = { content: "❌ Ocorreu um erro ao gerar o drop e salvá-lo.", flags: MessageFlags.Ephemeral };
+            const erroMsg = {
+                content: "❌ Ocorreu um erro ao gerar o drop e salvá-lo.",
+                flags: MessageFlags.Ephemeral
+            };
 
             if (interaction.replied || interaction.deferred) {
                 await interaction.followUp(erroMsg).catch(() => {});
