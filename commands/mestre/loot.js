@@ -42,8 +42,19 @@ module.exports = {
                 .addStringOption(option =>
                     option
                         .setName("tipo")
-                        .setDescription("Categoria do item (Ex: Arma, Consumível, Material)")
+                        .setDescription("Categoria do item")
                         .setRequired(true)
+                        .addChoices(
+                            { name: "🍔 Alimento", value: "Alimento" },
+                            { name: "🎒 Consumível", value: "Consumíveis" },
+                            { name: "🛡️ Item Permanente", value: "Itens Permanentes" },
+                            { name: "🪄 Item Mágico", value: "Item Mágico" },
+                            { name: "✨ Encantamento", value: "Encantamento" },
+                            { name: "⚒️ Melhoria", value: "Melhorias" },
+                            { name: "🏹 Munição", value: "Munição" },
+                            { name: "🧪 Poção/Pergaminho (1-2)", value: "Poções/Pergaminhos (1-2)" },
+                            { name: "🧪 Poção/Pergaminho (3-5)", value: "Poções/Pergaminhos (3-5)" }
+                        )
                 )
                 .addIntegerOption(option =>
                     option.setName("quantidade").setDescription("Quantidade de itens").setRequired(true).setMinValue(1)
