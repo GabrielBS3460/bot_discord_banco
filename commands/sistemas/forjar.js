@@ -122,7 +122,8 @@ module.exports = {
                     let qtd = parseInt(submit.fields.getTextInputValue("inp_qtd"));
                     const custoOuro = parseFloat(submit.fields.getTextInputValue("inp_ouro").replace(",", "."));
                     const linkItem = submit.fields.getTextInputValue("inp_link");
-                    const custoPontosUnit = CUSTO_FORJA[tipoSelecionado];
+
+                    let custoPontosUnit = CUSTO_FORJA[tipoSelecionado];
 
                     if (isNaN(qtd) || qtd <= 0) return submit.editReply("🚫 Quantidade inválida.");
                     if (isNaN(custoOuro) || custoOuro < 0) return submit.editReply("🚫 Valor em Kwanzas inválido.");
@@ -131,6 +132,12 @@ module.exports = {
                         return submit.editReply(
                             `🚫 Você só possui **${itemBase.quantidade}x** de **${itemBase.nome}** para usar como base.`
                         );
+                    }
+
+                    if (itemBase && itemBase.tipo === "Munição") {
+                        const pacotesDeMunicao = Math.ceil(qtd / 20);
+                        const custoTotalReal = pacotesDeMunicao * CUSTO_FORJA[tipoSelecionado];
+                        custoPontosUnit = custoTotalReal / qtd;
                     }
 
                     const { saldoAtualizado, pontosAtualizados, custoPontosTotal } = await ForjaService.executarForja(
