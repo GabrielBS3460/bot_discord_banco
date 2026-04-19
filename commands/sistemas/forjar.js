@@ -108,8 +108,10 @@ module.exports = {
 
                 await interacao.showModal(modal);
 
+                let submit;
+
                 try {
-                    const submit = await interacao.awaitModalSubmit({
+                    submit = await interacao.awaitModalSubmit({
                         filter: inter => inter.customId === modalId && inter.user.id === interaction.user.id,
                         time: 120000
                     });
@@ -170,20 +172,21 @@ module.exports = {
                     await msg.edit({ components: [] }).catch(() => {});
                     collector.stop();
                 } catch (err) {
+                    let erroTexto = "❌ Ocorreu um erro interno durante a forja.";
+
                     if (err.message === "SALDO_INSUFICIENTE") {
-                        return msg
-                            .edit({ content: "🚫 Kwanzas insuficientes para concluir a forja.", components: [] })
-                            .catch(() => {});
+                        erroTexto = "🚫 Kwanzas insuficientes para concluir a forja.";
+                    } else if (err.message === "PONTOS_INSUFICIENTES") {
+                        erroTexto = "🚫 Pontos de Forja insuficientes para concluir a forja.";
+                    } else if (err.code !== "InteractionCollectorError") {
+                        console.error("Erro na forja:", err);
                     }
-                    if (err.message === "PONTOS_INSUFICIENTES") {
-                        return msg
-                            .edit({
-                                content: "🚫 Pontos de Forja insuficientes para concluir a forja.",
-                                components: []
-                            })
-                            .catch(() => {});
+
+                    if (submit && submit.deferred) {
+                        await submit.editReply({ content: erroTexto }).catch(() => {});
+                    } else if (err.code !== "InteractionCollectorError") {
+                        await msg.edit({ content: erroTexto, components: [] }).catch(() => {});
                     }
-                    console.error("Tempo de modal expirado ou erro interno:", err);
                 }
             };
 
