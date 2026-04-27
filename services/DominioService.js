@@ -3,7 +3,7 @@ const transacaoService = require("../services/TransacaoService.js");
 const CATALOGO_CONSTRUCOES = require("../data/construcoesData.js");
 const CATALOGO_TROPAS = require("../data/unidadesMilitaresData.js");
 
-const CLASSES_MISTICAS = [
+/*const CLASSES_MISTICAS = [
     "Arcanista",
     "Necromante",
     "Magimarcialista",
@@ -13,7 +13,7 @@ const CLASSES_MISTICAS = [
     "Ermitão",
     "Usurpador",
     "Frade"
-];
+];*/
 
 const PRECO_FUNDACAO = 5000;
 
@@ -23,9 +23,9 @@ class DominioService {
             throw new Error("SALDO_INSUFICIENTE");
         }
 
-        if (mistico && !CLASSES_MISTICAS.includes(char.classe)) {
+        /*if (mistico && !CLASSES_MISTICAS.includes(char.classe)) {
             throw new Error("CLASSE_INVALIDA_MISTICO");
-        }
+        }*/
 
         const dominioExistente = await prisma.dominio.findUnique({
             where: { personagem_id: char.id }
