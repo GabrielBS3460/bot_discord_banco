@@ -9,8 +9,8 @@ const DropData = {
             if (roll <= 90) return { tipo: "DINHEIRO" };
             return { tipo: "SUPERIOR", slots: 1 };
         } else if (nd <= 10) {
-            if (roll <= 50) return { tipo: "DINHEIRO" };
-            if (roll <= 70) return { tipo: "SUPERIOR", slots: 1 };
+            //if (roll <= 50) return { tipo: "DINHEIRO" };
+            //if (roll <= 70) return { tipo: "SUPERIOR", slots: 1 };
             return { tipo: "SUPERIOR", slots: 2 };
         } else if (nd <= 16) {
             if (roll <= 50) return { tipo: "DINHEIRO" };
