@@ -159,7 +159,7 @@ module.exports = {
                     });
 
                     await interaction.channel.send({
-                        content: `**MISSÃO AVALIADA**\n\nJogador acabou de avaliar um contrato!\n\n**Mestre:** ${mestreUser}\n**Contrato avaliado:** ${linkMissao}\n**Tipo de contrato:** ${tipoMissao}`
+                        content: `**MISSÃO AVALIADA**\n\nO jogador: ${interaction.user} acabou de avaliar um contrato!\n\n**Mestre:** ${mestreUser}\n**Contrato avaliado:** ${linkMissao}\n**Tipo de contrato:** ${tipoMissao}`
                     });
 
                     collector.stop();
