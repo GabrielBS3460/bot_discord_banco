@@ -14,6 +14,7 @@ const {
 } = require("discord.js");
 const ContratoService = require("../../services/ContratoService.js");
 const ContratoRepository = require("../../repositories/ContratoRepository.js");
+const prisma = require("../../database.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -38,22 +39,46 @@ module.exports = {
             const selecionados = missao.inscricoes.filter(i => i.selecionado);
             const fila = missao.inscricoes.filter(i => !i.selecionado);
 
+            // Montamos os campos (Equipe e Fila)
+            const fieldsEmbed = [
+                {
+                    name: `Equipe (${selecionados.length}/${missao.vagas})`,
+                    value: selecionados.map(i => `✅ **${i.personagem.nome}**`).join("\n") || "Vazia",
+                    inline: true
+                },
+                {
+                    name: "Fila",
+                    value: fila.map(i => `⏳ ${i.personagem.nome}`).join("\n") || "Vazia",
+                    inline: true
+                }
+            ];
+
+            if (missao.status === "CONCLUIDA" && selecionados.length > 0) {
+                const userIds = selecionados.map(s => s.personagem.usuario_id);
+                const avaliacoes = await prisma.avaliacao.findMany({
+                    where: { mestre_id: missao.criador_id, avaliador_id: { in: userIds } }
+                });
+
+                const avaliadoresIds = avaliacoes.map(a => a.avaliador_id);
+                const listaAvaliacoes = selecionados
+                    .map(s => {
+                        const avaliou = avaliadoresIds.includes(s.personagem.usuario_id);
+                        return `${avaliou ? "✅" : "❌"} **${s.personagem.nome}**`;
+                    })
+                    .join("\n");
+
+                fieldsEmbed.push({
+                    name: "Avaliações:",
+                    value: listaAvaliacoes,
+                    inline: true
+                });
+            }
+
             const embed = new EmbedBuilder()
                 .setColor(missao.status === "CONCLUIDA" ? "#00FF00" : "#FFA500")
                 .setTitle(`🛡️ Gestão: ${missao.nome}`)
                 .setDescription(`**ND:** ${missao.nd} | **Vagas:** ${missao.vagas} | **Status:** ${missao.status}`)
-                .addFields(
-                    {
-                        name: `Equipe (${selecionados.length}/${missao.vagas})`,
-                        value: selecionados.map(i => `✅ **${i.personagem.nome}**`).join("\n") || "Vazia",
-                        inline: true
-                    },
-                    {
-                        name: "Fila",
-                        value: fila.map(i => `⏳ ${i.personagem.nome}`).join("\n") || "Vazia",
-                        inline: true
-                    }
-                );
+                .addFields(fieldsEmbed);
 
             const buttons1 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
@@ -205,9 +230,7 @@ module.exports = {
                     const s2 = await p1.awaitMessageComponent({ time: 30000 }).catch(() => null);
                     if (s2) {
                         await s2.deferUpdate();
-
                         await ContratoService.trocarPersonagemInscrito(parseInt(inscId), parseInt(s2.values[0]));
-
                         await s2.editReply({ content: "✅ Personagem trocado com sucesso!", components: [] });
                         return atualizarInterface(interaction);
                     }

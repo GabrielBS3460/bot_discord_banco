@@ -141,6 +141,7 @@ model Avaliacao {
   mestre_id       String
   avaliador_id    String
   link_missao     String
+  tipo_contrato     String   @default("Quadro") 
   nota_ritmo      Int
   nota_imersao    Int
   nota_preparo    Int

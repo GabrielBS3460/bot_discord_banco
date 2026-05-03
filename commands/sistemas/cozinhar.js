@@ -12,7 +12,7 @@ const {
 } = require("discord.js");
 
 const CulinariaService = require("../../services/CulinariaService.js");
-const ItensRepository = require("../../repositories/ItensRepository.js"); 
+const ItensRepository = require("../../repositories/ItensRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -20,31 +20,30 @@ module.exports = {
         .setDescription("Abre o fogão para preparar refeições se você tiver a perícia Ofício Cozinheiro."),
 
     async execute({ interaction, getPersonagemAtivo, DB_CULINARIA }) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
             if (!char)
-                return interaction.reply({
-                    content: "🚫 Você não tem um personagem ativo.",
-                    flags: MessageFlags.Ephemeral
+                return interaction.editReply({
+                    content: "🚫 Você não tem um personagem ativo."
                 });
 
             try {
                 CulinariaService.verificarPericia(char);
                 // eslint-disable-next-line no-unused-vars
             } catch (e) {
-                return interaction.reply({
+                return interaction.editReply({
                     content:
-                        "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!",
-                    flags: MessageFlags.Ephemeral
+                        "🚫 **Acesso Negado:** Você precisa da perícia **Ofício Cozinheiro** para usar o fogão sem incendiar a cozinha!"
                 });
             }
 
             const receitasConhecidas = char.receitas_conhecidas || [];
             if (receitasConhecidas.length === 0) {
-                return interaction.reply({
+                return interaction.editReply({
                     content:
-                        "⚠️ Você tem a habilidade, mas não conhece nenhuma receita. Use `/aprenderculinaria` primeiro.",
-                    flags: MessageFlags.Ephemeral
+                        "⚠️ Você tem a habilidade, mas não conhece nenhuma receita. Use `/aprenderculinaria` primeiro."
                 });
             }
 
@@ -77,10 +76,9 @@ module.exports = {
                     .map(([k, v]) => `${k}: ${v}`)
                     .join(", ") || "Vazio";
 
-            const msg = await interaction.reply({
+            const msg = await interaction.editReply({
                 content: `🔥 **Fogão Aceso (Rende 5 Porções)**\n👤 **Cozinheiro:** ${char.nome}\n🔨 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)}\n🎒 **Estoque:** ${estoqueTxt}\n\n*Dica: Você pode selecionar até 2 pratos para fazer uma Refeição Combinada.*`,
                 components: [montarMenuReceitas()],
-                flags: MessageFlags.Ephemeral,
                 fetchReply: true
             });
 
@@ -141,7 +139,7 @@ module.exports = {
                     const tituloPreparo = receitasSelecionadas.length > 1 ? "Prato Combinado" : receitasSelecionadas[0];
 
                     return i.update({
-                        content: `🥘 **Preparando: ${tituloPreparo}**\n📦 **Rendimento:** 5 Porções\n\n**Efeitos Originais:**\n${analise.efeitosPadrao.join("\n")}\n\n🔹 **Padrão:** Custa ${analise.custoBasePts.toFixed(1)} pts\n✨ **Especial:** Custa ${analise.custoEspecialPts.toFixed(1)} pts + 1 Especiaria\n\n*Nota: Você poderá editar os efeitos na próxima tela.*`,
+                        content: `🥘 **Preparando: ${tituloPreparo}**\n📦 **Rendimento:** 5 Porções\n\n**Efeitos Originais:**\n${analise.efeitosPadrao.join("\n")}\n\n🔹 **Padrão:** Custa ${analise.custoBasePts.toFixed(1)} pts\n✨ **Especial:** Custa ${analise.custoEspecialPts.toFixed(1)} pts + 1 Especiaria\n\n*Nota: Você poderá nomear e editar os efeitos na próxima tela.*`,
                         components: [botoes]
                     });
                 }
@@ -159,12 +157,21 @@ module.exports = {
 
                     const usarEspeciarias = i.customId === "btn_cozinhar_especial";
                     const custoPts = usarEspeciarias ? analise.custoEspecialPts : analise.custoBasePts;
+                    const tituloPreparoOriginal = receitasSelecionadas.join(" + ");
 
                     const modalId = `modal_efeitos_cozinha_${Date.now()}`;
                     const modal = new ModalBuilder()
                         .setCustomId(modalId)
-                        .setTitle("Descreva a Refeição")
+                        .setTitle("Descreva e Nomeie a Refeição")
                         .addComponents(
+                            new ActionRowBuilder().addComponents(
+                                new TextInputBuilder()
+                                    .setCustomId("inp_nome_prato")
+                                    .setLabel("Dê um Nome Criativo ao Prato:")
+                                    .setStyle(TextInputStyle.Short)
+                                    .setRequired(true)
+                                    .setValue(tituloPreparoOriginal)
+                            ),
                             new ActionRowBuilder().addComponents(
                                 new TextInputBuilder()
                                     .setCustomId("inp_efeitos")
@@ -182,30 +189,31 @@ module.exports = {
                             filter: m => m.customId === modalId && m.user.id === interaction.user.id,
                             time: 120000
                         });
+
                         await modalSubmit.deferUpdate();
 
+                        const nomePratoFinal = modalSubmit.fields.getTextInputValue("inp_nome_prato");
                         const efeitosEditados = modalSubmit.fields.getTextInputValue("inp_efeitos");
-                        const nomePratoLog = receitasSelecionadas.join(" + ");
 
                         const estoqueFinalDb = await CulinariaService.finalizarCozimento(
                             charAtual,
                             analise.ingredientesAgregados,
                             usarEspeciarias,
                             custoPts,
-                            nomePratoLog
+                            tituloPreparoOriginal
                         );
 
                         await ItensRepository.adicionarItem(
                             charAtual.id,
-                            nomePratoLog, 
-                            "Alimento", 
-                            5, 
-                            efeitosEditados 
+                            nomePratoFinal,
+                            "Alimento",
+                            5,
+                            efeitosEditados
                         );
 
                         const msgSucesso = usarEspeciarias
-                            ? `✨ **Banquete Gourmet!**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}** e guardou **5 Porções** na mochila.\n*Efeitos (Aprimorados):*\n${efeitosEditados}`
-                            : `🍲 **Refeição Pronta!**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoLog}** e guardou **5 Porções** na mochila.\n*Efeitos:*\n${efeitosEditados}`;
+                            ? `✨ **Banquete Gourmet!**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoFinal}** e guardou **5 Porções** na mochila.\n*Receita original:* ${tituloPreparoOriginal}\n*Efeitos (Aprimorados):*\n${efeitosEditados}`
+                            : `🍲 **Refeição Pronta!**\nO cozinheiro **${charAtual.nome}** preparou **${nomePratoFinal}** e guardou **5 Porções** na mochila.\n*Receita original:* ${tituloPreparoOriginal}\n*Efeitos:*\n${efeitosEditados}`;
 
                         await interaction.channel.send({ content: msgSucesso });
 
@@ -228,10 +236,7 @@ module.exports = {
             });
         } catch (err) {
             console.error("Erro no comando cozinhar:", err);
-            const erroMsg = { content: "❌ Ocorreu um erro ao acessar o fogão.", flags: MessageFlags.Ephemeral };
-            interaction.replied
-                ? await interaction.followUp(erroMsg).catch(() => {})
-                : await interaction.reply(erroMsg).catch(() => {});
+            await interaction.editReply({ content: "❌ Ocorreu um erro ao acessar o fogão." }).catch(() => {});
         }
     }
 };

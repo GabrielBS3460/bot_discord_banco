@@ -71,9 +71,16 @@ module.exports = {
 
             const itensMenu = inventario.slice(0, 25);
             itensMenu.forEach(item => {
+                const sulfixo = ` (Qtd: ${item.quantidade})`;
+                let nomeSeguro = item.nome;
+
+                if (nomeSeguro.length + sulfixo.length > 100) {
+                    nomeSeguro = nomeSeguro.substring(0, 100 - sulfixo.length - 3) + "...";
+                }
+
                 menuItens.addOptions(
                     new StringSelectMenuOptionBuilder()
-                        .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
+                        .setLabel(`${nomeSeguro}${sulfixo}`)
                         .setDescription(`Tipo: ${item.tipo}`)
                         .setValue(item.id.toString())
                 );

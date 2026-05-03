@@ -14,11 +14,19 @@ module.exports = {
         .setName("avaliar")
         .setDescription("Avalia o desempenho de um Mestre em uma missão.")
         .addUserOption(opt => opt.setName("mestre").setDescription("O mestre que narrou a missão").setRequired(true))
-        .addStringOption(opt => opt.setName("link").setDescription("Link da missão").setRequired(true)),
+        .addStringOption(opt => opt.setName("link").setDescription("Link da missão").setRequired(true))
+        .addStringOption(opt =>
+            opt
+                .setName("tipo")
+                .setDescription("Tipo de contrato")
+                .setRequired(true)
+                .addChoices({ name: "📋 Quadro", value: "Quadro" }, { name: "📜 Solicitada", value: "Solicitada" })
+        ),
 
     async execute({ interaction }) {
         const mestreUser = interaction.options.getUser("mestre");
         const linkMissao = interaction.options.getString("link");
+        const tipoMissao = interaction.options.getString("tipo");
 
         if (!linkMissao.startsWith("http")) {
             return interaction.reply({
@@ -31,7 +39,14 @@ module.exports = {
             return interaction.reply({ content: "🚫 Autoavaliação não permitida.", flags: MessageFlags.Ephemeral });
         }
 
-        let respostas = { ritmo: null, imersao: null, preparo: null, conhecimento: null, geral: null };
+        let respostas = {
+            ritmo: null,
+            imersao: null,
+            preparo: null,
+            conhecimento: null,
+            geral: null,
+            tipo: tipoMissao
+        };
         let telaAtual = 1;
 
         const gerarOpcoes = () => [
@@ -137,10 +152,16 @@ module.exports = {
                         linkMissao,
                         respostas
                     );
+
                     await i.update({
                         content: `✅ **Avaliação registrada!**\n🧙‍♂️ Mestre: ${mestreUser.username}\n⭐ Média: **${media.toFixed(1)}**`,
                         components: []
                     });
+
+                    await interaction.channel.send({
+                        content: `**MISSÃO AVALIADA**\n\nJogador acabou de avaliar um contrato!\n\n**Mestre:** ${mestreUser}\n**Contrato avaliado:** ${linkMissao}\n**Tipo de contrato:** ${tipoMissao}`
+                    });
+
                     collector.stop();
                 } catch (err) {
                     console.error(err);
