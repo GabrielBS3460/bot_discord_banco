@@ -1,14 +1,15 @@
 const AvaliacaoRepository = require("../repositories/AvaliacaoRepository.js");
 
 class MestreService {
-    async registrarAvaliacao(avaliadorId, mestreId, linkMissao, notas) {
+    async registrarAvaliacao(avaliadorId, mestreId, nomeMissao, notas) {
         const apenasNotas = [notas.ritmo, notas.imersao, notas.preparo, notas.conhecimento, notas.geral];
 
         const media = apenasNotas.reduce((a, b) => a + b, 0) / apenasNotas.length;
+
         await AvaliacaoRepository.criar({
             mestre_id: mestreId,
             avaliador_id: avaliadorId,
-            link_missao: linkMissao,
+            nome_missao: nomeMissao,
             tipo_contrato: notas.tipo,
             nota_ritmo: notas.ritmo,
             nota_imersao: notas.imersao,

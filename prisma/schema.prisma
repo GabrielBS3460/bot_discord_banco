@@ -140,8 +140,8 @@ model Avaliacao {
   id              Int      @id @default(autoincrement())
   mestre_id       String
   avaliador_id    String
-  link_missao     String
-  tipo_contrato     String   @default("Quadro") 
+  nome_missao     String   @default("Missão Antiga")
+  tipo_contrato   String   @default("Quadro") 
   nota_ritmo      Int
   nota_imersao    Int
   nota_preparo    Int

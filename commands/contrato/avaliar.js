@@ -8,13 +8,14 @@ const {
     MessageFlags
 } = require("discord.js");
 const MestreService = require("../../services/MestreService.js");
+const ContratoRepository = require("../../repositories/ContratoRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("avaliar")
         .setDescription("Avalia o desempenho de um Mestre em uma missão.")
         .addUserOption(opt => opt.setName("mestre").setDescription("O mestre que narrou a missão").setRequired(true))
-        .addStringOption(opt => opt.setName("link").setDescription("Link da missão").setRequired(true))
+        .addStringOption(opt => opt.setName("nome").setDescription("Nome exato da missão").setRequired(true))
         .addStringOption(opt =>
             opt
                 .setName("tipo")
@@ -25,14 +26,13 @@ module.exports = {
 
     async execute({ interaction }) {
         const mestreUser = interaction.options.getUser("mestre");
-        const linkMissao = interaction.options.getString("link");
+        const nomeMissao = interaction.options.getString("nome").trim();
         const tipoMissao = interaction.options.getString("tipo");
 
-        if (!linkMissao.startsWith("http")) {
-            return interaction.reply({
-                content: "⚠️ Forneça um link válido do Contrato.",
-                flags: MessageFlags.Ephemeral
-            });
+        let missao = await ContratoRepository.buscarPorNomeCompleto(nomeMissao);
+
+        if (!missao) {
+            return interaction.reply({ content: "🚫 Contrato não encontrado.", flags: MessageFlags.Ephemeral });
         }
 
         if (mestreUser.id === interaction.user.id) {
@@ -149,7 +149,7 @@ module.exports = {
                     const media = await MestreService.registrarAvaliacao(
                         interaction.user.id,
                         mestreUser.id,
-                        linkMissao,
+                        nomeMissao,
                         respostas
                     );
 
@@ -159,7 +159,7 @@ module.exports = {
                     });
 
                     await interaction.channel.send({
-                        content: `**MISSÃO AVALIADA**\n\nO jogador: ${interaction.user} acabou de avaliar um contrato!\n\n**Mestre:** ${mestreUser}\n**Contrato avaliado:** ${linkMissao}\n**Tipo de contrato:** ${tipoMissao}`
+                        content: `**MISSÃO AVALIADA**\n\nO jogador: ${interaction.user} acabou de avaliar um contrato!\n\n**Mestre:** ${mestreUser}\n**Contrato avaliado:** ${nomeMissao}\n**Tipo de contrato:** ${tipoMissao}`
                     });
 
                     collector.stop();

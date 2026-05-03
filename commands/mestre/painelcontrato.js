@@ -56,7 +56,11 @@ module.exports = {
             if (missao.status === "CONCLUIDA" && selecionados.length > 0) {
                 const userIds = selecionados.map(s => s.personagem.usuario_id);
                 const avaliacoes = await prisma.avaliacao.findMany({
-                    where: { mestre_id: missao.criador_id, avaliador_id: { in: userIds } }
+                    where: {
+                        mestre_id: missao.criador_id,
+                        avaliador_id: { in: userIds },
+                        nome_missao: missao.nome
+                    }
                 });
 
                 const avaliadoresIds = avaliacoes.map(a => a.avaliador_id);
