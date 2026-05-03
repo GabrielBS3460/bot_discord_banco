@@ -5,7 +5,6 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    MessageFlags,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle
@@ -20,7 +19,7 @@ module.exports = {
         .setDescription("Abre o fogão para preparar refeições se você tiver a perícia Ofício Cozinheiro."),
 
     async execute({ interaction, getPersonagemAtivo, DB_CULINARIA }) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({ ephemeral: true });
 
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
@@ -107,14 +106,14 @@ module.exports = {
                     if (!analise.temIngredientes) {
                         return i.reply({
                             content: `🚫 **Faltam ingredientes para o preparo:** ${analise.faltantes.join(", ")}`,
-                            flags: MessageFlags.Ephemeral
+                            ephemeral: true
                         });
                     }
 
                     if (charAtual.pontos_forja_atual < analise.custoBasePts) {
                         return i.reply({
                             content: `🚫 **Pontos de Forja insuficientes!** Custo: ${analise.custoBasePts.toFixed(1)} pts.\nVocê tem ${charAtual.pontos_forja_atual.toFixed(1)}.`,
-                            flags: MessageFlags.Ephemeral
+                            ephemeral: true
                         });
                     }
 
@@ -153,7 +152,7 @@ module.exports = {
                     }
 
                     if (receitasSelecionadas.length === 0)
-                        return i.reply({ content: "Nenhuma receita selecionada.", flags: MessageFlags.Ephemeral });
+                        return i.reply({ content: "Nenhuma receita selecionada.", ephemeral: true });
 
                     const usarEspeciarias = i.customId === "btn_cozinhar_especial";
                     const custoPts = usarEspeciarias ? analise.custoEspecialPts : analise.custoBasePts;
@@ -190,7 +189,7 @@ module.exports = {
                             time: 120000
                         });
 
-                        await modalSubmit.deferUpdate({ flags: MessageFlags.Ephemeral });
+                        await modalSubmit.deferUpdate();
 
                         const nomePratoFinal = modalSubmit.fields.getTextInputValue("inp_nome_prato");
                         const efeitosEditados = modalSubmit.fields.getTextInputValue("inp_efeitos");
