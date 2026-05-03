@@ -190,7 +190,7 @@ module.exports = {
                             time: 120000
                         });
 
-                        await modalSubmit.deferUpdate();
+                        await modalSubmit.deferUpdate({ flags: MessageFlags.Ephemeral });
 
                         const nomePratoFinal = modalSubmit.fields.getTextInputValue("inp_nome_prato");
                         const efeitosEditados = modalSubmit.fields.getTextInputValue("inp_efeitos");
@@ -222,7 +222,7 @@ module.exports = {
                                 .map(([k, v]) => `${k}: ${v}`)
                                 .join(", ") || "Vazio";
 
-                        await modalSubmit.editReply({
+                        await interaction.editReply({
                             content: `✅ O prato foi preparado e adicionado ao seu inventário!\n\n🎒 **Estoque de Ingredientes:** ${estoqueFinalTxt}\n🔨 **Pts Restantes:** ${(charAtual.pontos_forja_atual - custoPts).toFixed(1)}\n\n🔥 O fogão foi desligado.`,
                             components: []
                         });
