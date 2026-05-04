@@ -88,8 +88,8 @@ module.exports = {
                 .setColor("#2b2d31")
                 .setThumbnail(targetUser.displayAvatarURL())
                 .addFields(
-                    { name: "avaliações de quadro", value: formatarNotas(statsQuadro), inline: true },
-                    { name: "avaliações solicitadas", value: formatarNotas(statsSolicitadas), inline: true },
+                    { name: "AVALIAÇÕES DE QUADRO", value: formatarNotas(statsQuadro), inline: true },
+                    { name: "AVALIAÇÕES DE SOLICITADAS", value: formatarNotas(statsSolicitadas), inline: true },
                     {
                         name: "\u200B",
                         value: `**Quantidade de mesas narradas neste mês:** ${mesasNoMes}`,
