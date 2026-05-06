@@ -280,7 +280,8 @@ module.exports = {
                         .setCustomId(`dom_menu_cat_${interaction.id}`)
                         .setPlaceholder("Setor da Obra...")
                         .addOptions(
-                            { label: "Nobreza", value: "Nobreza" },
+                            { label: "Nobreza (Básicas)", value: "Nobreza_1" },
+                            { label: "Nobreza (Avançadas)", value: "Nobreza_2" },
                             { label: "Guerra", value: "Guerra" },
                             { label: "Enganação", value: "Enganação" },
                             { label: "Religião", value: "Religião" },
@@ -288,15 +289,30 @@ module.exports = {
                         );
                     await iBtn.update({ content: "**Escolha a Categoria**", components: [new ActionRowBuilder().addComponents(menuCat)] });
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_cat_")) {
-                    const cat = iBtn.values[0];
-                    const obras = Object.keys(CATALOGO_CONSTRUCOES).filter(n => CATALOGO_CONSTRUCOES[n].tipo === cat);
+                    const catRaw = iBtn.values[0];
+                    let cat = catRaw;
+                    let obras = [];
+
+                    if (catRaw === "Nobreza_1") {
+                        cat = "Nobreza";
+                        obras = Object.keys(CATALOGO_CONSTRUCOES)
+                            .filter(n => CATALOGO_CONSTRUCOES[n].tipo === "Nobreza")
+                            .slice(0, 20);
+                    } else if (catRaw === "Nobreza_2") {
+                        cat = "Nobreza";
+                        obras = Object.keys(CATALOGO_CONSTRUCOES)
+                            .filter(n => CATALOGO_CONSTRUCOES[n].tipo === "Nobreza")
+                            .slice(20);
+                    } else {
+                        obras = Object.keys(CATALOGO_CONSTRUCOES).filter(n => CATALOGO_CONSTRUCOES[n].tipo === cat);
+                    }
                     
                     const menuObras = new StringSelectMenuBuilder()
                         .setCustomId(`dom_menu_obra_${interaction.id}`)
-                        .setPlaceholder(`Obras de ${cat}...`)
+                        .setPlaceholder(`Obras de ${catRaw.replace("_", " ")}...`)
                         .addOptions(obras.map(n => ({ label: `${n} (${CATALOGO_CONSTRUCOES[n].custo} LO)`, value: n })));
 
-                    await iBtn.update({ content: `**Projetos de ${cat}**`, components: [new ActionRowBuilder().addComponents(menuObras)] });
+                    await iBtn.update({ content: `**Projetos de ${catRaw.replace("_", " ")}**`, components: [new ActionRowBuilder().addComponents(menuObras)] });
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_tax_")) {
                     const tipo = iBtn.values[0];
                     await iBtn.deferUpdate();
