@@ -66,6 +66,50 @@ module.exports = {
         const subcomando = interaction.options.getSubcommand();
         const char = await getPersonagemAtivo(interaction.user.id);
 
+        const formatarErro = (msg) => {
+            if (!msg || typeof msg !== "string") return "Ocorreu um erro desconhecido.";
+            
+            if (msg.startsWith("FALHA_TESTE_FUNDACAO")) {
+                const parts = msg.split("_");
+                return `❌ **Falha na Fundação:** Você obteve **${parts[3] || "?"}** no teste de Nobreza (CD 20). Suas terras permanecem selvagens.`;
+            }
+            if (msg.startsWith("FALHA_CONSTRUCAO")) {
+                const parts = msg.split("_");
+                return `❌ **Obra Interrompida:** O teste falhou (**${parts[2] || "?"}** vs CD **${parts[3]?.replace("CD", "") || "?"}**). Materiais foram perdidos.`;
+            }
+            if (msg.startsWith("FALHA_GOVERNAR")) {
+                const parts = msg.split("_");
+                return `❌ **Instabilidade Política:** Seu esforço para governar falhou (**${parts[2] || "?"}** vs CD **${parts[3]?.replace("CD", "") || "?"}**).`;
+            }
+            if (msg.startsWith("FALHA_FESTIVAL")) {
+                const parts = msg.split("_");
+                return `❌ **Festa Fracassada:** O festival foi um fiasco (**${parts[2] || "?"}** vs CD **${parts[3]?.replace("CD", "") || "?"}**). O povo não se animou.`;
+            }
+            if (msg.startsWith("FALHA_EXTORQUIR")) {
+                const parts = msg.split("_");
+                return `❌ **Resistência Popular:** Você tentou extorquir o povo mas eles resistiram (**${parts[2] || "?"}** vs CD **${parts[3]?.replace("CD", "") || "?"}**).`;
+            }
+            if (msg.startsWith("FALHA_FINANCAS")) {
+                const parts = msg.split("_");
+                return `❌ **Erro Contábil:** O teste de Finanças falhou (**${parts[2] || "?"}** vs CD 20). O dinheiro não foi movimentado.`;
+            }
+            if (msg.startsWith("FALHA_CORTE")) {
+                const parts = msg.split("_");
+                return `❌ **Etiqueta Insuficiente:** Você falhou em elevar o nível da corte (**${parts[2] || "?"}** vs CD 20).`;
+            }
+
+            if (msg.startsWith("LO_INSUFICIENTE")) return `❌ **Tesouro Vazio:** Você não possui os **${msg.split("_")[2]} LO** necessários no tesouro do domínio.`;
+            if (msg.startsWith("T$_INSUFICIENTE")) return `❌ **Saldo Insuficiente:** Você não possui **T$ ${msg.split("_")[2]}** na sua conta pessoal.`;
+            if (msg === "SEM_ACOES") return "❌ **Exaustão Administrativa:** Você não possui mais ações de regente disponíveis este mês.";
+            if (msg === "LIMITE_CONSTRUCOES") return "❌ **Espaço Insuficiente:** Você atingiu o limite de construções para o nível atual do seu domínio.";
+            if (msg === "LIMITE_TERRENO_ATINGIDO") return "❌ **Limite Territorial:** Este terreno não suporta um domínio de nível mais alto.";
+            if (msg.startsWith("REQUISITO_FALTANTE")) return `❌ **Falta Infraestrutura:** Você precisa construir primeiro: **${msg.split("_")[2]}**.`;
+            if (msg.startsWith("TERRENO_INVALIDO")) return "❌ **Terreno Incompatível:** Esta construção não pode ser feita neste tipo de solo.";
+            if (msg.startsWith("LIMITE_RECRUTAMENTO")) return `❌ **Limite Militar:** Você só pode recrutar até **${msg.split("_")[2]}** unidades por vez (igual ao seu nível).`;
+
+            return `❌ **Falha:** ${msg}`;
+        };
+
         if (!char) {
             return interaction.reply({
                 content: "🚫 Você não tem um personagem ativo.",
@@ -133,15 +177,7 @@ module.exports = {
 
                 return mSubmit.editReply({ embeds: [embed] });
             } catch (err) {
-                if (err.message && err.message.startsWith("FALHA_TESTE_FUNDACAO")) {
-                    return interaction.followUp({
-                        content: `❌ **Falha no Teste:** Você não conseguiu estabelecer autoridade sobre as terras. (Perdeu T$ 5.000)`
-                    });
-                }
-                return interaction.followUp({
-                    content: `❌ Erro: ${err.message || err}`,
-                    flags: MessageFlags.Ephemeral
-                });
+                return interaction.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
             }
         } else if (subcomando === "painel") {
             await interaction.deferReply();
@@ -275,50 +311,17 @@ module.exports = {
                         .setCustomId(`dom_menu_acoes_${interaction.id}`)
                         .setPlaceholder("Selecione uma Ação de Domínio")
                         .addOptions(
-                            {
-                                label: "👑 Governar",
-                                description: "Subir Nível | Req: Nobreza",
-                                value: "Governar",
-                                emoji: "👑"
-                            },
-                            {
-                                label: "🎭 Festival",
-                                description: "Pop +1 | Custa 1 LO | Req: Atuação",
-                                value: "Festival",
-                                emoji: "🎭"
-                            },
-                            {
-                                label: "🗡️ Extorquir",
-                                description: "Ganha LO | Pop -1 | Req: Intimidação",
-                                value: "Extorquir",
-                                emoji: "🗡️"
-                            },
-                            {
-                                label: "🏰 Aumentar Corte",
-                                description: "Sobe Corte | Custa 1 LO | Req: Nobreza",
-                                value: "Aumentar_Corte",
-                                emoji: "🏰"
-                            },
-                            {
-                                label: "🌾 Convocar Camponeses",
-                                description: "1d6 Tropas | Pop -1 | Req: Nenhuma",
-                                value: "Convocar_Camponeses",
-                                emoji: "🌾"
-                            },
-                            {
-                                label: "📢 Alterar Impostos",
-                                description: "Muda arrecadação e popularidade",
-                                value: "Alterar_Imposto",
-                                emoji: "📢"
-                            },
+                            { label: "👑 Governar", description: "Subir Nível | Req: Nobreza", value: "Governar", emoji: "👑" },
+                            { label: "🎭 Festival", description: "Pop +1 | Custa 1 LO | Req: Atuação", value: "Festival", emoji: "🎭" },
+                            { label: "🗡️ Extorquir", description: "Ganha LO | Pop -1 | Req: Intimidação", value: "Extorquir", emoji: "🗡️" },
+                            { label: "🏰 Aumentar Corte", description: "Sobe Corte | Custa 1 LO | Req: Nobreza", value: "Aumentar_Corte", emoji: "🏰" },
+                            { label: "🌾 Convocar Camponeses", description: "1d6 Tropas | Pop -1 | Req: Nenhuma", value: "Convocar_Camponeses", emoji: "🌾" },
+                            { label: "📢 Alterar Impostos", description: "Muda arrecadação e popularidade", value: "Alterar_Imposto", emoji: "📢" },
                             { label: "💰 Finanças (Comprar LO)", value: "Financas_Compra", emoji: "💰" },
                             { label: "🪙 Finanças (Sacar LO)", value: "Financas_Venda", emoji: "🪙" }
                         );
 
-                    await iBtn.update({
-                        content: "**Menu de Ações**",
-                        components: [new ActionRowBuilder().addComponents(menuAcoes)]
-                    });
+                    await iBtn.update({ content: "**Menu de Ações**", components: [new ActionRowBuilder().addComponents(menuAcoes)] });
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_acoes_")) {
                     const acao = iBtn.values[0];
 
@@ -327,24 +330,11 @@ module.exports = {
                             .setCustomId(`dom_menu_tax_${interaction.id}`)
                             .setPlaceholder("Escolha o novo nível de impostos")
                             .addOptions(
-                                {
-                                    label: "Baixo",
-                                    description: "Menos LO, mas aumenta Popularidade",
-                                    value: "Baixo",
-                                    emoji: "📉"
-                                },
+                                { label: "Baixo", description: "Menos LO, mas aumenta Popularidade", value: "Baixo", emoji: "📉" },
                                 { label: "Médio", description: "Equilíbrio padrão", value: "Médio", emoji: "📊" },
-                                {
-                                    label: "Alto",
-                                    description: "Mais LO, mas diminui Popularidade",
-                                    value: "Alto",
-                                    emoji: "📈"
-                                }
+                                { label: "Alto", description: "Mais LO, mas diminui Popularidade", value: "Alto", emoji: "📈" }
                             );
-                        return iBtn.update({
-                            content: "**📢 Novo Decreto Tributário**",
-                            components: [new ActionRowBuilder().addComponents(menuImposto)]
-                        });
+                        return iBtn.update({ content: "**📢 Novo Decreto Tributário**", components: [new ActionRowBuilder().addComponents(menuImposto)] });
                     }
 
                     const pericia = acao === "Festival" ? "Atuação" : acao === "Extorquir" ? "Intimidação" : "Nobreza";
@@ -352,19 +342,13 @@ module.exports = {
                     if (acao === "Convocar_Camponeses") {
                         await iBtn.deferUpdate();
                         try {
-                            const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(
-                                dominio.id,
-                                acao
-                            );
+                            const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(dominio.id, acao);
                             dominio = domNovo;
                             await iBtn.followUp({ content: `✅ ${log}` });
                             return msgPainel.edit(renderizarPainel());
                         } catch (err) {
                             if (err.dominio) dominio = err.dominio;
-                            await iBtn.followUp({
-                                content: `❌ Falha: ${err.message || err}`,
-                                flags: MessageFlags.Ephemeral
-                            });
+                            await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
                             return msgPainel.edit(renderizarPainel());
                         }
                     }
@@ -372,54 +356,36 @@ module.exports = {
                     const modalId = `mod_acao_${iBtn.id}`;
                     const modal = new ModalBuilder().setCustomId(modalId).setTitle(`Ação: ${acao}`);
 
-                    const rowBonus = new ActionRowBuilder().addComponents(
+                    modal.addComponents(new ActionRowBuilder().addComponents(
                         new TextInputBuilder()
                             .setCustomId("inp_bonus")
                             .setLabel(`Seu bônus de ${pericia}`)
                             .setStyle(TextInputStyle.Short)
                             .setRequired(true)
-                    );
-                    modal.addComponents(rowBonus);
+                    ));
 
                     if (acao.startsWith("Financas")) {
-                        modal.addComponents(
-                            new ActionRowBuilder().addComponents(
-                                new TextInputBuilder()
-                                    .setCustomId("inp_qtd")
-                                    .setLabel("Quantidade de LO")
-                                    .setStyle(TextInputStyle.Short)
-                                    .setRequired(true)
-                            )
-                        );
+                        modal.addComponents(new ActionRowBuilder().addComponents(
+                            new TextInputBuilder().setCustomId("inp_qtd").setLabel("Quantidade de LO").setStyle(TextInputStyle.Short).setRequired(true)
+                        ));
                     }
 
                     await iBtn.showModal(modal);
 
                     try {
-                        const mSubmit = await iBtn.awaitModalSubmit({
-                            filter: m => m.customId === modalId,
-                            time: 60000
-                        });
+                        const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
                         await mSubmit.deferUpdate();
 
                         const bonus = parseInt(mSubmit.fields.getTextInputValue("inp_bonus")) || 0;
-                        const qtd = acao.startsWith("Financas")
-                            ? parseInt(mSubmit.fields.getTextInputValue("inp_qtd"))
-                            : 0;
+                        const qtd = acao.startsWith("Financas") ? parseInt(mSubmit.fields.getTextInputValue("inp_qtd")) : 0;
 
-                        const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(dominio.id, acao, {
-                            bonusManual: bonus,
-                            qtd: qtd
-                        });
+                        const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(dominio.id, acao, { bonusManual: bonus, qtd: qtd });
                         dominio = domNovo;
                         await mSubmit.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
                         if (err.dominio) dominio = err.dominio;
-                        await iBtn.followUp({
-                            content: `❌ Falha: ${err.message || err}`,
-                            flags: MessageFlags.Ephemeral
-                        });
+                        await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
                         await msgPainel.edit(renderizarPainel());
                     }
                 } else if (iBtn.customId.startsWith("dom_btn_construir_")) {
@@ -434,10 +400,7 @@ module.exports = {
                             { label: "Religião", value: "Religião" },
                             { label: "Misticismo", value: "Misticismo" }
                         );
-                    await iBtn.update({
-                        content: "**Escolha a Categoria**",
-                        components: [new ActionRowBuilder().addComponents(menuCat)]
-                    });
+                    await iBtn.update({ content: "**Escolha a Categoria**", components: [new ActionRowBuilder().addComponents(menuCat)] });
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_cat_")) {
                     const catRaw = iBtn.values[0];
                     let cat = catRaw;
@@ -445,14 +408,10 @@ module.exports = {
 
                     if (catRaw === "Nobreza_1") {
                         cat = "Nobreza";
-                        obras = Object.keys(CATALOGO_CONSTRUCOES)
-                            .filter(n => CATALOGO_CONSTRUCOES[n].tipo === "Nobreza")
-                            .slice(0, 20);
+                        obras = Object.keys(CATALOGO_CONSTRUCOES).filter(n => CATALOGO_CONSTRUCOES[n].tipo === "Nobreza").slice(0, 20);
                     } else if (catRaw === "Nobreza_2") {
                         cat = "Nobreza";
-                        obras = Object.keys(CATALOGO_CONSTRUCOES)
-                            .filter(n => CATALOGO_CONSTRUCOES[n].tipo === "Nobreza")
-                            .slice(20);
+                        obras = Object.keys(CATALOGO_CONSTRUCOES).filter(n => CATALOGO_CONSTRUCOES[n].tipo === "Nobreza").slice(20);
                     } else {
                         obras = Object.keys(CATALOGO_CONSTRUCOES).filter(n => CATALOGO_CONSTRUCOES[n].tipo === cat);
                     }
@@ -460,140 +419,84 @@ module.exports = {
                     const menuObras = new StringSelectMenuBuilder()
                         .setCustomId(`dom_menu_obra_${interaction.id}`)
                         .setPlaceholder(`Obras de ${catRaw.replace("_", " ")}...`)
-                        .addOptions(
-                            obras.map(n => ({ label: `${n} (${CATALOGO_CONSTRUCOES[n].custo} LO)`, value: n }))
-                        );
+                        .addOptions(obras.map(n => ({ label: `${n} (${CATALOGO_CONSTRUCOES[n].custo} LO)`, value: n })));
 
-                    await iBtn.update({
-                        content: `**Projetos de ${catRaw.replace("_", " ")}**`,
-                        components: [new ActionRowBuilder().addComponents(menuObras)]
-                    });
+                    await iBtn.update({ content: `**Projetos de ${catRaw.replace("_", " ")}**`, components: [new ActionRowBuilder().addComponents(menuObras)] });
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_tax_")) {
                     const tipo = iBtn.values[0];
                     await iBtn.deferUpdate();
                     try {
-                        const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(
-                            dominio.id,
-                            "Alterar_Imposto",
-                            { tipo: tipo }
-                        );
+                        const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(dominio.id, "Alterar_Imposto", { tipo: tipo });
                         dominio = domNovo;
                         await iBtn.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
-                        await iBtn.followUp({
-                            content: `❌ Falha: ${err.message || err}`,
-                            flags: MessageFlags.Ephemeral
-                        });
+                        await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
                     }
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_obra_")) {
                     const nomeObra = iBtn.values[0];
                     const obra = CATALOGO_CONSTRUCOES[nomeObra];
 
                     const modalId = `mod_obra_${iBtn.id}`;
-                    const modal = new ModalBuilder()
-                        .setCustomId(modalId)
-                        .setTitle(`Construir: ${nomeObra}`)
-                        .addComponents(
-                            new ActionRowBuilder().addComponents(
-                                new TextInputBuilder()
-                                    .setCustomId("inp_bonus")
-                                    .setLabel(`Bônus de ${obra.tipo}`)
-                                    .setStyle(TextInputStyle.Short)
-                                    .setRequired(true)
-                            )
-                        );
+                    const modal = new ModalBuilder().setCustomId(modalId).setTitle(`Construir: ${nomeObra}`);
+                    modal.addComponents(new ActionRowBuilder().addComponents(
+                        new TextInputBuilder().setCustomId("inp_bonus").setLabel(`Bônus de ${obra.tipo}`).setStyle(TextInputStyle.Short).setRequired(true)
+                    ));
 
                     await iBtn.showModal(modal);
 
                     try {
-                        const mSubmit = await iBtn.awaitModalSubmit({
-                            filter: m => m.customId === modalId,
-                            time: 60000
-                        });
+                        const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
                         await mSubmit.deferUpdate();
                         const bonus = parseInt(mSubmit.fields.getTextInputValue("inp_bonus")) || 0;
 
-                        const { log, dominio: domNovo } = await DominioService.construir(
-                            dominio.id,
-                            char.id,
-                            nomeObra,
-                            bonus
-                        );
+                        const { log, dominio: domNovo } = await DominioService.construir(dominio.id, char.id, nomeObra, bonus);
                         dominio = domNovo;
                         await mSubmit.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
                         if (err.dominio) dominio = err.dominio;
-                        await iBtn.followUp({
-                            content: `❌ Falha: ${err.message || err}`,
-                            flags: MessageFlags.Ephemeral
-                        });
+                        await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
                         await msgPainel.edit(renderizarPainel());
                     }
-                } else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
-                    await iBtn.update(renderizarPainel());
                 } else if (iBtn.customId.startsWith("dom_btn_exercito_")) {
                     const exercitoEmbed = new EmbedBuilder()
                         .setColor("#E74C3C")
                         .setTitle(`⚔️ Forças Armadas: ${dominio.nome}`)
                         .setDescription("Gerencie suas tropas e recrute novas unidades.");
 
-                    let listaTropas =
-                        (dominio.tropas || []).length > 0
-                            ? dominio.tropas.map(t => `**${t.quantidade}x ${t.nome}**`).join("\n")
-                            : "*Nenhuma tropa recrutada.*";
+                    let listaTropas = (dominio.tropas || []).length > 0 
+                        ? dominio.tropas.map(t => `**${t.quantidade}x ${t.nome}**`).join("\n")
+                        : "*Nenhuma tropa recrutada.*";
                     exercitoEmbed.addFields({ name: "Unidades Atuais", value: listaTropas, inline: false });
 
                     const menuTropas = new StringSelectMenuBuilder()
                         .setCustomId(`dom_menu_recrutar_${interaction.id}`)
                         .setPlaceholder("Recrutar Nova Unidade...")
-                        .addOptions(
-                            Object.keys(CATALOGO_TROPAS)
-                                .filter(n => n !== "Camponeses")
-                                .map(n => ({
-                                    label: `${n} (${CATALOGO_TROPAS[n].custo} LO)`,
-                                    description: `Poder: ${CATALOGO_TROPAS[n].poder} | Req: ${CATALOGO_TROPAS[n].req || "Nenhum"}`,
-                                    value: n
-                                }))
-                        );
+                        .addOptions(Object.keys(CATALOGO_TROPAS).filter(n => n !== "Camponeses").map(n => ({
+                            label: `${n} (${CATALOGO_TROPAS[n].custo} LO)`,
+                            description: `Poder: ${CATALOGO_TROPAS[n].poder} | Req: ${CATALOGO_TROPAS[n].req || "Nenhum"}`,
+                            value: n
+                        })));
 
                     const voltarRow = new ActionRowBuilder().addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`dom_btn_voltar_${interaction.id}`)
-                            .setLabel("Voltar")
-                            .setStyle(ButtonStyle.Secondary)
+                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar").setStyle(ButtonStyle.Secondary)
                     );
 
-                    await iBtn.update({
-                        embeds: [exercitoEmbed],
-                        components: [new ActionRowBuilder().addComponents(menuTropas), voltarRow]
-                    });
+                    await iBtn.update({ embeds: [exercitoEmbed], components: [new ActionRowBuilder().addComponents(menuTropas), voltarRow] });
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_recrutar_")) {
                     const nomeTropa = iBtn.values[0];
                     const modalId = `mod_recrutar_${iBtn.id}`;
 
-                    const modal = new ModalBuilder()
-                        .setCustomId(modalId)
-                        .setTitle(`Recrutar: ${nomeTropa}`)
-                        .addComponents(
-                            new ActionRowBuilder().addComponents(
-                                new TextInputBuilder()
-                                    .setCustomId("inp_qtd")
-                                    .setLabel(`Quantidade (Máx: ${dominio.nivel})`)
-                                    .setStyle(TextInputStyle.Short)
-                                    .setPlaceholder("Ex: 1")
-                                    .setRequired(true)
-                            )
-                        );
+                    const modal = new ModalBuilder().setCustomId(modalId).setTitle(`Recrutar: ${nomeTropa}`);
+                    modal.addComponents(new ActionRowBuilder().addComponents(
+                        new TextInputBuilder().setCustomId("inp_qtd").setLabel(`Quantidade (Máx: ${dominio.nivel})`).setStyle(TextInputStyle.Short).setPlaceholder("Ex: 1").setRequired(true)
+                    ));
 
                     await iBtn.showModal(modal);
 
                     try {
-                        const mSubmit = await iBtn.awaitModalSubmit({
-                            filter: m => m.customId === modalId,
-                            time: 60000
-                        });
+                        const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
                         await mSubmit.deferUpdate();
                         const qtd = parseInt(mSubmit.fields.getTextInputValue("inp_qtd")) || 0;
 
@@ -602,11 +505,10 @@ module.exports = {
                         await mSubmit.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
-                        await iBtn.followUp({
-                            content: `❌ Falha: ${err.message || err}`,
-                            flags: MessageFlags.Ephemeral
-                        });
+                        await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
                     }
+                } else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
+                    await iBtn.update(renderizarPainel());
                 }
             });
         }
