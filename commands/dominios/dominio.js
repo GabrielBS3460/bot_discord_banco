@@ -103,6 +103,8 @@ module.exports = {
             if (msg === "SEM_ACOES") return "❌ **Exaustão Administrativa:** Você não possui mais ações de regente disponíveis este mês.";
             if (msg === "LIMITE_CONSTRUCOES") return "❌ **Espaço Insuficiente:** Você atingiu o limite de construções para o nível atual do seu domínio.";
             if (msg === "LIMITE_TERRENO_ATINGIDO") return "❌ **Limite Territorial:** Este terreno não suporta um domínio de nível mais alto.";
+            if (msg === "CORTE_MAXIMA") return "❌ **Corte Suprema:** Sua corte já atingiu o nível máximo (Rica).";
+            if (msg === "JA_POSSUI_CONSELHEIRO") return "❌ **Cargo Ocupado:** Você já possui este conselheiro em sua corte.";
             if (msg.startsWith("REQUISITO_FALTANTE")) return `❌ **Falta Infraestrutura:** Você precisa construir primeiro: **${msg.split("_")[2]}**.`;
             if (msg.startsWith("TERRENO_INVALIDO")) return "❌ **Terreno Incompatível:** Esta construção não pode ser feita neste tipo de solo.";
             if (msg.startsWith("LIMITE_RECRUTAMENTO")) return `❌ **Limite Militar:** Você só pode recrutar até **${msg.split("_")[2]}** unidades por vez (igual ao seu nível).`;
@@ -121,8 +123,8 @@ module.exports = {
             const nome = interaction.options.getString("nome");
             const terreno = interaction.options.getString("terreno");
             const mistico = interaction.options.getBoolean("mistico");
-            const agua = interaction.options.getBoolean("agua") || false;
-            const elementoMistico = interaction.options.getBoolean("elemento_mistico") || false;
+            const tem_agua = interaction.options.getBoolean("agua") || false;
+            const tem_elemento_mistico = interaction.options.getBoolean("elemento_mistico") || false;
 
             const modalId = `mod_fundar_${interaction.id}`;
             const modal = new ModalBuilder()
@@ -141,8 +143,9 @@ module.exports = {
 
             await interaction.showModal(modal);
 
+            let mSubmit;
             try {
-                const mSubmit = await interaction.awaitModalSubmit({
+                mSubmit = await interaction.awaitModalSubmit({
                     filter: m => m.customId === modalId,
                     time: 60000
                 });
@@ -154,8 +157,8 @@ module.exports = {
                     nome,
                     terreno,
                     mistico,
-                    agua,
-                    elementoMistico,
+                    tem_agua,
+                    tem_elemento_mistico,
                     bonus
                 );
 
@@ -177,7 +180,14 @@ module.exports = {
 
                 return mSubmit.editReply({ embeds: [embed] });
             } catch (err) {
-                return interaction.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
+                const errorMsg = formatarErro(err.message || err);
+                if (mSubmit) {
+                    if (mSubmit.deferred || mSubmit.replied) {
+                        return mSubmit.editReply({ content: errorMsg, embeds: [], components: [] });
+                    }
+                    return mSubmit.reply({ content: errorMsg, flags: MessageFlags.Ephemeral });
+                }
+                return interaction.followUp({ content: errorMsg, flags: MessageFlags.Ephemeral });
             }
         } else if (subcomando === "painel") {
             await interaction.deferReply();
@@ -257,6 +267,11 @@ module.exports = {
                         .setStyle(ButtonStyle.Danger)
                         .setEmoji("⚔️"),
                     new ButtonBuilder()
+                        .setCustomId(`dom_btn_conselho_${interaction.id}`)
+                        .setLabel("Conselho")
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji("🤝"),
+                    new ButtonBuilder()
                         .setCustomId(`dom_btn_bonus_${interaction.id}`)
                         .setLabel("Bônus")
                         .setStyle(ButtonStyle.Secondary)
@@ -306,6 +321,48 @@ module.exports = {
                     );
 
                     await iBtn.update({ embeds: [bonusEmbed], components: [voltarRow] });
+                } else if (iBtn.customId.startsWith("dom_btn_conselho_")) {
+                    const { CONSELHEIROS: LISTA_CARGOS } = require("../../data/dominiosData.js");
+                    const conselhosEmbed = new EmbedBuilder()
+                        .setColor("#3498DB")
+                        .setTitle(`🤝 Conselho Real: ${dominio.nome}`)
+                        .setDescription("Conselheiros fornecem bônus de +5 em testes de sua área de especialidade.");
+
+                    const conselheirosAtuais = Array.isArray(dominio.conselheiros) ? dominio.conselheiros : JSON.parse(dominio.conselheiros || "[]");
+                    let listaConselheiros = conselheirosAtuais.length > 0 
+                        ? conselheirosAtuais.map(c => `**${c}:** ${LISTA_CARGOS[c]}`).join("\n")
+                        : "*Nenhum conselheiro contratado.*";
+                    conselhosEmbed.addFields({ name: "Membros do Conselho", value: listaConselheiros, inline: false });
+
+                    const menuConselho = new StringSelectMenuBuilder()
+                        .setCustomId(`dom_menu_conselho_${interaction.id}`)
+                        .setPlaceholder("Contratar Novo Conselheiro...")
+                        .addOptions(Object.keys(LISTA_CARGOS).filter(c => !conselheirosAtuais.includes(c)).map(c => ({
+                            label: c,
+                            description: `Especialidade: ${LISTA_CARGOS[c]}`,
+                            value: c
+                        })));
+
+                    const voltarRow = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder().setCustomId(`dom_btn_voltar_${interaction.id}`).setLabel("Voltar").setStyle(ButtonStyle.Secondary)
+                    );
+
+                    const components = [voltarRow];
+                    if (Object.keys(LISTA_CARGOS).length > conselheirosAtuais.length) {
+                        components.unshift(new ActionRowBuilder().addComponents(menuConselho));
+                    }
+
+                    await iBtn.update({ embeds: [conselhosEmbed], components: components });
+                } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_conselho_")) {
+                    const titulo = iBtn.values[0];
+                    await iBtn.deferUpdate();
+                    try {
+                        dominio = await DominioService.contratarConselheiro(dominio.id, titulo);
+                        await iBtn.followUp({ content: `✅ **${titulo}** agora faz parte do seu conselho!` });
+                        await msgPainel.edit(renderizarPainel());
+                    } catch (err) {
+                        await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
+                    }
                 } else if (iBtn.customId.startsWith("dom_btn_acoes_")) {
                     const menuAcoes = new StringSelectMenuBuilder()
                         .setCustomId(`dom_menu_acoes_${interaction.id}`)
@@ -372,8 +429,9 @@ module.exports = {
 
                     await iBtn.showModal(modal);
 
+                    let mSubmit;
                     try {
-                        const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
+                        mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
                         await mSubmit.deferUpdate();
 
                         const bonus = parseInt(mSubmit.fields.getTextInputValue("inp_bonus")) || 0;
@@ -385,7 +443,13 @@ module.exports = {
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
                         if (err.dominio) dominio = err.dominio;
-                        await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
+                        const errorMsg = formatarErro(err.message || err);
+                        
+                        if (mSubmit) {
+                            await mSubmit.followUp({ content: errorMsg, flags: MessageFlags.Ephemeral });
+                        } else {
+                            await iBtn.followUp({ content: errorMsg, flags: MessageFlags.Ephemeral });
+                        }
                         await msgPainel.edit(renderizarPainel());
                     }
                 } else if (iBtn.customId.startsWith("dom_btn_construir_")) {
@@ -445,8 +509,9 @@ module.exports = {
 
                     await iBtn.showModal(modal);
 
+                    let mSubmit;
                     try {
-                        const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
+                        mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
                         await mSubmit.deferUpdate();
                         const bonus = parseInt(mSubmit.fields.getTextInputValue("inp_bonus")) || 0;
 
@@ -456,7 +521,13 @@ module.exports = {
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
                         if (err.dominio) dominio = err.dominio;
-                        await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
+                        const errorMsg = formatarErro(err.message || err);
+                        
+                        if (mSubmit) {
+                            await mSubmit.followUp({ content: errorMsg, flags: MessageFlags.Ephemeral });
+                        } else {
+                            await iBtn.followUp({ content: errorMsg, flags: MessageFlags.Ephemeral });
+                        }
                         await msgPainel.edit(renderizarPainel());
                     }
                 } else if (iBtn.customId.startsWith("dom_btn_exercito_")) {
@@ -495,8 +566,9 @@ module.exports = {
 
                     await iBtn.showModal(modal);
 
+                    let mSubmit;
                     try {
-                        const mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
+                        mSubmit = await iBtn.awaitModalSubmit({ filter: m => m.customId === modalId, time: 60000 });
                         await mSubmit.deferUpdate();
                         const qtd = parseInt(mSubmit.fields.getTextInputValue("inp_qtd")) || 0;
 
@@ -505,7 +577,12 @@ module.exports = {
                         await mSubmit.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
-                        await iBtn.followUp({ content: formatarErro(err.message || err), flags: MessageFlags.Ephemeral });
+                        const errorMsg = formatarErro(err.message || err);
+                        if (mSubmit) {
+                            await mSubmit.followUp({ content: errorMsg, flags: MessageFlags.Ephemeral });
+                        } else {
+                            await iBtn.followUp({ content: errorMsg, flags: MessageFlags.Ephemeral });
+                        }
                     }
                 } else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
                     await iBtn.update(renderizarPainel());
