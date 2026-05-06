@@ -46,7 +46,7 @@ class DominioService {
     // CORE DO SISTEMA
     // ==========================================
 
-    async fundarDominio(char, nome, terreno, mistico, bonusNobrezaManual = 0) {
+    async fundarDominio(char, nome, terreno, mistico, temAgua = false, temMistico = false, bonusNobrezaManual = 0) {
         const saldoChar = Number(char.saldo);
         if (saldoChar < PRECO_FUNDACAO) {
             throw new Error(`SALDO_INSUFICIENTE_${PRECO_FUNDACAO}`);
@@ -77,11 +77,13 @@ class DominioService {
                 data: { saldo: { decrement: PRECO_FUNDACAO } }
             });
 
-            const dominio = await tx.dominio.create({
+            return await tx.dominio.create({
                 data: {
                     personagem_id: char.id,
                     nome: nome,
                     terreno: terreno,
+                    tem_agua: temAgua,
+                    tem_elemento_mistico: temMistico,
                     mistico: mistico,
                     nivel: 1,
                     tesouro_lo: 0,
@@ -93,8 +95,6 @@ class DominioService {
                 },
                 include: { construcoes: true, tropas: true, personagem: true }
             });
-
-            return dominio;
         });
 
         return novoDominio;
@@ -239,14 +239,15 @@ class DominioService {
         const total = rolagem + bonusManual + bonusDominio + bonusConselheiro;
 
         if (total < cd) {
-            await prisma.dominio.update({
+            const domErr = await prisma.dominio.update({
                 where: { id: dominioId },
                 data: {
                     tesouro_lo: { decrement: obra.custo },
                     acoes_disponiveis: { decrement: 1 }
-                }
+                },
+                include: { construcoes: true, tropas: true, personagem: true }
             });
-            throw new Error(`FALHA_CONSTRUCAO_${total}_CD${cd}`);
+            throw { message: `FALHA_CONSTRUCAO_${total}_CD${cd}`, dominio: domErr };
         }
 
         const log = `🏗️ **${nomeConstrucao}** concluída! (Rolagem: ${rolagem} + Bônus(Perícia:${bonusManual}, Domínio:${bonusDominio}, Conselheiro:${bonusConselheiro}) = ${total} vs CD ${cd})`;
@@ -308,8 +309,13 @@ class DominioService {
             case "Governar": {
                 const custoLO = 5 * (dominio.nivel + 1);
                 if (dominio.tesouro_lo < custoLO) throw new Error(`LO_INSUFICIENTE_${custoLO}`);
+
+                // Verificar limite do terreno
                 const dataTerreno = TERRENOS[dominio.terreno] || { nivelMax: 1 };
-                if (dominio.nivel >= dataTerreno.nivelMax) throw new Error("LIMITE_TERRENO_ATINGIDO");
+                let nivelMaxEfetivo = dataTerreno.nivelMax;
+                if (dominio.tem_agua) nivelMaxEfetivo += 1;
+
+                if (dominio.nivel >= nivelMaxEfetivo) throw new Error("LIMITE_TERRENO_ATINGIDO");
 
                 if (total < cd) {
                     const dErr = await prisma.dominio.update({

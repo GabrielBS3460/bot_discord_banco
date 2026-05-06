@@ -36,9 +36,7 @@ module.exports = {
                             { name: "Colinas", value: "Colinas" },
                             { name: "Pântano", value: "Pântano" },
                             { name: "Deserto", value: "Deserto" },
-                            { name: "Subterrâneo", value: "Subterrâneo" },
-                            { name: "Rio ou Mar", value: "Rio ou Mar" },
-                            { name: "Elemento Místico", value: "Elemento Místico" }
+                            { name: "Subterrâneo", value: "Subterrâneo" }
                         )
                 )
                 .addBooleanOption(opt =>
@@ -46,6 +44,18 @@ module.exports = {
                         .setName("mistico")
                         .setDescription("É um domínio místico? (Apenas para conjuradores)")
                         .setRequired(true)
+                )
+                .addBooleanOption(opt =>
+                    opt
+                        .setName("agua")
+                        .setDescription("O terreno possui Rio ou Mar? (+1 Nível Máximo)")
+                        .setRequired(false)
+                )
+                .addBooleanOption(opt =>
+                    opt
+                        .setName("elemento_mistico")
+                        .setDescription("O terreno possui Elemento Místico? (+1 Potencial Mágico)")
+                        .setRequired(false)
                 )
         )
         .addSubcommand(sub =>
@@ -67,6 +77,8 @@ module.exports = {
             const nome = interaction.options.getString("nome");
             const terreno = interaction.options.getString("terreno");
             const mistico = interaction.options.getBoolean("mistico");
+            const agua = interaction.options.getBoolean("agua") || false;
+            const elementoMistico = interaction.options.getBoolean("elemento_mistico") || false;
 
             const modalId = `mod_fundar_${interaction.id}`;
             const modal = new ModalBuilder()
@@ -93,7 +105,20 @@ module.exports = {
                 await mSubmit.deferReply();
 
                 const bonus = parseInt(mSubmit.fields.getTextInputValue("inp_bonus")) || 0;
-                await DominioService.fundarDominio(char, nome, terreno, mistico, bonus);
+                const novoDominio = await DominioService.fundarDominio(
+                    char,
+                    nome,
+                    terreno,
+                    mistico,
+                    agua,
+                    elementoMistico,
+                    bonus
+                );
+
+                const extras = [];
+                if (novoDominio.tem_agua) extras.push("🌊 Rio/Mar");
+                if (novoDominio.tem_elemento_mistico) extras.push("🔮 El. Místico");
+                const textoExtras = extras.length > 0 ? extras.join(" ") : "Nenhum";
 
                 const embed = new EmbedBuilder()
                     .setColor(mistico ? "#9B59B6" : "#2ECC71")
@@ -102,7 +127,8 @@ module.exports = {
                     .addFields(
                         { name: "Nome", value: nome, inline: true },
                         { name: "Terreno", value: terreno, inline: true },
-                        { name: "Tipo", value: mistico ? "Místico ✨" : "Padrão 🛡️", inline: true }
+                        { name: "Tipo", value: mistico ? "Místico ✨" : "Padrão 🛡️", inline: true },
+                        { name: "Adicionais", value: textoExtras, inline: false }
                     );
 
                 return mSubmit.editReply({ embeds: [embed] });
@@ -136,7 +162,7 @@ module.exports = {
 
             if (!dominio) {
                 return interaction.editReply({
-                    content: "🚫 Você ainda não é um regente. Use `/dominio fundar` para reivindicicar suas terras."
+                    content: "🚫 Você ainda não é um regente. Use `/dominio fundar` para reivindicar suas terras."
                 });
             }
 
@@ -152,7 +178,7 @@ module.exports = {
                     .addFields(
                         {
                             name: "📊 Geral",
-                            value: `**Nível:** ${dominio.nivel}\n**Terreno:** ${dominio.terreno}\n**Tipo:** ${dominio.mistico ? "Místico ✨" : "Padrão 🛡️"}`,
+                            value: `**Nível:** ${dominio.nivel}\n**Terreno:** ${dominio.terreno}${dominio.tem_agua ? " (🌊)" : ""}${dominio.tem_elemento_mistico ? " (🔮)" : ""}\n**Tipo:** ${dominio.mistico ? "Místico ✨" : "Padrão 🛡️"}`,
                             inline: true
                         },
                         {
@@ -219,9 +245,13 @@ module.exports = {
                         .setDescription("Bônus passivos concedidos pela sua estrutura atual.");
 
                     if (dominio.mistico) {
+                        const { TERRENOS: TABELA_TERRENOS } = require("../../data/dominiosData.js");
+                        const potMisticoBase =
+                            (TABELA_TERRENOS[dominio.terreno] || { potencialMistico: 0 }).potencialMistico || 0;
+                        const potFinal = potMisticoBase + (dominio.tem_elemento_mistico ? 1 : 0);
                         bonusEmbed.addFields({
                             name: "🔮 Fluxo Místico",
-                            value: `Recebe **+${dominio.nivel * dominio.nivel} PM** máximos.`,
+                            value: `Potencial Místico: **${potFinal}**\nRecebe **+${dominio.nivel * potFinal} PM** máximos.`,
                             inline: false
                         });
                     }
@@ -501,6 +531,8 @@ module.exports = {
                         });
                         await msgPainel.edit(renderizarPainel());
                     }
+                } else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
+                    await iBtn.update(renderizarPainel());
                 } else if (iBtn.customId.startsWith("dom_btn_exercito_")) {
                     const exercitoEmbed = new EmbedBuilder()
                         .setColor("#E74C3C")
@@ -575,8 +607,6 @@ module.exports = {
                             flags: MessageFlags.Ephemeral
                         });
                     }
-                } else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
-                    await iBtn.update(renderizarPainel());
                 }
             });
         }
