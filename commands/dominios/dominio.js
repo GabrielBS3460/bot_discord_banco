@@ -108,10 +108,10 @@ module.exports = {
 
                 return mSubmit.editReply({ embeds: [embed] });
             } catch (err) {
-                if (err.message.startsWith("FALHA_TESTE_FUNDACAO")) {
+                if (err.message && err.message.startsWith("FALHA_TESTE_FUNDACAO")) {
                     return interaction.followUp({ content: `❌ **Falha no Teste:** Você não conseguiu estabelecer autoridade sobre as terras. (Perdeu T$ 5.000)` });
                 }
-                return interaction.followUp({ content: `❌ Erro: ${err.message}`, flags: MessageFlags.Ephemeral });
+                return interaction.followUp({ content: `❌ Erro: ${err.message || err}`, flags: MessageFlags.Ephemeral });
             }
         } else if (subcomando === "painel") {
             await interaction.deferReply();
@@ -137,9 +137,9 @@ module.exports = {
             }
 
             const renderizarPainel = () => {
-                const maxConstrucoes = dominio.nivel * 3;
-                const qtdConstrucoes = dominio.construcoes.length;
-                const qtdTropas = dominio.tropas.reduce((acc, tropa) => acc + tropa.quantidade, 0);
+                const maxConstrucoes = (dominio.nivel || 1) * 3;
+                const qtdConstrucoes = (dominio.construcoes || []).length;
+                const qtdTropas = (dominio.tropas || []).reduce((acc, tropa) => acc + tropa.quantidade, 0);
 
                 const embed = new EmbedBuilder()
                     .setColor(dominio.mistico ? "#9B59B6" : "#F1C40F")
@@ -182,7 +182,7 @@ module.exports = {
                         bonusEmbed.addFields({ name: "🔮 Fluxo Místico", value: `Recebe **+${dominio.nivel * dominio.nivel} PM** máximos.`, inline: false });
                     }
 
-                    let listaConstrucoes = dominio.construcoes.length > 0 
+                    let listaConstrucoes = (dominio.construcoes || []).length > 0 
                         ? dominio.construcoes.map(c => `**${c.nome}:** ${c.beneficio}`).join("\n")
                         : "*Nenhuma construção.*";
                     bonusEmbed.addFields({ name: "🏗️ Construções", value: listaConstrucoes, inline: false });
@@ -227,10 +227,16 @@ module.exports = {
                     
                     if (acao === "Convocar_Camponeses") {
                         await iBtn.deferUpdate();
-                        const log = await DominioService.executarAcaoRegente(dominio.id, acao);
-                        dominio = await DominioService.buscarPainel(char.id);
-                        await iBtn.followUp({ content: `✅ ${log}` });
-                        return msgPainel.edit(renderizarPainel());
+                        try {
+                            const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(dominio.id, acao);
+                            dominio = domNovo;
+                            await iBtn.followUp({ content: `✅ ${log}` });
+                            return msgPainel.edit(renderizarPainel());
+                        } catch (err) {
+                            if (err.dominio) dominio = err.dominio;
+                            await iBtn.followUp({ content: `❌ Falha: ${err.message || err}`, flags: MessageFlags.Ephemeral });
+                            return msgPainel.edit(renderizarPainel());
+                        }
                     }
 
                     const modalId = `mod_acao_${iBtn.id}`;
@@ -260,12 +266,14 @@ module.exports = {
                         const bonus = parseInt(mSubmit.fields.getTextInputValue("inp_bonus")) || 0;
                         const qtd = acao.startsWith("Financas") ? parseInt(mSubmit.fields.getTextInputValue("inp_qtd")) : 0;
 
-                        const log = await DominioService.executarAcaoRegente(dominio.id, acao, { bonusManual: bonus, qtd: qtd });
-                        dominio = await DominioService.buscarPainel(char.id);
+                        const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(dominio.id, acao, { bonusManual: bonus, qtd: qtd });
+                        dominio = domNovo;
                         await mSubmit.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
-                        await iBtn.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
+                        if (err.dominio) dominio = err.dominio;
+                        await iBtn.followUp({ content: `❌ Falha: ${err.message || err}`, flags: MessageFlags.Ephemeral });
+                        await msgPainel.edit(renderizarPainel());
                     }
                 } else if (iBtn.customId.startsWith("dom_btn_construir_")) {
                     const menuCat = new StringSelectMenuBuilder()
@@ -292,10 +300,14 @@ module.exports = {
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_tax_")) {
                     const tipo = iBtn.values[0];
                     await iBtn.deferUpdate();
-                    const log = await DominioService.executarAcaoRegente(dominio.id, "Alterar_Imposto", { tipo: tipo });
-                    dominio = await DominioService.buscarPainel(char.id);
-                    await iBtn.followUp({ content: `✅ ${log}` });
-                    await msgPainel.edit(renderizarPainel());
+                    try {
+                        const { log, dominio: domNovo } = await DominioService.executarAcaoRegente(dominio.id, "Alterar_Imposto", { tipo: tipo });
+                        dominio = domNovo;
+                        await iBtn.followUp({ content: `✅ ${log}` });
+                        await msgPainel.edit(renderizarPainel());
+                    } catch (err) {
+                        await iBtn.followUp({ content: `❌ Falha: ${err.message || err}`, flags: MessageFlags.Ephemeral });
+                    }
                 } else if (iBtn.isStringSelectMenu() && iBtn.customId.startsWith("dom_menu_obra_")) {
                     const nomeObra = iBtn.values[0];
                     const obra = CATALOGO_CONSTRUCOES[nomeObra];
@@ -315,23 +327,24 @@ module.exports = {
                         await mSubmit.deferUpdate();
                         const bonus = parseInt(mSubmit.fields.getTextInputValue("inp_bonus")) || 0;
 
-                        const log = await DominioService.construir(dominio.id, char.id, nomeObra, bonus);
-                        dominio = await DominioService.buscarPainel(char.id);
+                        const { log, dominio: domNovo } = await DominioService.construir(dominio.id, char.id, nomeObra, bonus);
+                        dominio = domNovo;
                         await mSubmit.followUp({ content: `✅ ${log}` });
                         await msgPainel.edit(renderizarPainel());
                     } catch (err) {
-                        await iBtn.followUp({ content: `❌ Falha: ${err.message}`, flags: MessageFlags.Ephemeral });
+                        if (err.dominio) dominio = err.dominio;
+                        await iBtn.followUp({ content: `❌ Falha: ${err.message || err}`, flags: MessageFlags.Ephemeral });
+                        await msgPainel.edit(renderizarPainel());
                     }
                 } else if (iBtn.customId.startsWith("dom_btn_voltar_")) {
                     await iBtn.update(renderizarPainel());
                 } else if (iBtn.customId.startsWith("dom_btn_exercito_")) {
-                    // Reimplementação simplificada para o teste de integridade
                     const exercitoEmbed = new EmbedBuilder()
                         .setColor("#E74C3C")
                         .setTitle(`⚔️ Forças Armadas: ${dominio.nome}`)
                         .setDescription("Visão geral das suas unidades militares.");
                     
-                    let listaTropas = dominio.tropas.length > 0 
+                    let listaTropas = (dominio.tropas || []).length > 0 
                         ? dominio.tropas.map(t => `**${t.quantidade}x ${t.nome}**`).join("\n")
                         : "*Nenhuma tropa recrutada.*";
                     exercitoEmbed.addFields({ name: "Unidades", value: listaTropas, inline: false });

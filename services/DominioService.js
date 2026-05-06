@@ -90,7 +90,8 @@ class DominioService {
                     imposto_atual: "Médio",
                     acoes_disponiveis: 2,
                     mes_ultimo_turno: new Date().getMonth() + 1
-                }
+                },
+                include: { construcoes: true, tropas: true, personagem: true }
             });
 
             return dominio;
@@ -248,31 +249,34 @@ class DominioService {
             throw new Error(`FALHA_CONSTRUCAO_${total}_CD${cd}`);
         }
 
-        await prisma.$transaction([
-            prisma.dominioConstrucao.create({
+        const log = `🏗️ **${nomeConstrucao}** concluída! (Rolagem: ${rolagem} + Bônus(Perícia:${bonusManual}, Domínio:${bonusDominio}, Conselheiro:${bonusConselheiro}) = ${total} vs CD ${cd})`;
+
+        const dominioAtualizado = await prisma.$transaction(async tx => {
+            await tx.dominioConstrucao.create({
                 data: {
                     dominio_id: dominioId,
                     nome: nomeConstrucao,
                     tipo: obra.tipo,
                     beneficio: obra.beneficio
                 }
-            }),
-            prisma.dominio.update({
+            });
+            return await tx.dominio.update({
                 where: { id: dominioId },
                 data: {
                     tesouro_lo: { decrement: obra.custo },
                     acoes_disponiveis: { decrement: 1 }
-                }
-            })
-        ]);
+                },
+                include: { construcoes: true, tropas: true, personagem: true }
+            });
+        });
 
-        return `🏗️ **${nomeConstrucao}** concluída! (Rolagem: ${rolagem} + Bônus(Perícia:${bonusManual}, Domínio:${bonusDominio}, Conselheiro:${bonusConselheiro}) = ${total} vs CD ${cd})`;
+        return { log, dominio: dominioAtualizado };
     }
 
     async executarAcaoRegente(dominioId, acao, dadosExtras = {}) {
         const dominio = await prisma.dominio.findUnique({
             where: { id: dominioId },
-            include: { personagem: true }
+            include: { personagem: true, construcoes: true, tropas: true }
         });
 
         if (dominio.acoes_disponiveis <= 0 && acao !== "Alterar_Imposto") throw new Error("SEM_ACOES");
@@ -308,11 +312,12 @@ class DominioService {
                 if (dominio.nivel >= dataTerreno.nivelMax) throw new Error("LIMITE_TERRENO_ATINGIDO");
 
                 if (total < cd) {
-                    await prisma.dominio.update({
+                    const dErr = await prisma.dominio.update({
                         where: { id: dominioId },
-                        data: { tesouro_lo: { decrement: custoLO }, acoes_disponiveis: { decrement: 1 } }
+                        data: { tesouro_lo: { decrement: custoLO }, acoes_disponiveis: { decrement: 1 } },
+                        include: { construcoes: true, tropas: true, personagem: true }
                     });
-                    throw new Error(`FALHA_GOVERNAR_${total}_CD${cd}`);
+                    throw { message: `FALHA_GOVERNAR_${total}_CD${cd}`, dominio: dErr };
                 }
 
                 updateData.nivel = { increment: 1 };
@@ -323,11 +328,12 @@ class DominioService {
             case "Extorquir": {
                 if (total < cd) {
                     updateData.popularidade = this.mudarPopularidade(dominio, -1);
-                    await prisma.dominio.update({
+                    const dErr = await prisma.dominio.update({
                         where: { id: dominioId },
-                        data: { popularidade: updateData.popularidade, acoes_disponiveis: { decrement: 1 } }
+                        data: { popularidade: updateData.popularidade, acoes_disponiveis: { decrement: 1 } },
+                        include: { construcoes: true, tropas: true, personagem: true }
                     });
-                    throw new Error(`FALHA_EXTORQUIR_${total}_CD${cd}`);
+                    throw { message: `FALHA_EXTORQUIR_${total}_CD${cd}`, dominio: dErr };
                 }
                 const ganhoLO = this.rolarDado("1d6") + dominio.nivel;
                 updateData.tesouro_lo = { increment: ganhoLO };
@@ -338,11 +344,12 @@ class DominioService {
             case "Festival": {
                 if (dominio.tesouro_lo < 1) throw new Error("LO_INSUFICIENTE_1");
                 if (total < cd) {
-                    await prisma.dominio.update({
+                    const dErr = await prisma.dominio.update({
                         where: { id: dominioId },
-                        data: { tesouro_lo: { decrement: 1 }, acoes_disponiveis: { decrement: 1 } }
+                        data: { tesouro_lo: { decrement: 1 }, acoes_disponiveis: { decrement: 1 } },
+                        include: { construcoes: true, tropas: true, personagem: true }
                     });
-                    throw new Error(`FALHA_FESTIVAL_${total}_CD${cd}`);
+                    throw { message: `FALHA_FESTIVAL_${total}_CD${cd}`, dominio: dErr };
                 }
                 updateData.tesouro_lo = { decrement: 1 };
                 updateData.popularidade = this.mudarPopularidade(dominio, 1);
@@ -415,8 +422,13 @@ class DominioService {
             }
         }
 
-        await prisma.dominio.update({ where: { id: dominioId }, data: updateData });
-        return logAcao;
+        const dominioAtualizado = await prisma.dominio.update({
+            where: { id: dominioId },
+            data: updateData,
+            include: { construcoes: true, tropas: true, personagem: true }
+        });
+
+        return { log: logAcao, dominio: dominioAtualizado };
     }
 
     async recrutar(dominioId, nomeTropa, quantidade) {
@@ -444,7 +456,7 @@ class DominioService {
             where: { dominio_id: dominioId, nome: nomeTropa }
         });
 
-        await prisma.$transaction(async tx => {
+        const dominioAtualizado = await prisma.$transaction(async tx => {
             await tx.dominio.update({
                 where: { id: dominioId },
                 data: { tesouro_lo: { decrement: custoTotal }, acoes_disponiveis: { decrement: 1 } }
@@ -459,9 +471,13 @@ class DominioService {
                     data: { dominio_id: dominioId, nome: nomeTropa, quantidade: quantidade }
                 });
             }
+            return await tx.dominio.findUnique({
+                where: { id: dominioId },
+                include: { construcoes: true, tropas: true, personagem: true }
+            });
         });
 
-        return `⚔️ **${quantidade}x ${nomeTropa}** recrutados com sucesso!`;
+        return { log: `⚔️ **${quantidade}x ${nomeTropa}** recrutados com sucesso!`, dominio: dominioAtualizado };
     }
 }
 
