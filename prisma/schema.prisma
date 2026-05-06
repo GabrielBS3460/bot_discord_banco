@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  directUrl = env("DIRECT_URL")
+  url       = env("DATABASE_URL")
 }
 
 generator client {
@@ -273,6 +274,8 @@ model Dominio {
   
   corte           String              @default("Inexistente") 
   popularidade    String              @default("Tolerado") 
+  imposto_atual   String              @default("Médio")
+  conselheiros    Json                @default("[]")
   
   acoes_disponiveis Int               @default(2) 
   mes_ultimo_turno  Int               @default(0) 
