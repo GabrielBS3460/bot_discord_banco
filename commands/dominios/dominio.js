@@ -98,6 +98,10 @@ module.exports = {
                 return `❌ **Etiqueta Insuficiente:** Você falhou em elevar o nível da corte (**${parts[2] || "?"}** vs CD 20).`;
             }
 
+            if (msg === "REVOLTA_POPULAR") return "🔥 **REVOLTA POPULAR!** O povo não suportou mais sua tirania. O tesouro foi saqueado, o domínio perdeu prestígio e a administração entrou em colapso.";
+            if (msg === "QUANTIDADE_INVALIDA") return "❌ **Quantidade Inválida:** Você deve informar um valor numérico positivo.";
+            if (msg === "LIMITE_CORTE_CONSELHO") return "❌ **Corte Limitada:** Sua corte atual não possui espaço para mais conselheiros. Melhore sua corte primeiro.";
+
             if (msg.startsWith("LO_INSUFICIENTE")) return `❌ **Tesouro Vazio:** Você não possui os **${msg.split("_")[2]} LO** necessários no tesouro do domínio.`;
             if (msg.startsWith("T$_INSUFICIENTE")) return `❌ **Saldo Insuficiente:** Você não possui **T$ ${msg.split("_")[2]}** na sua conta pessoal.`;
             if (msg === "SEM_ACOES") return "❌ **Exaustão Administrativa:** Você não possui mais ações de regente disponíveis este mês.";

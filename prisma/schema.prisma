@@ -278,6 +278,7 @@ model Dominio {
   
   acoes_disponiveis Int               @default(2) 
   mes_ultimo_turno  Int               @default(0) 
+  em_revolta        Boolean             @default(false)
   
   tem_agua             Boolean             @default(false)
   tem_elemento_mistico Boolean             @default(false)
