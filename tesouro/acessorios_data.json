@@ -1,0 +1,1168 @@
+{
+    "Acessorios_Menores": [
+        {
+            "faixa": { "min": 1, "max": 1 },
+            "item": "Algibeira mordedora",
+            "valor_compra": 1000,
+            "valor_venda": 333,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 2, "max": 2 },
+            "item": "Elixir da mente dividida",
+            "valor_compra": 1500,
+            "valor_venda": 500,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 3, "max": 3 },
+            "item": "Papiro das estrelas",
+            "valor_compra": 1500,
+            "valor_venda": 500,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 4, "max": 4 },
+            "item": "Anel do sustento",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 5, "max": 7 },
+            "item": "Bainha mágica",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 8, "max": 9 },
+            "item": "Corda da escalada",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Tormenta20",
+            "pagina": 343
+        },
+        {
+            "faixa": { "min": 10, "max": 10 },
+            "item": "Ferraduras da velocidade",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 11, "max": 12 },
+            "item": "Garrafa da fumaça eterna",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 13, "max": 15 },
+            "item": "Gema da luminosidade",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 16, "max": 18 },
+            "item": "Manto élfico",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 19, "max": 21 },
+            "item": "Mochila de carga",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 22, "max": 23 },
+            "item": "Amuleto da visão etérea",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 24, "max": 25 },
+            "item": "Cinturão do trobo",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 26, "max": 27 },
+            "item": "Elixir da eternidade",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 28, "max": 29 },
+            "item": "Pérola da nulificação",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 30, "max": 31 },
+            "item": "Saco dos ventos silenciosos",
+            "valor_compra": 3000,
+            "valor_venda": 1000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 32, "max": 36 },
+            "item": "Brincos da sagacidade",
+            "valor_compra": 4500,
+            "valor_venda": 1500,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 37, "max": 41 },
+            "item": "Luvas da delicadeza",
+            "valor_compra": 4500,
+            "valor_venda": 1500,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 42, "max": 46 },
+            "item": "Manoplas da força do ogro",
+            "valor_compra": 4500,
+            "valor_venda": 1500,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 47, "max": 50 },
+            "item": "Manto da resistência",
+            "valor_compra": 4500,
+            "valor_venda": 1500,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 51, "max": 55 },
+            "item": "Manto do fascínio",
+            "valor_compra": 4500,
+            "valor_venda": 1500,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 56, "max": 60 },
+            "item": "Pingente da sensatez",
+            "valor_compra": 4500,
+            "valor_venda": 1500,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 61, "max": 65 },
+            "item": "Torque do vigor",
+            "valor_compra": 4500,
+            "valor_venda": 1500,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 66, "max": 66 },
+            "item": "Monóculo da franqueza",
+            "valor_compra": 4500,
+            "valor_venda": 1500,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 67, "max": 68 },
+            "item": "Chapéu do disfarce",
+            "valor_compra": 6000,
+            "valor_venda": 2000,
+            "livro": "Tormenta20",
+            "pagina": 343
+        },
+        {
+            "faixa": { "min": 69, "max": 69 },
+            "item": "Flauta fantasma",
+            "valor_compra": 6000,
+            "valor_venda": 2000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 70, "max": 71 },
+            "item": "Lanterna da revelação",
+            "valor_compra": 6000,
+            "valor_venda": 2000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 72, "max": 73 },
+            "item": "Algibeira provedora",
+            "valor_compra": 6000,
+            "valor_venda": 2000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 74, "max": 75 },
+            "item": "Gaiola dos arcanos",
+            "valor_compra": 6000,
+            "valor_venda": 2000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 76, "max": 77 },
+            "item": "Lâmpada da ilusión impecável",
+            "valor_compra": 6000,
+            "valor_venda": 2000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 78, "max": 79 },
+            "item": "Pena da criação",
+            "valor_compra": 6000,
+            "valor_venda": 2000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 80, "max": 81 },
+            "item": "Corda da resignação",
+            "valor_compra": 7500,
+            "valor_venda": 2500,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 82, "max": 86 },
+            "item": "Anel da proteção",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 87, "max": 87 },
+            "item": "Anel do escudo mental",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 88, "max": 88 },
+            "item": "Pingente da saúde",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 89, "max": 89 },
+            "item": "Coroa de flores",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Deuses de Arton",
+            "pagina": 55
+        },
+        {
+            "faixa": { "min": 90, "max": 90 },
+            "item": "Jarro das profundezas",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Deuses de Arton",
+            "pagina": 58
+        },
+        {
+            "faixa": { "min": 91, "max": 91 },
+            "item": "Escrivaninha consagrada",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Deuses de Arton",
+            "pagina": 58
+        },
+        {
+            "faixa": { "min": 92, "max": 92 },
+            "item": "Anel da proteção mental",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 93, "max": 93 },
+            "item": "Berço das fadas",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 94, "max": 94 },
+            "item": "Chapéu dos truques infinitos",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 95, "max": 95 },
+            "item": "Cinto da leveza graciosa",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 96, "max": 96 },
+            "item": "Cristal da voz silenciosa",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 97, "max": 97 },
+            "item": "Cristal do tempo célere",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 98, "max": 98 },
+            "item": "Ocarina da melodia distante",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 99, "max": 99 },
+            "item": "Olhos do corvo",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 100, "max": 100 },
+            "item": "Pergaminho da verdade cósmica",
+            "valor_compra": 9000,
+            "valor_venda": 3000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        }
+    ],
+    "Acessorios_Medios": [
+        {
+            "faixa": { "min": 1, "max": 1 },
+            "item": "Anel de telecinesia",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 2, "max": 2 },
+            "item": "Bola de cristal",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 3, "max": 3 },
+            "item": "Caveira maldita",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Tormenta20",
+            "pagina": 343
+        },
+        {
+            "faixa": { "min": 4, "max": 4 },
+            "item": "Instrumento da alegria",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Deuses de Arton",
+            "pagina": 57
+        },
+        {
+            "faixa": { "min": 5, "max": 5 },
+            "item": "Ampulheta da harmonia temporal",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 6, "max": 6 },
+            "item": "Amuleto do amparo",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 7, "max": 7 },
+            "item": "Caixa dos ecos perdidos",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 8, "max": 8 },
+            "item": "Colar da perseverança",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 9, "max": 9 },
+            "item": "Colar do tirano",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 10, "max": 10 },
+            "item": "Óculos da revelação",
+            "valor_compra": 10500,
+            "valor_venda": 3500,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 11, "max": 11 },
+            "item": "Colar das bolas de fogo",
+            "valor_compra": 12000,
+            "valor_venda": 4000,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 12, "max": 12 },
+            "item": "Sandálias de Valkaria",
+            "valor_compra": 12000,
+            "valor_venda": 4000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 13, "max": 13 },
+            "item": "Véu diáfano",
+            "valor_compra": 13500,
+            "valor_venda": 4500,
+            "livro": "Deuses de Arton",
+            "pagina": 57
+        },
+        {
+            "faixa": { "min": 14, "max": 14 },
+            "item": "Botas aladas",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 15, "max": 15 },
+            "item": "Botas inquietas",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Deuses de Arton",
+            "pagina": 59
+        },
+        {
+            "faixa": { "min": 16, "max": 16 },
+            "item": "Pira póstera",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Deuses de Arton",
+            "pagina": 59
+        },
+        {
+            "faixa": { "min": 17, "max": 17 },
+            "item": "Anel do pacto oneroso",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 18, "max": 18 },
+            "item": "Botas do andarilho das sombras",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 19, "max": 19 },
+            "item": "Cálice das marés",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 20, "max": 20 },
+            "item": "Cinto dos caminhos cruzados",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 21, "max": 21 },
+            "item": "Pedra da passagem",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 22, "max": 22 },
+            "item": "Pingente da dor partilhada",
+            "valor_compra": 15000,
+            "valor_venda": 5000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 23, "max": 26 },
+            "item": "Braceletes de bronze",
+            "valor_compra": 16500,
+            "valor_venda": 5500,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 27, "max": 27 },
+            "item": "Capa nebulosa",
+            "valor_compra": 16500,
+            "valor_venda": 5500,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 28, "max": 28 },
+            "item": "Espelho do outro lado",
+            "valor_compra": 18000,
+            "valor_venda": 6000,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 29, "max": 30 },
+            "item": "Gema da purificação",
+            "valor_compra": 18000,
+            "valor_venda": 6000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 31, "max": 32 },
+            "item": "Máscara da raposa",
+            "valor_compra": 18000,
+            "valor_venda": 6000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 33, "max": 36 },
+            "item": "Anel da energia",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 37, "max": 40 },
+            "item": "Anel da vitalidade",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 41, "max": 42 },
+            "item": "Anel de invisibilidade",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 43, "max": 44 },
+            "item": "Braçadeiras do arqueiro",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 45, "max": 46 },
+            "item": "Brincos de Marah",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 343
+        },
+        {
+            "faixa": { "min": 47, "max": 48 },
+            "item": "Faixas do pugilista",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 49, "max": 50 },
+            "item": "Manto da aranha",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 51, "max": 52 },
+            "item": "Vassoura voadora",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 53, "max": 54 },
+            "item": "Símbolo abençoado",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 55, "max": 55 },
+            "item": "Colar de presas",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Deuses de Arton",
+            "pagina": 57
+        },
+        {
+            "faixa": { "min": 56, "max": 56 },
+            "item": "Vestido noturno",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Deuses de Arton",
+            "pagina": 58
+        },
+        {
+            "faixa": { "min": 57, "max": 57 },
+            "item": "Anel da beleza ilusória",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 58, "max": 58 },
+            "item": "Bastão do sonhador",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 59, "max": 59 },
+            "item": "Colar da fúria monstruosa",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 60, "max": 60 },
+            "item": "Coroa da floresta sussurrante",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 61, "max": 61 },
+            "item": "Espelho da verdade",
+            "valor_compra": 21000,
+            "valor_venda": 7000,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 62, "max": 62 },
+            "item": "Instrumentos da celeridade",
+            "valor_compra": 22500,
+            "valor_venda": 7500,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 63, "max": 63 },
+            "item": "Máscara do predador",
+            "valor_compra": 22500,
+            "valor_venda": 7500,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 64, "max": 65 },
+            "item": "Frigideira do chef anão",
+            "valor_compra": 24000,
+            "valor_venda": 8000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 66, "max": 66 },
+            "item": "Gema da santificação",
+            "valor_compra": 24000,
+            "valor_venda": 8000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 67, "max": 67 },
+            "item": "Cubo armadilha",
+            "valor_compra": 25000,
+            "valor_venda": 8333,
+            "livro": "Deuses de Arton",
+            "pagina": 56
+        },
+        {
+            "faixa": { "min": 68, "max": 68 },
+            "item": "Caldeirão da vida",
+            "valor_compra": 25000,
+            "valor_venda": 8333,
+            "livro": "Deuses de Arton",
+            "pagina": 57
+        },
+        {
+            "faixa": { "min": 69, "max": 72 },
+            "item": "Amuleto da robustez",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 73, "max": 74 },
+            "item": "Botas velozes",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 75, "max": 78 },
+            "item": "Cinto da força do gigante",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Tormenta20",
+            "pagina": 343
+        },
+        {
+            "faixa": { "min": 79, "max": 82 },
+            "item": "Coroa majestosa",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 83, "max": 86 },
+            "item": "Estola da serenidade",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 87, "max": 87 },
+            "item": "Manto do morcego",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 88, "max": 91 },
+            "item": "Pulseiras da celeridade",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 92, "max": 95 },
+            "item": "Tiara da sapiência",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 96, "max": 97 },
+            "item": "Argolas místicas",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Deuses de Arton",
+            "pagina": 59
+        },
+        {
+            "faixa": { "min": 98, "max": 98 },
+            "item": "Bastão da grande harmonia",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 99, "max": 99 },
+            "item": "Coroa da majestade distorcida",
+            "valor_compra": 25500,
+            "valor_venda": 8500,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 100, "max": 100 },
+            "item": "Bracelete do coração vivaz",
+            "valor_compra": 27000,
+            "valor_venda": 9000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        }
+    ],
+    "Acessorios_Maiores": [
+        {
+            "faixa": { "min": 1, "max": 2 },
+            "item": "Elmo do teletransporte",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 3, "max": 4 },
+            "item": "Gema da telepatia",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 5, "max": 6 },
+            "item": "Gema elemental",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 7, "max": 11 },
+            "item": "Manual da saúde corporal",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 12, "max": 16 },
+            "item": "Manual do bom exercício",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 17, "max": 21 },
+            "item": "Manual dos movimentos precisos",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 22, "max": 26 },
+            "item": "Medalhão de Lena",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 27, "max": 31 },
+            "item": "Tomo da compreensão",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 32, "max": 36 },
+            "item": "Tomo da liderança e influência",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 37, "max": 41 },
+            "item": "Tomo dos grandes pensamentos",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 42, "max": 44 },
+            "item": "Anel da chama dançante",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Heróis de Arton",
+            "pagina": 263
+        },
+        {
+            "faixa": { "min": 45, "max": 46 },
+            "item": "Chapéu pensador",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 47, "max": 48 },
+            "item": "Cinto da flecha veloz",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 49, "max": 50 },
+            "item": "Gema da profanação",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Heróis de Arton",
+            "pagina": 266
+        },
+        {
+            "faixa": { "min": 51, "max": 53 },
+            "item": "Tomo da técnica definitiva",
+            "valor_compra": 30000,
+            "valor_venda": 10000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 54, "max": 55 },
+            "item": "Tapeçaria da guerra",
+            "valor_compra": 35000,
+            "valor_venda": 11666,
+            "livro": "Deuses de Arton",
+            "pagina": 55
+        },
+        {
+            "faixa": { "min": 56, "max": 57 },
+            "item": "Braceletes da amizade intensa",
+            "valor_compra": 36000,
+            "valor_venda": 12000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 58, "max": 58 },
+            "item": "Cilício vivo",
+            "valor_compra": 37000,
+            "valor_venda": 12333,
+            "livro": "Deuses de Arton",
+            "pagina": 55
+        },
+        {
+            "faixa": { "min": 59, "max": 59 },
+            "item": "Coração corrompido",
+            "valor_compra": 45000,
+            "valor_venda": 15000,
+            "livro": "Deuses de Arton",
+            "pagina": 55
+        },
+        {
+            "faixa": { "min": 60, "max": 61 },
+            "item": "Coração do inverno",
+            "valor_compra": 45000,
+            "valor_venda": 15000,
+            "livro": "Heróis de Arton",
+            "pagina": 265
+        },
+        {
+            "faixa": { "min": 62, "max": 63 },
+            "item": "Tomo dos companheiros",
+            "valor_compra": 45000,
+            "valor_venda": 15000,
+            "livro": "Heróis de Arton",
+            "pagina": 267
+        },
+        {
+            "faixa": { "min": 64, "max": 65 },
+            "item": "Anel refletor",
+            "valor_compra": 51000,
+            "valor_venda": 17000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 66, "max": 67 },
+            "item": "Cinto do campeão",
+            "valor_compra": 51000,
+            "valor_venda": 17000,
+            "livro": "Tormenta20",
+            "pagina": 343
+        },
+        {
+            "faixa": { "min": 68, "max": 71 },
+            "item": "Colar guardião",
+            "valor_compra": 51000,
+            "valor_venda": 17000,
+            "livro": "Tormenta20",
+            "pagina": 343
+        },
+        {
+            "faixa": { "min": 72, "max": 73 },
+            "item": "Estatueta animista",
+            "valor_compra": 51000,
+            "valor_venda": 17000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 74, "max": 75 },
+            "item": "Anel da liberdade",
+            "valor_compra": 60000,
+            "valor_venda": 20000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 76, "max": 77 },
+            "item": "Tapete voador",
+            "valor_compra": 60000,
+            "valor_venda": 20000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 78, "max": 79 },
+            "item": "Chave dos planos",
+            "valor_compra": 60000,
+            "valor_venda": 20000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 80, "max": 81 },
+            "item": "Cinto da desmaterialização",
+            "valor_compra": 60000,
+            "valor_venda": 20000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 82, "max": 85 },
+            "item": "Braceletes de ouro",
+            "valor_compra": 64500,
+            "valor_venda": 21500,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 86, "max": 87 },
+            "item": "Espelho da oposição",
+            "valor_compra": 75000,
+            "valor_venda": 25000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        },
+        {
+            "faixa": { "min": 88, "max": 91 },
+            "item": "Robe do arquimago",
+            "valor_compra": 90000,
+            "valor_venda": 30000,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 92, "max": 93 },
+            "item": "Ossos dracônicos",
+            "valor_compra": 90000,
+            "valor_venda": 30000,
+            "livro": "Deuses de Arton",
+            "pagina": 56
+        },
+        {
+            "faixa": { "min": 94, "max": 95 },
+            "item": "Orbe das tempestades",
+            "valor_compra": 97500,
+            "valor_venda": 32500,
+            "livro": "Tormenta20",
+            "pagina": 345
+        },
+        {
+            "faixa": { "min": 96, "max": 97 },
+            "item": "Braçadeiras da força do colosso",
+            "valor_compra": 120000,
+            "valor_venda": 40000,
+            "livro": "Heróis de Arton",
+            "pagina": 264
+        },
+        {
+            "faixa": { "min": 98, "max": 99 },
+            "item": "Anel da regeneração",
+            "valor_compra": 150000,
+            "valor_venda": 50000,
+            "livro": "Tormenta20",
+            "pagina": 342
+        },
+        {
+            "faixa": { "min": 100, "max": 100 },
+            "item": "Espelho do aprisionamento",
+            "valor_compra": 150000,
+            "valor_venda": 50000,
+            "livro": "Tormenta20",
+            "pagina": 344
+        }
+    ]
+}

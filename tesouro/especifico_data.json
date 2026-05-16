@@ -1,0 +1,164 @@
+{
+    "Armas_Especificas": [
+        { "faixa": { "min": 1, "max": 2 }, "item": "Adaga da bruma", "livro": "Heróis de Arton", "pagina": 257 },
+        { "faixa": { "min": 3, "max": 3 }, "item": "Adaga ofídica", "livro": "Deuses de Arton", "pagina": 58 },
+        { "faixa": { "min": 4, "max": 4 }, "item": "Adaga sorrateira", "livro": "Deuses de Arton", "pagina": 56 },
+        { "faixa": { "min": 5, "max": 5 }, "item": "Alabarda da coragem", "livro": "Deuses de Arton", "pagina": 57 },
+        { "faixa": { "min": 6, "max": 6 }, "item": "Alfange dourado", "livro": "Deuses de Arton", "pagina": 56 },
+        {
+            "faixa": { "min": 7, "max": 7 },
+            "item": "Alguma coisa de Nimb...",
+            "livro": "Deuses de Arton",
+            "pagina": 58
+        },
+        { "faixa": { "min": 8, "max": 10 }, "item": "Arco das sombras", "livro": "Heróis de Arton", "pagina": 257 },
+        { "faixa": { "min": 11, "max": 12 }, "item": "Arco do crepúsculo", "livro": "Heróis de Arton", "pagina": 257 },
+        { "faixa": { "min": 13, "max": 15 }, "item": "Arco do poder", "livro": "Tormenta20", "pagina": 336 },
+        { "faixa": { "min": 16, "max": 18 }, "item": "Avalanche", "livro": "Tormenta20", "pagina": 337 },
+        { "faixa": { "min": 19, "max": 21 }, "item": "Azagaia dos relâmpagos", "livro": "Tormenta20", "pagina": 337 },
+        { "faixa": { "min": 22, "max": 23 }, "item": "Azagaia fantasma", "livro": "Heróis de Arton", "pagina": 257 },
+        { "faixa": { "min": 24, "max": 26 }, "item": "Besta estelar", "livro": "Heróis de Arton", "pagina": 257 },
+        { "faixa": { "min": 27, "max": 29 }, "item": "Besta explosiva", "livro": "Tormenta20", "pagina": 337 },
+        { "faixa": { "min": 30, "max": 30 }, "item": "Bordão sabichão", "livro": "Deuses de Arton", "pagina": 58 },
+        { "faixa": { "min": 31, "max": 31 }, "item": "Cajado das matas", "livro": "Deuses de Arton", "pagina": 55 },
+        { "faixa": { "min": 32, "max": 32 }, "item": "Cimitarra solar", "livro": "Deuses de Arton", "pagina": 56 },
+        { "faixa": { "min": 33, "max": 34 }, "item": "Clava de lava", "livro": "Heróis de Arton", "pagina": 257 },
+        { "faixa": { "min": 35, "max": 37 }, "item": "Espada baronial", "livro": "Tormenta20", "pagina": 337 },
+        {
+            "faixa": { "min": 38, "max": 39 },
+            "item": "Espada da tempestade",
+            "livro": "Heróis de Arton",
+            "pagina": 257
+        },
+        { "faixa": { "min": 40, "max": 42 }, "item": "Espada do guardião", "livro": "Heróis de Arton", "pagina": 257 },
+        { "faixa": { "min": 43, "max": 43 }, "item": "Espada imaculada", "livro": "Deuses de Arton", "pagina": 59 },
+        { "faixa": { "min": 44, "max": 44 }, "item": "Espada monástica", "livro": "Deuses de Arton", "pagina": 57 },
+        { "faixa": { "min": 45, "max": 46 }, "item": "Espada solar", "livro": "Heróis de Arton", "pagina": 257 },
+        { "faixa": { "min": 47, "max": 49 }, "item": "Espada sortuda", "livro": "Tormenta20", "pagina": 337 },
+        { "faixa": { "min": 50, "max": 51 }, "item": "Florete do vendaval", "livro": "Heróis de Arton", "pagina": 258 },
+        { "faixa": { "min": 52, "max": 54 }, "item": "Florete fugaz", "livro": "Tormenta20", "pagina": 337 },
+        {
+            "faixa": { "min": 55, "max": 55 },
+            "item": "Katana da determinação",
+            "livro": "Deuses de Arton",
+            "pagina": 57
+        },
+        { "faixa": { "min": 56, "max": 58 }, "item": "Lâmina da luz", "livro": "Tormenta20", "pagina": 338 },
+        { "faixa": { "min": 59, "max": 61 }, "item": "Lança animalesca", "livro": "Tormenta20", "pagina": 338 },
+        { "faixa": { "min": 62, "max": 62 }, "item": "Lança da dominação", "livro": "Deuses de Arton", "pagina": 56 },
+        { "faixa": { "min": 63, "max": 64 }, "item": "Lança da fênix", "livro": "Heróis de Arton", "pagina": 258 },
+        { "faixa": { "min": 65, "max": 67 }, "item": "Língua do deserto", "livro": "Tormenta20", "pagina": 338 },
+        { "faixa": { "min": 68, "max": 70 }, "item": "Maça do terror", "livro": "Tormenta20", "pagina": 338 },
+        { "faixa": { "min": 71, "max": 71 }, "item": "Maça monstruosa", "livro": "Deuses de Arton", "pagina": 58 },
+        { "faixa": { "min": 72, "max": 72 }, "item": "Machado da bravura", "livro": "Deuses de Arton", "pagina": 55 },
+        { "faixa": { "min": 73, "max": 74 }, "item": "Machado da natureza", "livro": "Heróis de Arton", "pagina": 258 },
+        { "faixa": { "min": 75, "max": 76 }, "item": "Machado do abismo", "livro": "Heróis de Arton", "pagina": 258 },
+        { "faixa": { "min": 77, "max": 79 }, "item": "Machado do vulcão", "livro": "Heróis de Arton", "pagina": 258 },
+        { "faixa": { "min": 80, "max": 80 }, "item": "Machado lamnoriano", "livro": "Deuses de Arton", "pagina": 59 },
+        { "faixa": { "min": 81, "max": 83 }, "item": "Machado silvestre", "livro": "Tormenta20", "pagina": 338 },
+        { "faixa": { "min": 84, "max": 84 }, "item": "Mangual aventureiro", "livro": "Deuses de Arton", "pagina": 59 },
+        { "faixa": { "min": 85, "max": 86 }, "item": "Martelo da terra", "livro": "Heróis de Arton", "pagina": 258 },
+        { "faixa": { "min": 87, "max": 89 }, "item": "Martelo de Doherimm", "livro": "Tormenta20", "pagina": 338 },
+        { "faixa": { "min": 90, "max": 91 }, "item": "Martelo do titã", "livro": "Heróis de Arton", "pagina": 258 },
+        {
+            "faixa": { "min": 92, "max": 93 },
+            "item": "Punhal das profundezas",
+            "livro": "Heróis de Arton",
+            "pagina": 258
+        },
+        { "faixa": { "min": 94, "max": 96 }, "item": "Punhal sszzaazita", "livro": "Tormenta20", "pagina": 338 },
+        { "faixa": { "min": 97, "max": 97 }, "item": "Tridente aquoso", "livro": "Deuses de Arton", "pagina": 58 },
+        { "faixa": { "min": 98, "max": 100 }, "item": "Vingadora sagrada", "livro": "Tormenta20", "pagina": 338 }
+    ],
+    "Armaduras_Escudos_Especificos": [
+        { "faixa": { "min": 1, "max": 4 }, "item": "Armadura da luz", "livro": "Tormenta20", "pagina": 340 },
+        {
+            "faixa": { "min": 5, "max": 8 },
+            "item": "Armadura das sombras profundas",
+            "livro": "Heróis de Arton",
+            "pagina": 259
+        },
+        {
+            "faixa": { "min": 9, "max": 12 },
+            "item": "Armadura do dragão ancião",
+            "livro": "Heróis de Arton",
+            "pagina": 259
+        },
+        {
+            "faixa": { "min": 13, "max": 16 },
+            "item": "Armadura do inverno perene",
+            "livro": "Heróis de Arton",
+            "pagina": 259
+        },
+        {
+            "faixa": { "min": 17, "max": 18 },
+            "item": "Armadura do julgamento",
+            "livro": "Deuses de Arton",
+            "pagina": 57
+        },
+        { "faixa": { "min": 19, "max": 22 }, "item": "Baluarte anão", "livro": "Tormenta20", "pagina": 340 },
+        { "faixa": { "min": 23, "max": 26 }, "item": "Carapaça demoníaca", "livro": "Tormenta20", "pagina": 340 },
+        {
+            "faixa": { "min": 27, "max": 30 },
+            "item": "Cota da serpente marinha",
+            "livro": "Heróis de Arton",
+            "pagina": 259
+        },
+        { "faixa": { "min": 31, "max": 40 }, "item": "Cota élfica", "livro": "Tormenta20", "pagina": 340 },
+        { "faixa": { "min": 41, "max": 44 }, "item": "Couraça do comando", "livro": "Tormenta20", "pagina": 340 },
+        {
+            "faixa": { "min": 45, "max": 48 },
+            "item": "Couraça do guardião celeste",
+            "livro": "Heróis de Arton",
+            "pagina": 259
+        },
+        { "faixa": { "min": 49, "max": 52 }, "item": "Couro de monstro", "livro": "Tormenta20", "pagina": 340 },
+        {
+            "faixa": { "min": 53, "max": 56 },
+            "item": "Escudo da ira vulcânica",
+            "livro": "Heróis de Arton",
+            "pagina": 260
+        },
+        {
+            "faixa": { "min": 57, "max": 60 },
+            "item": "Escudo da luz estelar",
+            "livro": "Heróis de Arton",
+            "pagina": 260
+        },
+        {
+            "faixa": { "min": 61, "max": 64 },
+            "item": "Escudo da natureza viva",
+            "livro": "Heróis de Arton",
+            "pagina": 260
+        },
+        { "faixa": { "min": 65, "max": 68 }, "item": "Escudo de Azgher", "livro": "Tormenta20", "pagina": 340 },
+        { "faixa": { "min": 69, "max": 72 }, "item": "Escudo do conjurador", "livro": "Tormenta20", "pagina": 340 },
+        { "faixa": { "min": 73, "max": 76 }, "item": "Escudo do eclipse", "livro": "Tormenta20", "pagina": 340 },
+        { "faixa": { "min": 77, "max": 80 }, "item": "Escudo do grifo", "livro": "Heróis de Arton", "pagina": 260 },
+        { "faixa": { "min": 81, "max": 86 }, "item": "Escudo do leão", "livro": "Tormenta20", "pagina": 340 },
+        { "faixa": { "min": 87, "max": 90 }, "item": "Escudo do trovão", "livro": "Heróis de Arton", "pagina": 260 },
+        { "faixa": { "min": 91, "max": 94 }, "item": "Escudo espinhoso", "livro": "Tormenta20", "pagina": 340 },
+        { "faixa": { "min": 95, "max": 98 }, "item": "Loriga do centurião", "livro": "Tormenta20", "pagina": 340 },
+        { "faixa": { "min": 99, "max": 100 }, "item": "Manto da noite", "livro": "Tormenta20", "pagina": 340 }
+    ],
+    "Esotericos_Especificos": [
+        { "faixa": { "min": 1, "max": 20 }, "item": "Cajado da destruição", "livro": "Tormenta20", "pagina": 337 },
+        { "faixa": { "min": 21, "max": 40 }, "item": "Cajado da vida", "livro": "Tormenta20", "pagina": 337 },
+        { "faixa": { "min": 41, "max": 45 }, "item": "Cajado das marés", "livro": "Heróis de Arton", "pagina": 262 },
+        { "faixa": { "min": 46, "max": 60 }, "item": "Cajado do poder", "livro": "Tormenta20", "pagina": 337 },
+        { "faixa": { "min": 61, "max": 75 }, "item": "Cálice sagrado", "livro": "Heróis de Arton", "pagina": 262 },
+        {
+            "faixa": { "min": 76, "max": 85 },
+            "item": "Relógio do arcanista",
+            "livro": "Heróis de Arton",
+            "pagina": 262
+        },
+        {
+            "faixa": { "min": 86, "max": 95 },
+            "item": "Varinha da generosidade",
+            "livro": "Deuses de Arton",
+            "pagina": 59
+        },
+        { "faixa": { "min": 96, "max": 100 }, "item": "Varinha milenar", "livro": "Heróis de Arton", "pagina": 262 }
+    ]
+}
