@@ -96,6 +96,11 @@ module.exports = {
                 .setEmoji("📅")
                 .setStyle(ButtonStyle.Primary),
             new ButtonBuilder()
+                .setCustomId("help_tesouro")
+                .setLabel("Tesouro")
+                .setEmoji("💎")
+                .setStyle(ButtonStyle.Primary),
+            new ButtonBuilder()
                 .setCustomId("help_mestre")
                 .setLabel("Mestre")
                 .setEmoji("👑")
