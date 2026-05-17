@@ -214,58 +214,72 @@ module.exports = {
     async executarItens(interaction) {
         const valor = interaction.options.getString("valor");
         const bonus = interaction.options.getInteger("bonus") || 0;
-        const { titulo } = await TesouroService.gerarItens(valor, bonus);
-        return this.responderEmbed(interaction, titulo);
+        const { title, dHundredRollText, resultTitle, resultText, itemTypeText } = await TesouroService.gerarItens(
+            valor,
+            bonus
+        );
+
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText });
+
+        if (itemTypeText !== "") {
+            embed.setFooter({ text: itemTypeText });
+        }
+
+        return interaction.reply({ embeds: [embed] });
     },
 
     async executarRiquezas(interaction) {
         const tipo = interaction.options.getString("tipo");
-        const { titulo } = TesouroService.gerarRiquezas(tipo);
-        return this.responderEmbed(interaction, titulo);
+        const { title } = TesouroService.gerarRiquezas(tipo);
+        return this.responderEmbed(interaction, title);
     },
 
     async executarItemDiverso(interaction) {
-        const { titulo } = TesouroService.gerarItemDiverso();
-        return this.responderEmbed(interaction, titulo);
+        const { title } = TesouroService.gerarItemDiverso();
+        return this.responderEmbed(interaction, title);
     },
 
     async executarEquipamento(interaction) {
         const tipo = interaction.options.getString("tipo");
-        const { titulo } = TesouroService.gerarEquipamento(tipo);
-        return this.responderEmbed(interaction, titulo);
+        const { title } = TesouroService.gerarEquipamento(tipo);
+        return this.responderEmbed(interaction, title);
     },
 
     async executarPocao(interaction) {
-        const { titulo } = TesouroService.gerarPocao();
-        return this.responderEmbed(interaction, titulo);
+        const { title } = TesouroService.gerarPocao();
+        return this.responderEmbed(interaction, title);
     },
 
     async executarMelhoria(interaction) {
         const tipo = interaction.options.getString("tipo");
-        const { titulo } = TesouroService.gerarMelhoria(tipo);
-        return this.responderEmbed(interaction, titulo);
+        const { title } = TesouroService.gerarMelhoria(tipo);
+        return this.responderEmbed(interaction, title);
     },
 
     async executarEncanto(interaction) {
         const tipo = interaction.options.getString("tipo");
-        const { titulo } = TesouroService.gerarEncanto(tipo);
-        return this.responderEmbed(interaction, titulo);
+        const { title } = TesouroService.gerarEncanto(tipo);
+        return this.responderEmbed(interaction, title);
     },
 
     async executarItemEspecifico(interaction) {
         const tipo = interaction.options.getString("tipo");
-        const { titulo } = TesouroService.gerarItemEspecifico(tipo);
-        return this.responderEmbed(interaction, titulo);
+        const { title } = TesouroService.gerarItemEspecifico(tipo);
+        return this.responderEmbed(interaction, title);
     },
 
     async executarAcessorio(interaction) {
         const nivel = interaction.options.getString("nivel");
-        const { titulo } = TesouroService.gerarAcessorio(nivel);
-        return this.responderEmbed(interaction, titulo);
+        const { title } = TesouroService.gerarAcessorio(nivel);
+        return this.responderEmbed(interaction, title);
     },
 
-    async responderEmbed(interaction, titulo) {
-        const embed = new EmbedBuilder().setTitle(titulo);
+    async responderEmbed(interaction, title) {
+        const embed = new EmbedBuilder().setTitle(title);
 
         return interaction.reply({ embeds: [embed] });
     }

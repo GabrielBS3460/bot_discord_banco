@@ -1,5 +1,6 @@
 const fs = require("fs/promises");
 const path = require("path");
+const { text } = require("stream/consumers");
 
 class TesouroService {
     #rollDHundred() {
@@ -31,6 +32,35 @@ class TesouroService {
         return data.find(item => dHundredRollWithBonus >= item.faixa.min && dHundredRollWithBonus <= item.faixa.max);
     }
 
+    #getEquipmentTypeText(roll) {
+        return roll <= 3 ? "[Arma]" : roll <= 5 ? "[Armadura]" : "[Esotérico]";
+    }
+
+    #getMagicItemTypeText(roll) {
+        return roll <= 2 ? "[Arma]" : roll === 3 ? "[Armadura]" : roll === 4 ? "[Esotérico]" : "[Acessório]";
+    }
+
+    #getItemTypeText(item) {
+        const isEquipment = ["Equipamento", "Superior"].includes(item.categoria);
+        const isMagic = item.categoria === "Mágico";
+        if (!isEquipment && !isMagic) return "";
+
+        const getTypeText = isEquipment ? this.#getEquipmentTypeText : this.#getMagicItemTypeText;
+        const firstTypeText = getTypeText.call(this, this.#rollNdXpY("1d6").total);
+        if (!item.duas_rolagens) return firstTypeText;
+
+        const secondTypeText = getTypeText.call(this, this.#rollNdXpY("1d6").total);
+        return secondTypeText !== firstTypeText ? `${firstTypeText} ou ${secondTypeText}` : firstTypeText;
+    }
+
+    #buildRollMeta(dHundredRoll, bonus, faixa) {
+        const bonusText = bonus ? (bonus > 0 ? ` + ${bonus}` : ` - ${Math.abs(bonus)}`) : "";
+        const dHundredRollText = `\` ${dHundredRoll + bonus} \` ⟵ [${dHundredRoll}] 1d100${bonusText}`;
+        const resultTitle = `Resultado (${faixa.min} - ${faixa.max})`;
+
+        return { bonusText, dHundredRollText, resultTitle };
+    }
+
     async gerarDinheiro(value = "?", bonus = 0) {
         const filePath = path.join(__dirname, "../data/tesouroData/dinheiro_item_data.json");
         const jsonData = await fs.readFile(filePath, "utf-8");
@@ -42,11 +72,9 @@ class TesouroService {
         console.log(JSON.stringify(result));
 
         const title = `Dinheiro ND ${value}`;
-        const bonusText = bonus ? (bonus > 0 ? ` + ${bonus}` : ` - ${Math.abs(bonus)}`) : "";
-        const dHundredRollText = `\` ${dHundredRoll + bonus} \` ⟵ [${dHundredRoll}] 1d100${bonusText}`;
-        const resultTitle = `Resultado (${result.faixa.min} - ${result.faixa.max})`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, bonus, result.faixa);
 
-        if (result.recompensa === null) {
+        if (result.recompensa === null || !result.recompensa) {
             return {
                 title: title,
                 dHundredRollText: dHundredRollText,
@@ -55,14 +83,18 @@ class TesouroService {
             };
         }
 
-        const quantity = result.recompensa.dados;
-        const quantitylRoll = this.#rollNdXpY(quantity).total;
+        let quantityRoll = 1;
+        if (result.recompensa.dados && result.recompensa.dados.includes("d")) {
+            console.log("Rolando quantidade com base em:", result.recompensa.dados);
+            const quantity = result.recompensa.dados;
+            quantityRoll = this.#rollNdXpY(quantity).total;
+        }
 
         let resultText;
         if (["TC", "T$", "TO"].includes(result.recompensa.tipo)) {
-            resultText = `${result.recompensa.tipo} \` ${quantitylRoll} \`x${result.recompensa.multiplicador} = ${result.recompensa.tipo}${quantitylRoll * result.recompensa.multiplicador}`;
+            resultText = `${result.recompensa.tipo} \` ${quantityRoll} \`x${result.recompensa.multiplicador} = ${result.recompensa.tipo}${quantityRoll * result.recompensa.multiplicador}`;
         } else {
-            resultText = `**${quantitylRoll}**x ${result.recompensa.tipo} ${result.recompensa.porcentagem_extra ? `+%` : ""}`;
+            resultText = `**${quantityRoll}**x ${result.recompensa.tipo} ${result.recompensa.porcentagem_extra ? `+%` : ""}`;
         }
 
         return { title, dHundredRollText, resultTitle, resultText };
@@ -77,39 +109,69 @@ class TesouroService {
         const result = this.#getRangeByRoll(data, dHundredRoll, bonus);
 
         console.log(JSON.stringify(result));
-        return { titulo: value ? `Itens ${value}` : "Itens" };
+
+        const title = `Itens ND ${value}`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, bonus, result.faixa);
+
+        if (result.item === null || !result.item) {
+            return {
+                title: title,
+                dHundredRollText: dHundredRollText,
+                resultTitle: resultTitle,
+                resultText: "Nenhum item encontrado.",
+                itemTypeText: ""
+            };
+        }
+
+        let quantityText = "**1**x ";
+        if (result.item.dados && result.item.dados.includes("d")) {
+            const quantity = result.item.dados;
+            const quantityRoll = this.#rollNdXpY(quantity).total;
+            quantityText = `**${quantityRoll}**x `;
+        }
+
+        let resultText = `${quantityText}${result.item.categoria}`;
+        if (result.item.categoria === "Superior")
+            resultText += ` (${result.item.melhorias} ${"melhoria" + (result.item.melhorias > 1 ? "s" : "")})`;
+        if (result.item.categoria === "Mágico") resultText += ` (${result.item.raridade})`;
+
+        resultText += `${result.item.porcentagem_extra ? ` +%` : ""}${result.item.duas_rolagens ? ` 2D` : ""}`;
+
+        const itemTypeText = this.#getItemTypeText(result.item);
+
+        return { title, dHundredRollText, resultTitle, resultText, itemTypeText };
     }
 
     gerarRiquezas(tipo) {
-        return { titulo: this.criarTitulo("Riquezas", { tamanho: tipo }) };
+        return { title: this.criarTitulo("Riquezas", { tamanho: tipo }) };
     }
 
     gerarItemDiverso() {
-        return { titulo: "Item Diverso" };
+        return { title: "Item Diverso" };
     }
 
     gerarEquipamento(tipo) {
-        return { titulo: this.criarTitulo("Equipamento", { equipamento: tipo }) };
+        return { title: this.criarTitulo("Equipamento", { equipamento: tipo }) };
     }
 
     gerarPocao() {
-        return { titulo: "Pocao" };
+        return { title: "Pocao" };
     }
 
     gerarMelhoria(tipo) {
-        return { titulo: this.criarTitulo("Melhoria", { equipamento: tipo }) };
+        return { title: this.criarTitulo("Melhoria", { equipamento: tipo }) };
     }
 
     gerarEncanto(tipo) {
-        return { titulo: this.criarTitulo("Encanto", { equipamento: tipo }) };
+        return { title: this.criarTitulo("Encanto", { equipamento: tipo }) };
     }
 
     gerarItemEspecifico(tipo) {
-        return { titulo: this.criarTitulo("Item Especifico", { equipamento: tipo }) };
+        return { title: this.criarTitulo("Item Especifico", { equipamento: tipo }) };
     }
 
     gerarAcessorio(nivel) {
-        return { titulo: this.criarTitulo("Acessorio", { tamanho: nivel }) };
+        return { title: this.criarTitulo("Acessorio", { tamanho: nivel }) };
     }
 
     criarTitulo(base, { tamanho, equipamento } = {}) {
