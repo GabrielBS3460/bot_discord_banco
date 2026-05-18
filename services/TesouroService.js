@@ -142,16 +142,73 @@ class TesouroService {
         return { title, dHundredRollText, resultTitle, resultText, itemTypeText };
     }
 
-    gerarRiquezas(tipo) {
-        return { title: this.criarTitulo("Riquezas", { tamanho: tipo }) };
+    async gerarRiquezas(type, bonus = 0) {
+        const filePath = path.join(__dirname, "../data/tesouroData/riqueza_data.json");
+        const jsonData = await fs.readFile(filePath, "utf-8");
+        const data = JSON.parse(jsonData)[type];
+
+        const dHundredRoll = this.#rollDHundred();
+        const result = this.#getRangeByRoll(data, dHundredRoll, bonus ? 20 : 0);
+
+        console.log(JSON.stringify(result));
+
+        const title = `Riqueza ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, bonus ? 20 : 0, result.faixa);
+
+        const riquezaRoll = this.#rollNdXpY(result.recompensa.dados).total;
+
+        const resultText = `K$\` ${riquezaRoll} \`x${result.recompensa.multiplicador} = K$${riquezaRoll * result.recompensa.multiplicador}`;
+
+        return {
+            title: title,
+            dHundredRollText: dHundredRollText,
+            resultTitle: `Resultado`,
+            resultText: resultText
+        };
     }
 
-    gerarItemDiverso() {
-        return { title: "Item Diverso" };
+    async gerarItemDiverso() {
+        const filePath = path.join(__dirname, "../data/tesouroData/item_diverso_data.json");
+        const jsonData = await fs.readFile(filePath, "utf-8");
+        const data = JSON.parse(jsonData);
+
+        const dHundredRoll = this.#rollDHundred();
+        const result = this.#getRangeByRoll(data, dHundredRoll, 0);
+
+        const title = `Item Diverso`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, 0, result.faixa);
+        const resultText = `${result.item}`;
+        const footerText = `${result.livro} - Página ${result.pagina}`;
+
+        return {
+            title: title,
+            dHundredRollText: dHundredRollText,
+            resultTitle: `Resultado`,
+            resultText: resultText,
+            footerText: footerText
+        };
     }
 
-    gerarEquipamento(tipo) {
-        return { title: this.criarTitulo("Equipamento", { equipamento: tipo }) };
+    async gerarEquipamento(type) {
+        const filePath = path.join(__dirname, "../data/tesouroData/equipamentos_data.json");
+        const jsonData = await fs.readFile(filePath, "utf-8");
+        const data = JSON.parse(jsonData)[type];
+
+        const dHundredRoll = this.#rollDHundred();
+        const result = this.#getRangeByRoll(data, dHundredRoll, 0);
+
+        const title = `Equipamento`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, 0, result.faixa);
+        const resultText = `${result.item}`;
+        const footerText = `${result.livro} - Página ${result.pagina}`;
+
+        return {
+            title: title,
+            dHundredRollText: dHundredRollText,
+            resultTitle: `Resultado`,
+            resultText: resultText,
+            footerText: footerText
+        };
     }
 
     gerarPocao() {

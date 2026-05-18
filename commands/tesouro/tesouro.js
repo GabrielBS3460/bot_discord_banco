@@ -88,10 +88,11 @@ module.exports = {
                         .setRequired(true)
                         .addChoices(
                             { name: "Menor", value: "menor" },
-                            { name: "Medio", value: "medio" },
+                            { name: "Média", value: "media" },
                             { name: "Maior", value: "maior" }
                         )
                 )
+                .addBooleanOption(option => option.setName("bonus").setDescription("Bonus de +20% no d100"))
         )
         .addSubcommand(sub => sub.setName("item_diverso").setDescription("Gera um item diverso."))
         .addSubcommand(sub =>
@@ -104,9 +105,9 @@ module.exports = {
                         .setDescription("Tipo de equipamento")
                         .setRequired(true)
                         .addChoices(
-                            { name: "Arma", value: "arma" },
-                            { name: "Armadura e Escudo", value: "armadura_escudo" },
-                            { name: "Esoterico", value: "esoterico" }
+                            { name: "Arma", value: "armas" },
+                            { name: "Armadura e Escudo", value: "armaduras_e_escudos" },
+                            { name: "Esoterico", value: "esotericos" }
                         )
                 )
         )
@@ -233,48 +234,74 @@ module.exports = {
     },
 
     async executarRiquezas(interaction) {
-        const tipo = interaction.options.getString("tipo");
-        const { title } = TesouroService.gerarRiquezas(tipo);
-        return this.responderEmbed(interaction, title);
+        const type = interaction.options.getString("tipo");
+        const bonus = interaction.options.getBoolean("bonus");
+        const { title, dHundredRollText, resultTitle, resultText } = await TesouroService.gerarRiquezas(type, bonus);
+
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText });
+
+        return interaction.reply({ embeds: [embed] });
     },
 
     async executarItemDiverso(interaction) {
-        const { title } = TesouroService.gerarItemDiverso();
-        return this.responderEmbed(interaction, title);
+        const { title, dHundredRollText, resultTitle, resultText, footerText } =
+            await TesouroService.gerarItemDiverso();
+
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText })
+            .setFooter({ text: footerText });
+
+        return interaction.reply({ embeds: [embed] });
     },
 
     async executarEquipamento(interaction) {
-        const tipo = interaction.options.getString("tipo");
-        const { title } = TesouroService.gerarEquipamento(tipo);
-        return this.responderEmbed(interaction, title);
+        const type = interaction.options.getString("tipo");
+        const { title, dHundredRollText, resultTitle, resultText, footerText } =
+            await TesouroService.gerarEquipamento(type);
+
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText })
+            .setFooter({ text: footerText });
+
+        return interaction.reply({ embeds: [embed] });
     },
 
     async executarPocao(interaction) {
-        const { title } = TesouroService.gerarPocao();
+        const { title } = await TesouroService.gerarPocao();
         return this.responderEmbed(interaction, title);
     },
 
     async executarMelhoria(interaction) {
         const tipo = interaction.options.getString("tipo");
-        const { title } = TesouroService.gerarMelhoria(tipo);
+        const { title } = await TesouroService.gerarMelhoria(tipo);
         return this.responderEmbed(interaction, title);
     },
 
     async executarEncanto(interaction) {
         const tipo = interaction.options.getString("tipo");
-        const { title } = TesouroService.gerarEncanto(tipo);
+        const { title } = await TesouroService.gerarEncanto(tipo);
         return this.responderEmbed(interaction, title);
     },
 
     async executarItemEspecifico(interaction) {
         const tipo = interaction.options.getString("tipo");
-        const { title } = TesouroService.gerarItemEspecifico(tipo);
+        const { title } = await TesouroService.gerarItemEspecifico(tipo);
         return this.responderEmbed(interaction, title);
     },
 
     async executarAcessorio(interaction) {
         const nivel = interaction.options.getString("nivel");
-        const { title } = TesouroService.gerarAcessorio(nivel);
+        const { title } = await TesouroService.gerarAcessorio(nivel);
         return this.responderEmbed(interaction, title);
     },
 

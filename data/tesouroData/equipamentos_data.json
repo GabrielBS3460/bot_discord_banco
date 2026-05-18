@@ -1,5 +1,5 @@
 {
-    "Armas": [
+    "armas": [
         { "faixa": { "min": 1, "max": 1 }, "item": "Açoite finntroll", "livro": "Ameaças de Arton", "pagina": 392 },
         { "faixa": { "min": 2, "max": 2 }, "item": "Adaga", "livro": "Tormenta20", "pagina": 146 },
         { "faixa": { "min": 3, "max": 3 }, "item": "Adaga oposta", "livro": "Heróis de Arton", "pagina": 216 },
@@ -106,7 +106,7 @@
         { "faixa": { "min": 99, "max": 99 }, "item": "Virotes (20)", "livro": "Tormenta20", "pagina": 151 },
         { "faixa": { "min": 100, "max": 100 }, "item": "Zarabatana", "livro": "Ameaças de Arton", "pagina": 394 }
     ],
-    "Armaduras_e_Escudos": [
+    "armaduras_e_escudos": [
         { "faixa": { "min": 1, "max": 2 }, "item": "Armadura de chumbo", "livro": "Heróis de Arton", "pagina": 223 },
         {
             "faixa": { "min": 3, "max": 4 },
@@ -135,11 +135,11 @@
         { "faixa": { "min": 21, "max": 22 }, "item": "Broquel", "livro": "Heróis de Arton", "pagina": 224 },
         { "faixa": { "min": 23, "max": 26 }, "item": "Brunea", "livro": "Tormenta20", "pagina": 154 },
         { "faixa": { "min": 27, "max": 28 }, "item": "Colete fora da lei", "livro": "Heróis de Arton", "pagina": 226 },
-        { "faixa": { "min": 29, "max": 38 }, "item": "Completa", "livro": "Tormenta20", "pagina": 154 },
+        { "faixa": { "min": 29, "max": 38 }, "item": "Armadura Completa", "livro": "Tormenta20", "pagina": 154 },
         { "faixa": { "min": 39, "max": 42 }, "item": "Cota de malha", "livro": "Tormenta20", "pagina": 154 },
         { "faixa": { "min": 43, "max": 44 }, "item": "Cota de moedas", "livro": "Heróis de Arton", "pagina": 226 },
         { "faixa": { "min": 45, "max": 54 }, "item": "Couraça", "livro": "Tormenta20", "pagina": 154 },
-        { "faixa": { "min": 55, "max": 58 }, "item": "Couro", "livro": "Tormenta20", "pagina": 154 },
+        { "faixa": { "min": 55, "max": 58 }, "item": "Armadura de Couro", "livro": "Tormenta20", "pagina": 154 },
         { "faixa": { "min": 59, "max": 64 }, "item": "Couro batido", "livro": "Tormenta20", "pagina": 154 },
         { "faixa": { "min": 65, "max": 65 }, "item": "Escudo de couro", "livro": "Ameaças de Arton", "pagina": 395 },
         { "faixa": { "min": 66, "max": 66 }, "item": "Escudo de vime", "livro": "Heróis de Arton", "pagina": 226 },
@@ -157,7 +157,7 @@
             "pagina": 395
         }
     ],
-    "Esotericos": [
+    "esotericos": [
         { "faixa": { "min": 1, "max": 3 }, "item": "Afiador solar", "livro": "Deuses de Arton", "pagina": 51 },
         { "faixa": { "min": 4, "max": 6 }, "item": "Ankh solar", "livro": "Ameaças de Arton", "pagina": 396 },
         { "faixa": { "min": 7, "max": 10 }, "item": "Báculo da retribuição", "livro": "Deuses de Arton", "pagina": 51 },
