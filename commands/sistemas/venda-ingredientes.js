@@ -157,7 +157,7 @@ module.exports = {
 
                     const confirmCollector = ofertaMsg.createMessageComponentCollector({
                         filter: btn => btn.user.id === compradorUser.id || btn.user.id === interaction.user.id,
-                        time: 120000
+                        time: 1200000
                     });
 
                     confirmCollector.on("collect", async iBtn => {

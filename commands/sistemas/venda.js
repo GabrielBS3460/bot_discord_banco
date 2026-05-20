@@ -127,7 +127,7 @@ module.exports = {
 
             const collectorMenu = msgMenu.createMessageComponentCollector({
                 filter: i => i.user.id === vendedorUser.id,
-                time: 60000
+                time: 600000
             });
 
             collectorMenu.on("collect", async iSelect => {
