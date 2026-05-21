@@ -1,5 +1,5 @@
 {
-    "Armas_Especificas": [
+    "armas": [
         { "faixa": { "min": 1, "max": 2 }, "item": "Adaga da bruma", "livro": "Heróis de Arton", "pagina": 257 },
         { "faixa": { "min": 3, "max": 3 }, "item": "Adaga ofídica", "livro": "Deuses de Arton", "pagina": 58 },
         { "faixa": { "min": 4, "max": 4 }, "item": "Adaga sorrateira", "livro": "Deuses de Arton", "pagina": 56 },
@@ -70,7 +70,7 @@
         { "faixa": { "min": 97, "max": 97 }, "item": "Tridente aquoso", "livro": "Deuses de Arton", "pagina": 58 },
         { "faixa": { "min": 98, "max": 100 }, "item": "Vingadora sagrada", "livro": "Tormenta20", "pagina": 338 }
     ],
-    "Armaduras_Escudos_Especificos": [
+    "armaduras_e_escudos": [
         { "faixa": { "min": 1, "max": 4 }, "item": "Armadura da luz", "livro": "Tormenta20", "pagina": 340 },
         {
             "faixa": { "min": 5, "max": 8 },
@@ -141,7 +141,7 @@
         { "faixa": { "min": 95, "max": 98 }, "item": "Loriga do centurião", "livro": "Tormenta20", "pagina": 340 },
         { "faixa": { "min": 99, "max": 100 }, "item": "Manto da noite", "livro": "Tormenta20", "pagina": 340 }
     ],
-    "Esotericos_Especificos": [
+    "esotericos": [
         { "faixa": { "min": 1, "max": 20 }, "item": "Cajado da destruição", "livro": "Tormenta20", "pagina": 337 },
         { "faixa": { "min": 21, "max": 40 }, "item": "Cajado da vida", "livro": "Tormenta20", "pagina": 337 },
         { "faixa": { "min": 41, "max": 45 }, "item": "Cajado das marés", "livro": "Heróis de Arton", "pagina": 262 },

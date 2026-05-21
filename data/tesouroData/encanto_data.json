@@ -1,5 +1,5 @@
 {
-    "Encantos_de_Arma": [
+    "armas": [
         { "faixa": { "min": 1, "max": 1 }, "item": "Alvorada", "livro": "Heróis de Arton", "pagina": 256 },
         { "faixa": { "min": 2, "max": 5 }, "item": "Ameaçadora", "livro": "Tormenta20", "pagina": 335 },
         { "faixa": { "min": 6, "max": 6 }, "item": "Anátema", "livro": "Heróis de Arton", "pagina": 256 },
@@ -52,12 +52,12 @@
         { "faixa": { "min": 90, "max": 90 }, "item": "Venenosa", "livro": "Tormenta20", "pagina": 336 },
         {
             "faixa": { "min": 91, "max": 100 },
-            "item": "Arma específica (Role na tabela abaixo)",
+            "item": "Arma específica",
             "livro": "Tormenta20",
             "pagina": null
         }
     ],
-    "Encantos_de_Armadura_Escudo": [
+    "armaduras_e_escudos": [
         { "faixa": { "min": 1, "max": 2 }, "item": "Abascanto", "livro": "Tormenta20", "pagina": 338 },
         { "faixa": { "min": 3, "max": 4 }, "item": "Abençoado", "livro": "Tormenta20", "pagina": 338 },
         { "faixa": { "min": 5, "max": 5 }, "item": "Abissal", "livro": "Heróis de Arton", "pagina": 258 },
@@ -105,12 +105,12 @@
         { "faixa": { "min": 90, "max": 90 }, "item": "Zeloso", "livro": "Tormenta20", "pagina": 339 },
         {
             "faixa": { "min": 91, "max": 100 },
-            "item": "Item específico (Role na tabela abaixo)",
+            "item": "Item específico",
             "livro": "Tormenta20",
             "pagina": null
         }
     ],
-    "Encantos_de_Esoterico": [
+    "esotericos": [
         { "faixa": { "min": 1, "max": 2 }, "item": "Abafador", "livro": "Heróis de Arton", "pagina": 260 },
         { "faixa": { "min": 3, "max": 12 }, "item": "Bélico", "livro": "Heróis de Arton", "pagina": 260 },
         { "faixa": { "min": 13, "max": 16 }, "item": "Caridoso", "livro": "Heróis de Arton", "pagina": 260 },
@@ -139,7 +139,7 @@
         { "faixa": { "min": 89, "max": 90 }, "item": "Verdugo", "livro": "Heróis de Arton", "pagina": 261 },
         {
             "faixa": { "min": 91, "max": 100 },
-            "item": "Esotérico específico (Role na tabela abaixo)",
+            "item": "Esotérico específico",
             "livro": "Heróis de Arton",
             "pagina": null
         }

@@ -1,5 +1,5 @@
 {
-    "Acessorios_Menores": [
+    "menor": [
         {
             "faixa": { "min": 1, "max": 1 },
             "item": "Algibeira mordedora",
@@ -377,7 +377,7 @@
             "pagina": 267
         }
     ],
-    "Acessorios_Medios": [
+    "medio": [
         {
             "faixa": { "min": 1, "max": 1 },
             "item": "Anel de telecinesia",
@@ -867,7 +867,7 @@
             "pagina": 264
         }
     ],
-    "Acessorios_Maiores": [
+    "maior": [
         {
             "faixa": { "min": 1, "max": 2 },
             "item": "Elmo do teletransporte",

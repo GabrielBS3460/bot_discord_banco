@@ -111,7 +111,12 @@ module.exports = {
                         )
                 )
         )
-        .addSubcommand(sub => sub.setName("pocao").setDescription("Gera uma pocao."))
+        .addSubcommand(sub =>
+            sub
+                .setName("pocao")
+                .setDescription("Gera uma pocao.")
+                .addBooleanOption(option => option.setName("bonus").setDescription("Bonus de +20% no d100"))
+        )
         .addSubcommand(sub =>
             sub
                 .setName("melhoria")
@@ -122,9 +127,9 @@ module.exports = {
                         .setDescription("Tipo de melhoria")
                         .setRequired(true)
                         .addChoices(
-                            { name: "Arma", value: "arma" },
-                            { name: "Armadura e Escudo", value: "armadura_escudo" },
-                            { name: "Esoterico", value: "esoterico" }
+                            { name: "Arma", value: "armas" },
+                            { name: "Armadura e Escudo", value: "armaduras_e_escudos" },
+                            { name: "Esoterico", value: "esotericos" }
                         )
                 )
         )
@@ -138,9 +143,9 @@ module.exports = {
                         .setDescription("Tipo de encanto")
                         .setRequired(true)
                         .addChoices(
-                            { name: "Arma", value: "arma" },
-                            { name: "Armadura e Escudo", value: "armadura_escudo" },
-                            { name: "Esoterico", value: "esoterico" }
+                            { name: "Arma", value: "armas" },
+                            { name: "Armadura e Escudo", value: "armaduras_e_escudos" },
+                            { name: "Esoterico", value: "esotericos" }
                         )
                 )
         )
@@ -154,9 +159,9 @@ module.exports = {
                         .setDescription("Tipo de item especifico")
                         .setRequired(true)
                         .addChoices(
-                            { name: "Arma", value: "arma" },
-                            { name: "Armadura e Escudo", value: "armadura_escudo" },
-                            { name: "Esoterico", value: "esoterico" }
+                            { name: "Arma", value: "armas" },
+                            { name: "Armadura e Escudo", value: "armaduras_e_escudos" },
+                            { name: "Esoterico", value: "esotericos" }
                         )
                 )
         )
@@ -277,36 +282,75 @@ module.exports = {
     },
 
     async executarPocao(interaction) {
-        const { title } = await TesouroService.gerarPocao();
-        return this.responderEmbed(interaction, title);
+        const bonus = interaction.options.getBoolean("bonus");
+        const { title, dHundredRollText, resultTitle, resultText, footerText } = await TesouroService.gerarPocao(bonus);
+
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText })
+            .setFooter({ text: footerText });
+
+        return interaction.reply({ embeds: [embed] });
     },
 
     async executarMelhoria(interaction) {
-        const tipo = interaction.options.getString("tipo");
-        const { title } = await TesouroService.gerarMelhoria(tipo);
-        return this.responderEmbed(interaction, title);
+        const type = interaction.options.getString("tipo");
+        const { title, dHundredRollText, resultTitle, resultText, footerText } =
+            await TesouroService.gerarMelhoria(type);
+
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText })
+            .setFooter({ text: footerText });
+
+        return interaction.reply({ embeds: [embed] });
     },
 
     async executarEncanto(interaction) {
-        const tipo = interaction.options.getString("tipo");
-        const { title } = await TesouroService.gerarEncanto(tipo);
-        return this.responderEmbed(interaction, title);
+        const type = interaction.options.getString("tipo");
+        const { title, dHundredRollText, resultTitle, resultText, footerText } =
+            await TesouroService.gerarEncanto(type);
+
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText })
+            .setFooter({ text: footerText });
+
+        return interaction.reply({ embeds: [embed] });
     },
 
     async executarItemEspecifico(interaction) {
-        const tipo = interaction.options.getString("tipo");
-        const { title } = await TesouroService.gerarItemEspecifico(tipo);
-        return this.responderEmbed(interaction, title);
+        const type = interaction.options.getString("tipo");
+        const { title, dHundredRollText, resultTitle, resultText, footerText } =
+            await TesouroService.gerarItemEspecifico(type);
+
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText })
+            .setFooter({ text: footerText });
+
+        return interaction.reply({ embeds: [embed] });
     },
 
     async executarAcessorio(interaction) {
-        const nivel = interaction.options.getString("nivel");
-        const { title } = await TesouroService.gerarAcessorio(nivel);
-        return this.responderEmbed(interaction, title);
-    },
+        const level = interaction.options.getString("nivel");
+        const { title, dHundredRollText, resultTitle, resultText, footerText } =
+            await TesouroService.gerarAcessorio(level);
 
-    async responderEmbed(interaction, title) {
-        const embed = new EmbedBuilder().setTitle(title);
+        const embed = new EmbedBuilder()
+            .setColor("#2ecc71")
+            .setTitle(title)
+            .setDescription(dHundredRollText)
+            .addFields({ name: resultTitle, value: resultText })
+            .setFooter({ text: footerText });
 
         return interaction.reply({ embeds: [embed] });
     }

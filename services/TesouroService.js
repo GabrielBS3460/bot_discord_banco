@@ -27,8 +27,14 @@ class TesouroService {
         };
     }
 
-    #getRangeByRoll(data, roll, bonus = 0) {
-        const dHundredRollWithBonus = roll + bonus > 100 ? 100 : roll + bonus < 1 ? 1 : roll + bonus;
+    #getRangeByRoll(data, roll, bonus = 0, moreThanHundred = false) {
+        console.log(`Roll: ${roll}, Bonus: ${bonus}`);
+        let dHundredRollWithBonus;
+        if (!moreThanHundred) {
+            dHundredRollWithBonus = roll + bonus > 100 ? 100 : roll + bonus < 1 ? 1 : roll + bonus;
+        } else {
+            dHundredRollWithBonus = roll + bonus;
+        }
         return data.find(item => dHundredRollWithBonus >= item.faixa.min && dHundredRollWithBonus <= item.faixa.max);
     }
 
@@ -152,7 +158,7 @@ class TesouroService {
 
         console.log(JSON.stringify(result));
 
-        const title = `Riqueza ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+        const title = `Riqueza ${type.charAt(0).toUpperCase() + type.slice(1)} ${bonus ? "+%" : ""}`;
         const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, bonus ? 20 : 0, result.faixa);
 
         const riquezaRoll = this.#rollNdXpY(result.recompensa.dados).total;
@@ -162,7 +168,7 @@ class TesouroService {
         return {
             title: title,
             dHundredRollText: dHundredRollText,
-            resultTitle: `Resultado`,
+            resultTitle: resultTitle,
             resultText: resultText
         };
     }
@@ -183,7 +189,7 @@ class TesouroService {
         return {
             title: title,
             dHundredRollText: dHundredRollText,
-            resultTitle: `Resultado`,
+            resultTitle: resultTitle,
             resultText: resultText,
             footerText: footerText
         };
@@ -205,36 +211,166 @@ class TesouroService {
         return {
             title: title,
             dHundredRollText: dHundredRollText,
-            resultTitle: `Resultado`,
+            resultTitle: resultTitle,
             resultText: resultText,
             footerText: footerText
         };
     }
 
-    gerarPocao() {
-        return { title: "Pocao" };
+    async gerarPocao(bonus = 0) {
+        const filePath = path.join(__dirname, "../data/tesouroData/pocao_data.json");
+        const jsonData = await fs.readFile(filePath, "utf-8");
+        const data = JSON.parse(jsonData);
+
+        const dHundredRoll = this.#rollDHundred();
+        const result = this.#getRangeByRoll(data, dHundredRoll, bonus ? 20 : 0, true);
+
+        console.log(JSON.stringify(result));
+
+        const title = `Poção ${bonus ? "+%" : ""}`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, bonus ? 20 : 0, result.faixa);
+        const resultText = `${result.item} [K$${result.valor_compra}]\n\n*Valor de Venda: K$${result.valor_venda}*`;
+        const footerText = `${result.livro} - Página ${result.pagina}`;
+
+        return {
+            title: title,
+            dHundredRollText: dHundredRollText,
+            resultTitle: resultTitle,
+            resultText: resultText,
+            footerText: footerText
+        };
     }
 
-    gerarMelhoria(tipo) {
-        return { title: this.criarTitulo("Melhoria", { equipamento: tipo }) };
+    async gerarMelhoria(type) {
+        const filePath = path.join(__dirname, "../data/tesouroData/melhorias_data.json");
+        const jsonData = await fs.readFile(filePath, "utf-8");
+        const data = JSON.parse(jsonData)[type];
+
+        const dHundredRoll = this.#rollDHundred();
+        const result = this.#getRangeByRoll(data, dHundredRoll, 0);
+
+        console.log(JSON.stringify(result));
+
+        const typeFormated =
+            type === "armas" ? "de Arma" : type === "armaduras_e_escudos" ? "de Armadura e/ou Escudo" : "de Esotérico";
+
+        const title = `Melhoria ${typeFormated}`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, 0, result.faixa);
+        if (result.item === "Material especial") {
+            const materialRoll = this.#rollNdXpY("1d6").total;
+            const materialName = [
+                "Aço-rubi",
+                "Adamante",
+                "Gelo Eterno",
+                "Madeira de Tollon",
+                "Matéria Vermelha",
+                "Mitral"
+            ][materialRoll - 1];
+            if (materialName) result.item += ` (${materialName})`;
+        }
+        const resultText = `${result.item}${result.item.includes("*") ? "\n*[Conta como duas melhorias.]*" : ""}`;
+        const footerText = `${result.livro} - Página ${result.pagina}`;
+
+        return {
+            title: title,
+            dHundredRollText: dHundredRollText,
+            resultTitle: resultTitle,
+            resultText: resultText,
+            footerText: footerText
+        };
     }
 
-    gerarEncanto(tipo) {
-        return { title: this.criarTitulo("Encanto", { equipamento: tipo }) };
+    async gerarEncanto(type) {
+        const filePath = path.join(__dirname, "../data/tesouroData/encanto_data.json");
+        const jsonData = await fs.readFile(filePath, "utf-8");
+        const data = JSON.parse(jsonData)[type];
+
+        const dHundredRoll = this.#rollDHundred();
+        const result = this.#getRangeByRoll(data, dHundredRoll, 0);
+
+        console.log(JSON.stringify(result));
+
+        const typeFormated =
+            type === "armas" ? "de Arma" : type === "armaduras_e_escudos" ? "de Armadura e/ou Escudo" : "de Esotérico";
+
+        const title = `Encanto ${typeFormated}`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, 0, result.faixa);
+
+        const starsCount = (result.item.match(/\*/g) || []).length;
+        let resultText = result.item.replace(/\*/g, "");
+        if (type === "armas" || (type === "esotericos" && starsCount !== 0)) {
+            if (starsCount === 1) resultText += "\n*[Conta como dois encantos.]*";
+        } else if (type === "armaduras_e_escudos" && starsCount !== 0) {
+            if (starsCount === 1) resultText += " (Armadura)";
+            if (starsCount === 2) resultText += " (Escudo)";
+            if (starsCount === 3) resultText += "\n*[Conta como dois encantos.]*";
+        }
+
+        let footerText = result.livro;
+        footerText += result.pagina
+            ? ` - Página ${result.pagina}`
+            : ` | Use /tesouro item_especifico tipo:${type === "armas" ? "Arma" : type === "armaduras_e_escudos" ? "Armadura e Escudo" : "Esoterico"}.`;
+
+        return {
+            title: title,
+            dHundredRollText: dHundredRollText,
+            resultTitle: resultTitle,
+            resultText: resultText,
+            footerText: footerText
+        };
     }
 
-    gerarItemEspecifico(tipo) {
-        return { title: this.criarTitulo("Item Especifico", { equipamento: tipo }) };
+    async gerarItemEspecifico(type) {
+        const filePath = path.join(__dirname, "../data/tesouroData/especifico_data.json");
+        const jsonData = await fs.readFile(filePath, "utf-8");
+        const data = JSON.parse(jsonData)[type];
+
+        const dHundredRoll = this.#rollDHundred();
+        const result = this.#getRangeByRoll(data, dHundredRoll, 0);
+
+        console.log(JSON.stringify(result));
+
+        const title =
+            type === "armas"
+                ? "Arma Especifica"
+                : type === "armaduras_e_escudos"
+                  ? "Armadura e/ou Escudo Especifico"
+                  : "Esotérico Especifico";
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, 0, result.faixa);
+        const resultText = `${result.item}`;
+        const footerText = `${result.livro} - Página ${result.pagina}`;
+
+        return {
+            title: title,
+            dHundredRollText: dHundredRollText,
+            resultTitle: resultTitle,
+            resultText: resultText,
+            footerText: footerText
+        };
     }
 
-    gerarAcessorio(nivel) {
-        return { title: this.criarTitulo("Acessorio", { tamanho: nivel }) };
-    }
+    async gerarAcessorio(level) {
+        const filePath = path.join(__dirname, "../data/tesouroData/acessorios_data.json");
+        const jsonData = await fs.readFile(filePath, "utf-8");
+        const data = JSON.parse(jsonData)[level];
 
-    criarTitulo(base, { tamanho, equipamento } = {}) {
-        if (tamanho) return `${base} ${TIPOS_TAMANHO[tamanho]}`;
-        if (equipamento) return `${base} ${TIPOS_EQUIPAMENTO[equipamento]}`;
-        return base;
+        const dHundredRoll = this.#rollDHundred();
+        const result = this.#getRangeByRoll(data, dHundredRoll, 0);
+
+        console.log(JSON.stringify(result));
+
+        const title = `Acessório ${level.charAt(0).toUpperCase() + level.slice(1)}`;
+        const { dHundredRollText, resultTitle } = this.#buildRollMeta(dHundredRoll, 0, result.faixa);
+        const resultText = `${result.item} [K$${result.valor_compra}]\n\n*Valor de Venda: K$${result.valor_venda}*`;
+        const footerText = `${result.livro} - Página ${result.pagina}`;
+
+        return {
+            title: title,
+            dHundredRollText: dHundredRollText,
+            resultTitle: resultTitle,
+            resultText: resultText,
+            footerText: footerText
+        };
     }
 }
 
