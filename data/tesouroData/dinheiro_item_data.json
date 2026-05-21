@@ -1,0 +1,862 @@
+{
+    "Dinheiro": {
+        "1/4": [
+            { "faixa": { "min": 1, "max": 30 }, "recompensa": null },
+            {
+                "faixa": { "min": 31, "max": 70 },
+                "recompensa": { "tipo": "TC", "dados": "1d6", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 71, "max": 95 },
+                "recompensa": { "tipo": "TC", "dados": "1d4", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "recompensa": { "tipo": "T$", "dados": "1d6", "multiplicador": 10, "porcentagem_extra": false }
+            }
+        ],
+        "1/2": [
+            { "faixa": { "min": 1, "max": 25 }, "recompensa": null },
+            {
+                "faixa": { "min": 26, "max": 70 },
+                "recompensa": { "tipo": "TC", "dados": "2d6", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 71, "max": 95 },
+                "recompensa": { "tipo": "T$", "dados": "2d8", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "recompensa": { "tipo": "T$", "dados": "1d4", "multiplicador": 100, "porcentagem_extra": false }
+            }
+        ],
+        "1": [
+            { "faixa": { "min": 1, "max": 20 }, "recompensa": null },
+            {
+                "faixa": { "min": 21, "max": 70 },
+                "recompensa": { "tipo": "T$", "dados": "3d8", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 71, "max": 95 },
+                "recompensa": { "tipo": "T$", "dados": "4d12", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "recompensa": { "tipo": "riqueza menor", "dados": "1", "multiplicador": 1, "porcentagem_extra": false }
+            }
+        ],
+        "2": [
+            { "faixa": { "min": 1, "max": 15 }, "recompensa": null },
+            {
+                "faixa": { "min": 16, "max": 55 },
+                "recompensa": { "tipo": "T$", "dados": "3d10", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 56, "max": 85 },
+                "recompensa": { "tipo": "T$", "dados": "2d4", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 86, "max": 95 },
+                "recompensa": { "tipo": "T$", "dados": "2d6+1", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "recompensa": { "tipo": "riqueza menor", "dados": "1", "multiplicador": 1, "porcentagem_extra": false }
+            }
+        ],
+        "3": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 20 },
+                "recompensa": { "tipo": "T$", "dados": "4d12", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 21, "max": 60 },
+                "recompensa": { "tipo": "T$", "dados": "1d4", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 61, "max": 90 },
+                "recompensa": { "tipo": "TO", "dados": "1d8", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas menores",
+                    "dados": "1d3",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "4": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 50 },
+                "recompensa": { "tipo": "T$", "dados": "1d6", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 51, "max": 80 },
+                "recompensa": { "tipo": "T$", "dados": "1d12", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 81, "max": 90 },
+                "recompensa": { "tipo": "riqueza menor", "dados": "1", "multiplicador": 1, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas menores",
+                    "dados": "1d3",
+                    "multiplicador": 1,
+                    "porcentagem_extra": true
+                }
+            }
+        ],
+        "5": [
+            { "faixa": { "min": 1, "max": 15 }, "recompensa": null },
+            {
+                "faixa": { "min": 16, "max": 65 },
+                "recompensa": { "tipo": "T$", "dados": "1d8", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 66, "max": 95 },
+                "recompensa": { "tipo": "TO", "dados": "3d4", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "recompensa": { "tipo": "riqueza média", "dados": "1", "multiplicador": 1, "porcentagem_extra": false }
+            }
+        ],
+        "6": [
+            { "faixa": { "min": 1, "max": 15 }, "recompensa": null },
+            {
+                "faixa": { "min": 16, "max": 60 },
+                "recompensa": { "tipo": "T$", "dados": "2d6", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 61, "max": 90 },
+                "recompensa": { "tipo": "T$", "dados": "2d10", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas menores",
+                    "dados": "1d3+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "7": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 60 },
+                "recompensa": { "tipo": "T$", "dados": "2d8", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 61, "max": 90 },
+                "recompensa": { "tipo": "TO", "dados": "2d12", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas menores",
+                    "dados": "1d4+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "8": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 55 },
+                "recompensa": { "tipo": "T$", "dados": "2d10", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 56, "max": 95 },
+                "recompensa": {
+                    "tipo": "riquezas menores",
+                    "dados": "1d4+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "recompensa": { "tipo": "riqueza média", "dados": "1", "multiplicador": 1, "porcentagem_extra": true }
+            }
+        ],
+        "9": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 35 },
+                "recompensa": { "tipo": "riqueza média", "dados": "1", "multiplicador": 1, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 36, "max": 85 },
+                "recompensa": { "tipo": "T$", "dados": "4d6", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 86, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas médias",
+                    "dados": "1d3",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "10": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 30 },
+                "recompensa": { "tipo": "T$", "dados": "4d6", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 31, "max": 85 },
+                "recompensa": { "tipo": "TO", "dados": "4d10", "multiplicador": 10, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 86, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas médias",
+                    "dados": "1d3+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "11": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 45 },
+                "recompensa": { "tipo": "T$", "dados": "2d4", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 46, "max": 85 },
+                "recompensa": {
+                    "tipo": "riquezas médias",
+                    "dados": "1d3",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 86, "max": 100 },
+                "recompensa": { "tipo": "TO", "dados": "2d6", "multiplicador": 100, "porcentagem_extra": false }
+            }
+        ],
+        "12": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 45 },
+                "recompensa": { "tipo": "riqueza média", "dados": "1", "multiplicador": 1, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 46, "max": 80 },
+                "recompensa": { "tipo": "T$", "dados": "2d6", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 81, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas médias",
+                    "dados": "1d4+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "13": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 45 },
+                "recompensa": { "tipo": "T$", "dados": "4d4", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 46, "max": 80 },
+                "recompensa": {
+                    "tipo": "riquezas médias",
+                    "dados": "1d3+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 81, "max": 100 },
+                "recompensa": { "tipo": "TO", "dados": "4d6", "multiplicador": 100, "porcentagem_extra": false }
+            }
+        ],
+        "14": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 45 },
+                "recompensa": {
+                    "tipo": "riquezas médias",
+                    "dados": "1d3+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 46, "max": 80 },
+                "recompensa": { "tipo": "T$", "dados": "3d6", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 81, "max": 100 },
+                "recompensa": { "tipo": "riqueza maior", "dados": "1", "multiplicador": 1, "porcentagem_extra": false }
+            }
+        ],
+        "15": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 45 },
+                "recompensa": { "tipo": "riqueza média", "dados": "1", "multiplicador": 1, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 46, "max": 80 },
+                "recompensa": { "tipo": "T$", "dados": "2d10", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 81, "max": 100 },
+                "recompensa": { "tipo": "TO", "dados": "1d4", "multiplicador": 1000, "porcentagem_extra": false }
+            }
+        ],
+        "16": [
+            { "faixa": { "min": 1, "max": 10 }, "recompensa": null },
+            {
+                "faixa": { "min": 11, "max": 40 },
+                "recompensa": { "tipo": "T$", "dados": "3d6", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 41, "max": 75 },
+                "recompensa": { "tipo": "TO", "dados": "3d10", "multiplicador": 100, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 76, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas maiores",
+                    "dados": "1d3",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "17": [
+            { "faixa": { "min": 1, "max": 5 }, "recompensa": null },
+            {
+                "faixa": { "min": 6, "max": 40 },
+                "recompensa": { "tipo": "T$", "dados": "4d6", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 41, "max": 75 },
+                "recompensa": {
+                    "tipo": "riquezas médias",
+                    "dados": "1d3",
+                    "multiplicador": 1,
+                    "porcentagem_extra": true
+                }
+            },
+            {
+                "faixa": { "min": 76, "max": 100 },
+                "recompensa": { "tipo": "TO", "dados": "2d4", "multiplicador": 1000, "porcentagem_extra": false }
+            }
+        ],
+        "18": [
+            { "faixa": { "min": 1, "max": 5 }, "recompensa": null },
+            {
+                "faixa": { "min": 6, "max": 40 },
+                "recompensa": { "tipo": "T$", "dados": "4d10", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 41, "max": 75 },
+                "recompensa": { "tipo": "riqueza maior", "dados": "1", "multiplicador": 1, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 76, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas maiores",
+                    "dados": "1d3+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "19": [
+            { "faixa": { "min": 1, "max": 5 }, "recompensa": null },
+            {
+                "faixa": { "min": 6, "max": 40 },
+                "recompensa": { "tipo": "4d12", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 41, "max": 75 },
+                "recompensa": { "tipo": "riqueza maior", "dados": "1", "multiplicador": 1, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 76, "max": 100 },
+                "recompensa": { "tipo": "TO", "dados": "1d12", "multiplicador": 1000, "porcentagem_extra": false }
+            }
+        ],
+        "20": [
+            { "faixa": { "min": 1, "max": 5 }, "recompensa": null },
+            {
+                "faixa": { "min": 6, "max": 40 },
+                "recompensa": { "tipo": "TO", "dados": "2d4", "multiplicador": 1000, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 41, "max": 75 },
+                "recompensa": {
+                    "tipo": "riquezas maiores",
+                    "dados": "1d3",
+                    "multiplicador": 1,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 76, "max": 100 },
+                "recompensa": {
+                    "tipo": "riquezas maiores",
+                    "dados": "1d3+1",
+                    "multiplicador": 1,
+                    "porcentagem_extra": true
+                }
+            }
+        ]
+    },
+    "Itens": {
+        "1/4": [
+            { "faixa": { "min": 1, "max": 50 }, "item": null },
+            {
+                "faixa": { "min": 51, "max": 75 },
+                "item": { "categoria": "Item diverso", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 76, "max": 100 },
+                "item": { "categoria": "Equipamento", "duas_rolagens": false, "porcentagem_extra": false }
+            }
+        ],
+        "1/2": [
+            { "faixa": { "min": 1, "max": 45 }, "item": null },
+            {
+                "faixa": { "min": 46, "max": 70 },
+                "item": { "categoria": "Item diverso", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 71, "max": 100 },
+                "item": { "categoria": "Equipamento", "duas_rolagens": false, "porcentagem_extra": false }
+            }
+        ],
+        "1": [
+            { "faixa": { "min": 1, "max": 40 }, "item": null },
+            {
+                "faixa": { "min": 41, "max": 65 },
+                "item": { "categoria": "Item diverso", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 66, "max": 90 },
+                "item": { "categoria": "Equipamento", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "item": { "categoria": "Poção", "dados": "1", "duas_rolagens": false, "porcentagem_extra": false }
+            }
+        ],
+        "2": [
+            { "faixa": { "min": 1, "max": 30 }, "item": null },
+            {
+                "faixa": { "min": 31, "max": 40 },
+                "item": { "categoria": "Item diverso", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 41, "max": 70 },
+                "item": { "categoria": "Equipamento", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 71, "max": 90 },
+                "item": { "categoria": "Poção", "dados": "1", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "item": { "categoria": "Superior", "melhorias": 1, "duas_rolagens": false, "porcentagem_extra": false }
+            }
+        ],
+        "3": [
+            { "faixa": { "min": 1, "max": 25 }, "item": null },
+            {
+                "faixa": { "min": 26, "max": 35 },
+                "item": { "categoria": "Item diverso", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 36, "max": 60 },
+                "item": { "categoria": "Equipamento", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 61, "max": 85 },
+                "item": { "categoria": "Poção", "dados": "1", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 86, "max": 100 },
+                "item": { "categoria": "Superior", "melhorias": 1, "duas_rolagens": false, "porcentagem_extra": false }
+            }
+        ],
+        "4": [
+            { "faixa": { "min": 1, "max": 20 }, "item": null },
+            {
+                "faixa": { "min": 21, "max": 30 },
+                "item": { "categoria": "Item diverso", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 31, "max": 55 },
+                "item": { "categoria": "Equipamento", "duas_rolagens": true, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 56, "max": 80 },
+                "item": { "categoria": "Poção", "dados": "1", "duas_rolagens": false, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 81, "max": 100 },
+                "item": { "categoria": "Superior", "melhorias": 1, "duas_rolagens": true, "porcentagem_extra": false }
+            }
+        ],
+        "5": [
+            { "faixa": { "min": 1, "max": 20 }, "item": null },
+            {
+                "faixa": { "min": 21, "max": 70 },
+                "item": { "categoria": "Poção", "dados": "1", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 71, "max": 90 },
+                "item": { "categoria": "Superior", "melhorias": 1, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "item": { "categoria": "Superior", "melhorias": 2, "duas_rolagens": false, "porcentagem_extra": false }
+            }
+        ],
+        "6": [
+            { "faixa": { "min": 1, "max": 20 }, "item": null },
+            {
+                "faixa": { "min": 21, "max": 65 },
+                "item": { "categoria": "Poção", "dados": "1", "duas_rolagens": false, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 66, "max": 95 },
+                "item": { "categoria": "Superior", "melhorias": 1, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "item": { "categoria": "Superior", "melhorias": 2, "duas_rolagens": true, "porcentagem_extra": false }
+            }
+        ],
+        "7": [
+            { "faixa": { "min": 1, "max": 20 }, "item": null },
+            {
+                "faixa": { "min": 21, "max": 60 },
+                "item": { "categoria": "Poção", "dados": "1d3", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 61, "max": 90 },
+                "item": { "categoria": "Superior", "melhorias": 2, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "item": { "categoria": "Superior", "melhorias": 3, "duas_rolagens": false, "porcentagem_extra": false }
+            }
+        ],
+        "8": [
+            { "faixa": { "min": 1, "max": 20 }, "item": null },
+            {
+                "faixa": { "min": 21, "max": 75 },
+                "item": { "categoria": "Poção", "dados": "1d3", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 76, "max": 95 },
+                "item": { "categoria": "Superior", "melhorias": 2, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "item": { "categoria": "Superior", "melhorias": 3, "duas_rolagens": true, "porcentagem_extra": false }
+            }
+        ],
+        "9": [
+            { "faixa": { "min": 1, "max": 20 }, "item": null },
+            {
+                "faixa": { "min": 21, "max": 70 },
+                "item": { "categoria": "Poção", "dados": "1", "duas_rolagens": false, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 71, "max": 95 },
+                "item": { "categoria": "Superior", "melhorias": 3, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "menor",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "10": [
+            { "faixa": { "min": 1, "max": 50 }, "item": null },
+            {
+                "faixa": { "min": 51, "max": 75 },
+                "item": { "categoria": "Poção", "dados": "1d3+1", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 76, "max": 90 },
+                "item": { "categoria": "Superior", "melhorias": 3, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "menor",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "11": [
+            { "faixa": { "min": 1, "max": 45 }, "item": null },
+            {
+                "faixa": { "min": 46, "max": 70 },
+                "item": { "categoria": "Poção", "dados": "1d4+1", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 71, "max": 90 },
+                "item": { "categoria": "Superior", "melhorias": 3, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "menor",
+                    "duas_rolagens": true,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "12": [
+            { "faixa": { "min": 1, "max": 45 }, "item": null },
+            {
+                "faixa": { "min": 46, "max": 70 },
+                "item": { "categoria": "Poção", "dados": "1d3+1", "duas_rolagens": false, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 71, "max": 85 },
+                "item": { "categoria": "Superior", "melhorias": 4, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 86, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "menor",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "13": [
+            { "faixa": { "min": 1, "max": 40 }, "item": null },
+            {
+                "faixa": { "min": 41, "max": 65 },
+                "item": { "categoria": "Poção", "dados": "1d4+1", "duas_rolagens": false, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 66, "max": 95 },
+                "item": { "categoria": "Superior", "melhorias": 4, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 96, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "médio",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "14": [
+            { "faixa": { "min": 1, "max": 40 }, "item": null },
+            {
+                "faixa": { "min": 41, "max": 65 },
+                "item": { "categoria": "Poção", "dados": "1d4+1", "duas_rolagens": false, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 66, "max": 90 },
+                "item": { "categoria": "Superior", "melhorias": 4, "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 91, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "médio",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "15": [
+            { "faixa": { "min": 1, "max": 35 }, "item": null },
+            {
+                "faixa": { "min": 36, "max": 45 },
+                "item": { "categoria": "Poção", "dados": "1d6+1", "duas_rolagens": false, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 46, "max": 85 },
+                "item": { "categoria": "Superior", "melhorias": 4, "duas_rolagens": true, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 86, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "médio",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "16": [
+            { "faixa": { "min": 1, "max": 35 }, "item": null },
+            {
+                "faixa": { "min": 36, "max": 45 },
+                "item": { "categoria": "Poção", "dados": "1d6+1", "duas_rolagens": false, "porcentagem_extra": true }
+            },
+            {
+                "faixa": { "min": 46, "max": 80 },
+                "item": { "categoria": "Superior", "melhorias": 4, "duas_rolagens": true, "porcentagem_extra": false }
+            },
+            {
+                "faixa": { "min": 81, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "médio",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "17": [
+            { "faixa": { "min": 1, "max": 20 }, "item": null },
+            {
+                "faixa": { "min": 21, "max": 40 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "menor",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 41, "max": 80 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "médio",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 81, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "maior",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "18": [
+            { "faixa": { "min": 1, "max": 15 }, "item": null },
+            {
+                "faixa": { "min": 16, "max": 40 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "menor",
+                    "duas_rolagens": true,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 41, "max": 70 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "médio",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 71, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "maior",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "19": [
+            { "faixa": { "min": 1, "max": 10 }, "item": null },
+            {
+                "faixa": { "min": 11, "max": 40 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "menor",
+                    "duas_rolagens": true,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 41, "max": 60 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "médio",
+                    "duas_rolagens": true,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 61, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "maior",
+                    "duas_rolagens": false,
+                    "porcentagem_extra": false
+                }
+            }
+        ],
+        "20": [
+            { "faixa": { "min": 1, "max": 5 }, "item": null },
+            {
+                "faixa": { "min": 6, "max": 40 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "menor",
+                    "duas_rolagens": true,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 41, "max": 50 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "médio",
+                    "duas_rolagens": true,
+                    "porcentagem_extra": false
+                }
+            },
+            {
+                "faixa": { "min": 51, "max": 100 },
+                "item": {
+                    "categoria": "Mágico",
+                    "raridade": "maior",
+                    "duas_rolagens": true,
+                    "porcentagem_extra": false
+                }
+            }
+        ]
+    }
+}

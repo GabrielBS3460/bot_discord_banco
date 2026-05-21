@@ -1,0 +1,112 @@
+{
+    "menor": [
+        {
+            "faixa": { "min": 1, "max": 25 },
+            "recompensa": { "dados": "4d4", "multiplicador": 1, "valor_medio": 10 }
+        },
+        {
+            "faixa": { "min": 26, "max": 40 },
+            "recompensa": { "dados": "1d4", "multiplicador": 10, "valor_medio": 25 }
+        },
+        {
+            "faixa": { "min": 41, "max": 55 },
+            "recompensa": { "dados": "2d4", "multiplicador": 10, "valor_medio": 50 }
+        },
+        {
+            "faixa": { "min": 56, "max": 70 },
+            "recompensa": { "dados": "4d6", "multiplicador": 10, "valor_medio": 140 }
+        },
+        {
+            "faixa": { "min": 71, "max": 85 },
+            "recompensa": { "dados": "1d6", "multiplicador": 100, "valor_medio": 350 }
+        },
+        {
+            "faixa": { "min": 86, "max": 95 },
+            "recompensa": { "dados": "2d6", "multiplicador": 100, "valor_medio": 700 }
+        },
+        {
+            "faixa": { "min": 96, "max": 99 },
+            "recompensa": { "dados": "2d8", "multiplicador": 100, "valor_medio": 900 }
+        },
+        {
+            "faixa": { "min": 100, "max": 100 },
+            "recompensa": { "dados": "4d10", "multiplicador": 100, "valor_medio": 2200 }
+        }
+    ],
+    "media": [
+        {
+            "faixa": { "min": 1, "max": 10 },
+            "recompensa": { "dados": "2d4", "multiplicador": 10, "valor_medio": 50 }
+        },
+        {
+            "faixa": { "min": 11, "max": 30 },
+            "recompensa": { "dados": "4d6", "multiplicador": 10, "valor_medio": 140 }
+        },
+        {
+            "faixa": { "min": 31, "max": 50 },
+            "recompensa": { "dados": "1d6", "multiplicador": 100, "valor_medio": 350 }
+        },
+        {
+            "faixa": { "min": 51, "max": 65 },
+            "recompensa": { "dados": "2d6", "multiplicador": 100, "valor_medio": 700 }
+        },
+        {
+            "faixa": { "min": 66, "max": 80 },
+            "recompensa": { "dados": "2d8", "multiplicador": 100, "valor_medio": 900 }
+        },
+        {
+            "faixa": { "min": 81, "max": 90 },
+            "recompensa": { "dados": "4d10", "multiplicador": 100, "valor_medio": 2200 }
+        },
+        {
+            "faixa": { "min": 91, "max": 95 },
+            "recompensa": { "dados": "6d12", "multiplicador": 100, "valor_medio": 3900 }
+        },
+        {
+            "faixa": { "min": 96, "max": 99 },
+            "recompensa": { "dados": "2d10", "multiplicador": 1000, "valor_medio": 11000 }
+        },
+        {
+            "faixa": { "min": 100, "max": 100 },
+            "recompensa": { "dados": "6d8", "multiplicador": 1000, "valor_medio": 27000 }
+        }
+    ],
+    "maior": [
+        {
+            "faixa": { "min": 1, "max": 5 },
+            "recompensa": { "dados": "1d6", "multiplicador": 100, "valor_medio": 350 }
+        },
+        {
+            "faixa": { "min": 6, "max": 15 },
+            "recompensa": { "dados": "2d6", "multiplicador": 100, "valor_medio": 700 }
+        },
+        {
+            "faixa": { "min": 16, "max": 25 },
+            "recompensa": { "dados": "2d8", "multiplicador": 100, "valor_medio": 900 }
+        },
+        {
+            "faixa": { "min": 26, "max": 40 },
+            "recompensa": { "dados": "4d10", "multiplicador": 100, "valor_medio": 2200 }
+        },
+        {
+            "faixa": { "min": 41, "max": 60 },
+            "recompensa": { "dados": "6d12", "multiplicador": 100, "valor_medio": 3900 }
+        },
+        {
+            "faixa": { "min": 61, "max": 75 },
+            "recompensa": { "dados": "2d10", "multiplicador": 1000, "valor_medio": 11000 }
+        },
+        {
+            "faixa": { "min": 76, "max": 85 },
+            "recompensa": { "dados": "6d8", "multiplicador": 1000, "valor_medio": 27000 }
+        },
+        {
+            "faixa": { "min": 86, "max": 95 },
+            "recompensa": { "dados": "1d10", "multiplicador": 10000, "valor_medio": 55000 }
+        },
+        {
+            "faixa": { "min": 96, "max": 100 },
+            "recompensa": { "dados": "4d12", "multiplicador": 10000, "valor_medio": 260000 }
+        }
+    ]
+}

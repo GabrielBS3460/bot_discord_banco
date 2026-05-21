@@ -143,6 +143,47 @@ module.exports = {
             { cmd: "/gasto", desc: "Registra um gasto no seu extrato.", syntax: "/gasto valor:<valor> motivo:<motivo>" }
         ]
     },
+    tesouro: {
+        emoji: "💎",
+        titulo: "Tesouros & Recompensas",
+        descricao: "Gere recompensas e itens por categoria.",
+        comandos: [
+            { cmd: "/tesouro dinheiro", desc: "Gera dinheiro.", syntax: "/tesouro dinheiro" },
+            { cmd: "/tesouro itens", desc: "Gera itens.", syntax: "/tesouro itens" },
+            {
+                cmd: "/tesouro riquezas",
+                desc: "Gera riquezas por tamanho.",
+                syntax: "/tesouro riquezas tipo:<menor|medio|maior>"
+            },
+            { cmd: "/tesouro item_diverso", desc: "Gera um item diverso.", syntax: "/tesouro item_diverso" },
+            {
+                cmd: "/tesouro equipamento",
+                desc: "Gera um equipamento por tipo.",
+                syntax: "/tesouro equipamento tipo:<arma|armadura_escudo|esoterico>"
+            },
+            { cmd: "/tesouro pocao", desc: "Gera uma pocao.", syntax: "/tesouro pocao" },
+            {
+                cmd: "/tesouro melhoria",
+                desc: "Gera uma melhoria por tipo.",
+                syntax: "/tesouro melhoria tipo:<arma|armadura_escudo|esoterico>"
+            },
+            {
+                cmd: "/tesouro encanto",
+                desc: "Gera um encanto por tipo.",
+                syntax: "/tesouro encanto tipo:<arma|armadura_escudo|esoterico>"
+            },
+            {
+                cmd: "/tesouro item_especifico",
+                desc: "Gera um item especifico por tipo.",
+                syntax: "/tesouro item_especifico tipo:<arma|armadura_escudo|esoterico>"
+            },
+            {
+                cmd: "/tesouro acessorio",
+                desc: "Gera um acessorio por nivel.",
+                syntax: "/tesouro acessorio nivel:<menor|medio|maior>"
+            }
+        ]
+    },
     sistemas: {
         emoji: "⚒️",
         titulo: "Ofícios & Profissões",

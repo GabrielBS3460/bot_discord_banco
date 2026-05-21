@@ -1,0 +1,554 @@
+[
+    {
+        "faixa": { "min": 1, "max": 1 },
+        "item": "Abençoar Alimentos (óleo)",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 178
+    },
+    {
+        "faixa": { "min": 2, "max": 2 },
+        "item": "Área Escorregadia (granada)",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 180
+    },
+    {
+        "faixa": { "min": 3, "max": 4 },
+        "item": "Arma Mágica (óleo)",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 181
+    },
+    {
+        "faixa": { "min": 5, "max": 5 },
+        "item": "Compreensão",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 184
+    },
+    {
+        "faixa": { "min": 6, "max": 11 },
+        "item": "Curar Ferimentos (2d8+2 PV)",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 189
+    },
+    {
+        "faixa": { "min": 12, "max": 13 },
+        "item": "Disfarce Ilusório",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 191
+    },
+    {
+        "faixa": { "min": 14, "max": 15 },
+        "item": "Escuridão (óleo)",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 193
+    },
+    {
+        "faixa": { "min": 16, "max": 17 },
+        "item": "Luz (óleo)",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 197
+    },
+    {
+        "faixa": { "min": 18, "max": 18 },
+        "item": "Névoa (granada)",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 200
+    },
+    {
+        "faixa": { "min": 19, "max": 19 },
+        "item": "Primor Atlético",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 201
+    },
+    {
+        "faixa": { "min": 20, "max": 20 },
+        "item": "Sono",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 207
+    },
+    {
+        "faixa": { "min": 21, "max": 22 },
+        "item": "Proteção Divina",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 202
+    },
+    {
+        "faixa": { "min": 23, "max": 24 },
+        "item": "Resistência a Energia",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 204
+    },
+    {
+        "faixa": { "min": 25, "max": 25 },
+        "item": "Suporte Ambiental",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 207
+    },
+    {
+        "faixa": { "min": 26, "max": 26 },
+        "item": "Tranca Arcana (óleo)",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 209
+    },
+    {
+        "faixa": { "min": 27, "max": 27 },
+        "item": "Visão Mística",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 211
+    },
+    {
+        "faixa": { "min": 28, "max": 28 },
+        "item": "Vitalidade Fantasma",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Tormenta20",
+        "pagina": 211
+    },
+    {
+        "faixa": { "min": 29, "max": 29 },
+        "item": "Armadura Elemental",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Heróis de Arton",
+        "pagina": 252
+    },
+    {
+        "faixa": { "min": 30, "max": 30 },
+        "item": "Desafio Corajoso",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Heróis de Arton",
+        "pagina": 252
+    },
+    {
+        "faixa": { "min": 31, "max": 31 },
+        "item": "Discrição",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Heróis de Arton",
+        "pagina": 253
+    },
+    {
+        "faixa": { "min": 32, "max": 32 },
+        "item": "Farejar Fortuna",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Heróis de Arton",
+        "pagina": 254
+    },
+    {
+        "faixa": { "min": 33, "max": 33 },
+        "item": "Maaais Klunc",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Heróis de Arton",
+        "pagina": 254
+    },
+    {
+        "faixa": { "min": 34, "max": 34 },
+        "item": "Ossos de Adamante",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Heróis de Arton",
+        "pagina": 254
+    },
+    {
+        "faixa": { "min": 35, "max": 35 },
+        "item": "Punho de Mitral",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Heróis de Arton",
+        "pagina": 254
+    },
+    {
+        "faixa": { "min": 36, "max": 36 },
+        "item": "Magia Dadivosa",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Deuses de Arton",
+        "pagina": 62
+    },
+    {
+        "faixa": { "min": 37, "max": 37 },
+        "item": "Sigilo de Sszzaas",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Deuses de Arton",
+        "pagina": 64
+    },
+    {
+        "faixa": { "min": 38, "max": 38 },
+        "item": "Sorriso da Fortuna",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Deuses de Arton",
+        "pagina": 64
+    },
+    {
+        "faixa": { "min": 39, "max": 39 },
+        "item": "Toque de Megalokk",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Deuses de Arton",
+        "pagina": 65
+    },
+    {
+        "faixa": { "min": 40, "max": 40 },
+        "item": "Voz da Razão",
+        "valor_compra": 30,
+        "valor_venda": 10,
+        "livro": "Deuses de Arton",
+        "pagina": 65
+    },
+    {
+        "faixa": { "min": 41, "max": 42 },
+        "item": "Escudo da Fé (aprimoramento para duração cena)",
+        "valor_compra": 120,
+        "valor_venda": 40,
+        "livro": "Tormenta20",
+        "pagina": 192
+    },
+    {
+        "faixa": { "min": 43, "max": 44 },
+        "item": "Alterar Tamanho",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 179
+    },
+    {
+        "faixa": { "min": 45, "max": 45 },
+        "item": "Aparência Perfeita",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 180
+    },
+    {
+        "faixa": { "min": 46, "max": 46 },
+        "item": "Armamento da Natureza (óleo)",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 181
+    },
+    {
+        "faixa": { "min": 47, "max": 50 },
+        "item": "Bola de Fogo (granada)",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 182
+    },
+    {
+        "faixa": { "min": 51, "max": 51 },
+        "item": "Camuflagem Ilusória",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 183
+    },
+    {
+        "faixa": { "min": 52, "max": 52 },
+        "item": "Concentração de Combate (aprimoramento para duração cena)",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 185
+    },
+    {
+        "faixa": { "min": 53, "max": 56 },
+        "item": "Curar Ferimentos (4d8+4 PV)",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 189
+    },
+    {
+        "faixa": { "min": 57, "max": 58 },
+        "item": "Físico Divino",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 193
+    },
+    {
+        "faixa": { "min": 59, "max": 59 },
+        "item": "Mente Divina",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 198
+    },
+    {
+        "faixa": { "min": 60, "max": 60 },
+        "item": "Metamorfose",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 198
+    },
+    {
+        "faixa": { "min": 61, "max": 64 },
+        "item": "Purificação",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 202
+    },
+    {
+        "faixa": { "min": 65, "max": 66 },
+        "item": "Velocidade",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 210
+    },
+    {
+        "faixa": { "min": 67, "max": 68 },
+        "item": "Vestimenta da Fé (óleo)",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 210
+    },
+    {
+        "faixa": { "min": 69, "max": 69 },
+        "item": "Voz Divina",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 211
+    },
+    {
+        "faixa": { "min": 70, "max": 71 },
+        "item": "Orientação (aprimoramento para duração cena; role o atributo afetado, sendo 1 = Força, 2 = Destreza e assim por diante)",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Tormenta20",
+        "pagina": 200
+    },
+    {
+        "faixa": { "min": 72, "max": 72 },
+        "item": "Aura de Morte",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Heróis de Arton",
+        "pagina": 252
+    },
+    {
+        "faixa": { "min": 73, "max": 73 },
+        "item": "Emular Magia",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Heróis de Arton",
+        "pagina": 253
+    },
+    {
+        "faixa": { "min": 74, "max": 74 },
+        "item": "Punho de Mitral (aprimoramento para +2 em testes de ataque e margem de ameaça)",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Heróis de Arton",
+        "pagina": 255
+    },
+    {
+        "faixa": { "min": 75, "max": 75 },
+        "item": "Viagem Onírica",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Heróis de Arton",
+        "pagina": 255
+    },
+    {
+        "faixa": { "min": 76, "max": 76 },
+        "item": "Couraça de Allihanna (óleo)",
+        "valor_compra": 270,
+        "valor_venda": 90,
+        "livro": "Deuses de Arton",
+        "pagina": 60
+    },
+    {
+        "faixa": { "min": 77, "max": 77 },
+        "item": "Toque de Megalokk (aprimoramento para aumentar o dano das armas naturais em um passo e a margem de ameaça delas em +1)",
+        "valor_compra": 480,
+        "valor_venda": 160,
+        "livro": "Deuses de Arton",
+        "pagina": 65
+    },
+    {
+        "faixa": { "min": 78, "max": 79 },
+        "item": "Arma Mágica (óleo; aprimoramento para bônus +3)",
+        "valor_compra": 750,
+        "valor_venda": 250,
+        "livro": "Tormenta20",
+        "pagina": 181
+    },
+    {
+        "faixa": { "min": 80, "max": 81 },
+        "item": "Proteção Divina (aprimoramento para bônus de +4)",
+        "valor_compra": 750,
+        "valor_venda": 250,
+        "livro": "Tormenta20",
+        "pagina": 202
+    },
+    {
+        "faixa": { "min": 82, "max": 82 },
+        "item": "Armadura Elemental (aprimoramento para 4d6 pontos de dano)",
+        "valor_compra": 750,
+        "valor_venda": 250,
+        "livro": "Heróis de Arton",
+        "pagina": 252
+    },
+    {
+        "faixa": { "min": 83, "max": 88 },
+        "item": "Curar Ferimentos (7d8+7 PV)",
+        "valor_compra": 1080,
+        "valor_venda": 360,
+        "livro": "Tormenta20",
+        "pagina": 189
+    },
+    {
+        "faixa": { "min": 89, "max": 90 },
+        "item": "Físico Divino (aprimoramento para três atributos)",
+        "valor_compra": 1080,
+        "valor_venda": 360,
+        "livro": "Tormenta20",
+        "pagina": 193
+    },
+    {
+        "faixa": { "min": 91, "max": 92 },
+        "item": "Invisibilidade (aprimoramento para duração cena)",
+        "valor_compra": 1080,
+        "valor_venda": 360,
+        "livro": "Tormenta20",
+        "pagina": 195
+    },
+    {
+        "faixa": { "min": 93, "max": 94 },
+        "item": "Pele de Pedra",
+        "valor_compra": 1080,
+        "valor_venda": 360,
+        "livro": "Tormenta20",
+        "pagina": 201
+    },
+    {
+        "faixa": { "min": 95, "max": 95 },
+        "item": "Potência Divina",
+        "valor_compra": 1080,
+        "valor_venda": 360,
+        "livro": "Tormenta20",
+        "pagina": 201
+    },
+    {
+        "faixa": { "min": 96, "max": 96 },
+        "item": "Voo",
+        "valor_compra": 1080,
+        "valor_venda": 360,
+        "livro": "Tormenta20",
+        "pagina": 211
+    },
+    {
+        "faixa": { "min": 97, "max": 97 },
+        "item": "Percepção Rubra (aprimoramento para aumentar bônus em +3)",
+        "valor_compra": 1080,
+        "valor_venda": 360,
+        "livro": "Deuses de Arton",
+        "pagina": 63
+    },
+    {
+        "faixa": { "min": 98, "max": 100 },
+        "item": "Bola de Fogo (granada; aprimoramento para 10d6 de dano)",
+        "valor_compra": 1470,
+        "valor_venda": 490,
+        "livro": "Tormenta20",
+        "pagina": 182
+    },
+    {
+        "faixa": { "min": 101, "max": 110 },
+        "item": "Curar Ferimentos (11d8+11 PV)",
+        "valor_compra": 3000,
+        "valor_venda": 1000,
+        "livro": "Tormenta20",
+        "pagina": 189
+    },
+    {
+        "faixa": { "min": 111, "max": 114 },
+        "item": "Pele de Pedra (aprimoramento para pele de aço e RD 10)",
+        "valor_compra": 3000,
+        "valor_venda": 1000,
+        "livro": "Tormenta20",
+        "pagina": 201
+    },
+    {
+        "faixa": { "min": 115, "max": 116 },
+        "item": "Premonição",
+        "valor_compra": 3000,
+        "valor_venda": 1000,
+        "livro": "Tormenta20",
+        "pagina": 201
+    },
+    {
+        "faixa": { "min": 117, "max": 117 },
+        "item": "Viagem Onírica (aprimoramentos para falar e lançar magias)",
+        "valor_compra": 3000,
+        "valor_venda": 1000,
+        "livro": "Heróis de Arton",
+        "pagina": 255
+    },
+    {
+        "faixa": { "min": 118, "max": 118 },
+        "item": "Potência Divina (aprimoramento para Força +6 e RD 15)",
+        "valor_compra": 6750,
+        "valor_venda": 2250,
+        "livro": "Tormenta20",
+        "pagina": 201
+    },
+    {
+        "faixa": { "min": 119, "max": 119 },
+        "item": "Momento de Tormenta (granada; aprimoramento para +4 dados de dano do mesmo tipo)",
+        "valor_compra": 6750,
+        "valor_venda": 2250,
+        "livro": "Ameaças de Arton",
+        "pagina": 404
+    },
+    {
+        "faixa": { "min": 120, "max": 120 },
+        "item": "Transformação em Dragão (aprimoramentos para atributos +4, asas, arma de mordida e dano de sopro de 12d6+12)",
+        "valor_compra": 28000,
+        "valor_venda": 9333,
+        "livro": "Ameaças de Arton",
+        "pagina": 405
+    }
+]
