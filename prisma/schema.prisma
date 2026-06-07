@@ -1,6 +1,7 @@
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
+  directUrl       = env("DIRECT_URL")
 }
 
 generator client {
@@ -147,6 +148,7 @@ model Avaliacao {
   nota_preparo    Int
   nota_conhecimento Int
   nota_geral      Int
+  feedback        String?
   data_avaliacao  DateTime @default(now())
 }
 

@@ -145,15 +145,42 @@ module.exports = {
             }
 
             if (i.customId === "btn_finalizar") {
+                const modalId = `modal_feedback_${i.id}`;
+                const modal = new ModalBuilder()
+                    .setCustomId(modalId)
+                    .setTitle("Feedback Adicional (Opcional)")
+                    .addComponents(
+                        new ActionRowBuilder().addComponents(
+                            new TextInputBuilder()
+                                .setCustomId("feedback")
+                                .setLabel("Deixe um comentário sobre a missão:")
+                                .setStyle(TextInputStyle.Paragraph)
+                                .setPlaceholder("Ex: Foi muito bom, amei a narrativa!")
+                                .setRequired(false)
+                                .setMaxLength(250)
+                        )
+                    );
+
+                await i.showModal(modal);
+
                 try {
+                    const modalSubmit = await i.awaitModalSubmit({
+                        filter: m => m.customId === modalId && m.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    await modalSubmit.deferUpdate();
+                    const feedbackText = modalSubmit.fields.getTextInputValue("feedback") || null;
+
                     const media = await MestreService.registrarAvaliacao(
                         interaction.user.id,
                         mestreUser.id,
                         nomeMissao,
-                        respostas
+                        respostas,
+                        feedbackText
                     );
 
-                    await i.update({
+                    await modalSubmit.editReply({
                         content: `✅ **Avaliação registrada!**\n🧙‍♂️ Mestre: ${mestreUser.username}\n⭐ Média: **${media.toFixed(1)}**`,
                         components: []
                     });
@@ -164,8 +191,7 @@ module.exports = {
 
                     collector.stop();
                 } catch (err) {
-                    console.error(err);
-                    await i.update({ content: "❌ Erro ao salvar avaliação.", components: [] });
+                    console.error("Erro no modal de feedback:", err);
                 }
             }
         });

@@ -26,7 +26,7 @@ module.exports = {
         .addStringOption(opt =>
             opt
                 .setName("filtro")
-                .setDescription("Filtrar por um tipo específico de item")
+                .setDescription("Filtrar por uma categoria específica")
                 .setRequired(false)
                 .addChoices(
                     { name: "🍔 Alimentos", value: "Alimento" },
@@ -37,11 +37,15 @@ module.exports = {
                     { name: "✨ Item Mágico / Encantamento", value: "Item Mágico" },
                     { name: "🧪 Poções e Pergaminhos", value: "Poções/Pergaminhos" }
                 )
+        )
+        .addStringOption(opt =>
+            opt.setName("nome").setDescription("Filtrar pelo nome parcial do item").setRequired(false)
         ),
 
     async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         const valorVenda = interaction.options.getNumber("valor");
-        const filtro = interaction.options.getString("filtro");
+        const filtroCat = interaction.options.getString("filtro");
+        const filtroNome = interaction.options.getString("nome");
 
         try {
             const char = await getPersonagemAtivo(interaction.user.id);
@@ -62,21 +66,26 @@ module.exports = {
                 });
             }
 
-            if (filtro) {
-                if (filtro === "Poções/Pergaminhos") {
+            if (filtroCat) {
+                if (filtroCat === "Poções/Pergaminhos") {
                     inventario = inventario.filter(i => i.tipo.includes("Poções/Pergaminhos"));
-                } else if (filtro === "Item Mágico") {
+                } else if (filtroCat === "Item Mágico") {
                     inventario = inventario.filter(i => i.tipo === "Item Mágico" || i.tipo === "Encantamento");
                 } else {
-                    inventario = inventario.filter(i => i.tipo === filtro);
+                    inventario = inventario.filter(i => i.tipo === filtroCat);
                 }
+            }
 
-                if (inventario.length === 0) {
-                    return interaction.reply({
-                        content: `🎒 Você não possui nenhum item da categoria **${filtro}** na mochila para vender.`,
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
+            if (filtroNome) {
+                const termo = filtroNome.toLowerCase();
+                inventario = inventario.filter(i => i.nome.toLowerCase().includes(termo));
+            }
+
+            if (inventario.length === 0) {
+                return interaction.reply({
+                    content: `🎒 Nenhum item encontrado na sua mochila com os filtros aplicados.`,
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
             const menuItens = new StringSelectMenuBuilder()

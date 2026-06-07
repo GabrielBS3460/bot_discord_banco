@@ -1,5 +1,6 @@
 const PersonagemRepository = require("../repositories/PersonagemRepository.js");
 const UsuarioRepository = require("../repositories/UsuarioRepository.js");
+const TransacaoService = require("./TransacaoService.js");
 const prisma = require("../database.js");
 
 class PersonagemService {
@@ -12,8 +13,13 @@ class PersonagemService {
         return { nivelReal, patamar };
     }
 
-    async processarDescanso(char, tipoCustomId, bonusVida, bonusMana) {
+    async processarDescanso(char, tipoCustomId, bonusVida, bonusMana, gasto = 0) {
         const { nivelReal } = this.calcularDadosBase(char);
+
+        if (gasto > 0) {
+            if (char.saldo < gasto) throw new Error("SALDO_INSUFICIENTE");
+            char = await TransacaoService.registrarGasto(char, gasto, `Descanso: ${tipoCustomId.replace("desc_", "")}`);
+        }
 
         let multiplicador = 1;
         let nomeTipo = "Normal";
@@ -45,7 +51,7 @@ class PersonagemService {
 
         await PersonagemRepository.registrarLogDescanso(char.id, curouVida, curouMana, nomeTipo);
 
-        return { charAtualizado, curouVida, curouMana };
+        return { charAtualizado, curouVida, curouMana, gasto };
     }
 
     verificarPodeDescansar(char) {

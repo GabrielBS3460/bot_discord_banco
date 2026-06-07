@@ -313,6 +313,14 @@ module.exports = {
                                         .setLabel("Bônus Mana")
                                         .setStyle(TextInputStyle.Short)
                                         .setRequired(false)
+                                ),
+                                new ActionRowBuilder().addComponents(
+                                    new TextInputBuilder()
+                                        .setCustomId("inp_gasto")
+                                        .setLabel("Gasto (K$)")
+                                        .setStyle(TextInputStyle.Short)
+                                        .setRequired(false)
+                                        .setPlaceholder("Opcional: Ex: 10")
                                 )
                             );
 
@@ -327,24 +335,31 @@ module.exports = {
 
                             const bonusV = parseInt(modalSubmit.fields.getTextInputValue("inp_bonus_vida")) || 0;
                             const bonusM = parseInt(modalSubmit.fields.getTextInputValue("inp_bonus_mana")) || 0;
+                            const gasto = parseFloat(modalSubmit.fields.getTextInputValue("inp_gasto")) || 0;
 
                             const resultado = await PersonagemService.processarDescanso(
                                 char,
                                 iDesc.customId,
                                 bonusV,
-                                bonusM
+                                bonusM,
+                                gasto
                             );
                             char = resultado.charAtualizado;
 
                             await interaction.editReply({ embeds: [montarEmbedFicha(char)] });
-                            await interaction.channel.send({
-                                content: `🛏️ O personagem **${char.nome}** descansou!\n❤️ **Vida recuperada:** +${resultado.curouVida}\n✨ **Mana recuperada:** +${resultado.curouMana}`
-                            });
+                            
+                            let msgDescanso = `🛏️ O personagem **${char.nome}** descansou!\n❤️ **Vida recuperada:** +${resultado.curouVida}\n✨ **Mana recuperada:** +${resultado.curouMana}`;
+                            if (resultado.gasto > 0) {
+                                msgDescanso += `\n💰 **Gasto:** ${formatarMoeda(resultado.gasto)}`;
+                            }
+                            
+                            await interaction.channel.send({ content: msgDescanso });
 
                             await modalSubmit.deleteReply().catch(() => {});
-                            // eslint-disable-next-line no-unused-vars
                         } catch (err) {
-                            /* ignora */
+                            if (err.message === "SALDO_INSUFICIENTE") {
+                                await interaction.followUp({ content: "🚫 Você não tem saldo suficiente para esse descanso.", flags: MessageFlags.Ephemeral });
+                            }
                         }
                     });
                     return;

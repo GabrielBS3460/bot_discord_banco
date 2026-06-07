@@ -19,11 +19,15 @@ module.exports = {
         .setDescription("Entrega um item do seu inventário para outro personagem.")
         .addUserOption(option =>
             option.setName("destinatario").setDescription("O jogador que vai receber o item").setRequired(true)
+        )
+        .addStringOption(option =>
+            option.setName("filtro").setDescription("Filtrar itens pelo nome").setRequired(false)
         ),
 
     async execute({ interaction, getPersonagemAtivo }) {
         try {
             const destinatarioUser = interaction.options.getUser("destinatario");
+            const filtro = interaction.options.getString("filtro");
 
             if (destinatarioUser.bot) {
                 return interaction.reply({
@@ -56,13 +60,25 @@ module.exports = {
                 });
             }
 
-            const inventario = await ItensRepository.buscarInventario(charRemetente.id);
+            let inventario = await ItensRepository.buscarInventario(charRemetente.id);
 
             if (!inventario || inventario.length === 0) {
                 return interaction.reply({
                     content: "🎒 Seu inventário está vazio. Não há nada para entregar.",
                     flags: MessageFlags.Ephemeral
                 });
+            }
+
+            if (filtro) {
+                const termo = filtro.toLowerCase();
+                inventario = inventario.filter(i => i.nome.toLowerCase().includes(termo));
+
+                if (inventario.length === 0) {
+                    return interaction.reply({
+                        content: `🎒 Nenhum item encontrado com o filtro **"${filtro}"**.`,
+                        flags: MessageFlags.Ephemeral
+                    });
+                }
             }
 
             const menuItens = new StringSelectMenuBuilder()

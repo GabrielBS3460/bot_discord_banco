@@ -67,7 +67,7 @@ class DominioService {
                     corte: "Inexistente",
                     popularidade: mistico ? "N/A" : "Tolerado",
                     imposto_atual: "Médio",
-                    acoes_disponiveis: 2,
+                    acoes_disponiveis: 1, // A fundação consome 1 ação do primeiro mês
                     mes_ultimo_turno: new Date().getMonth() + 1
                 },
                 include: { construcoes: true, tropas: true, personagem: true }

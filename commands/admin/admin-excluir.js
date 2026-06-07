@@ -51,7 +51,7 @@ module.exports = {
                 .setTitle("⚠️ CONFIRMAÇÃO DE EXCLUSÃO")
                 .setColor("#ED4245")
                 .setDescription(
-                    `Você está prestes a excluir permanentemente o personagem:\n\n**Nome:** ${personagem.nome}\n**Dono:** ${alvoUser}\n**Saldo:** K$ ${personagem.saldo}\n\n**Esta ação não pode ser desfeita e apagará todos os registros (Inscrições, Transações, Moradia).**`
+                    `Você está prestes a excluir permanentemente o personagem:\n\n**Nome:** ${personagem.nome}\n**Dono:** ${alvoUser}\n**Saldo:** K$ ${personagem.saldo}\n\n**Esta ação não pode ser desfeita e apagará todos os registros (Inscrições, Transações, Moradia, Inventário, Mercado e Domínio).**`
                 )
                 .setFooter({ text: "Clique no botão abaixo para confirmar." });
 
@@ -90,6 +90,8 @@ module.exports = {
                         prisma.inscricoes.deleteMany({ where: { personagem_id: personagem.id } }),
                         prisma.baseResidente.deleteMany({ where: { personagem_id: personagem.id } }),
                         prisma.base.deleteMany({ where: { dono_id: personagem.id } }),
+                        prisma.mercado.deleteMany({ where: { vendedor_id: personagem.id } }),
+                        prisma.dominio.deleteMany({ where: { personagem_id: personagem.id } }),
                         prisma.personagens.delete({ where: { id: personagem.id } })
                     ]);
 

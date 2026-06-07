@@ -27,6 +27,9 @@ module.exports = {
                 .addNumberOption(opt =>
                     opt.setName("preco").setDescription("Preço total em Kwanzas (K$)").setRequired(true).setMinValue(1)
                 )
+                .addStringOption(opt =>
+                    opt.setName("filtro").setDescription("Filtrar itens pelo nome").setRequired(false)
+                )
         )
         .addSubcommand(sub =>
             sub.setName("comprar").setDescription("Abre o mural de anúncios para comprar itens de outros jogadores.")
@@ -51,12 +54,24 @@ module.exports = {
 
             if (subcomando === "anunciar") {
                 const preco = interaction.options.getNumber("preco");
-                const inventario = await ItensRepository.buscarInventario(char.id);
+                const filtro = interaction.options.getString("filtro");
+                let inventario = await ItensRepository.buscarInventario(char.id);
 
                 if (!inventario || inventario.length === 0) {
                     return interaction.editReply({
                         content: "🎒 Sua mochila está vazia. Não há nada para vender."
                     });
+                }
+
+                if (filtro) {
+                    const termo = filtro.toLowerCase();
+                    inventario = inventario.filter(i => i.nome.toLowerCase().includes(termo));
+
+                    if (inventario.length === 0) {
+                        return interaction.editReply({
+                            content: `🎒 Nenhum item encontrado com o filtro **"${filtro}"**.`
+                        });
+                    }
                 }
 
                 const menuItens = new StringSelectMenuBuilder()

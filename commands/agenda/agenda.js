@@ -18,15 +18,17 @@ const DAY_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado",
 
 const HEAT_COLORS = [
     { label: "0", color: "#383a40" },
-    { label: "1-2", color: "#1a4d2e" },
-    { label: "3-4", color: "#248046" },
-    { label: "5+", color: "#57f287" }
+    { label: "1-4", color: "#3498db" },
+    { label: "5-9", color: "#f1c40f" },
+    { label: "10-14", color: "#e67e22" },
+    { label: "15+", color: "#e74c3c" }
 ];
 
 const getColor = count => {
-    if (count >= 5) return "#57f287";
-    if (count >= 3) return "#248046";
-    if (count >= 1) return "#1a4d2e";
+    if (count >= 15) return "#e74c3c";
+    if (count >= 10) return "#e67e22";
+    if (count >= 5) return "#f1c40f";
+    if (count >= 1) return "#3498db";
     return "#383a40";
 };
 
@@ -213,7 +215,7 @@ module.exports = {
 
                     ctx.fillStyle = "#b5bac1";
                     ctx.fillText(
-                        item.label === "5+" ? "5+ Players" : `${item.label} Players`,
+                        `${item.label} Players`,
                         legendX + 25,
                         legendY + 15
                     );
