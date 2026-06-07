@@ -10,18 +10,17 @@ module.exports = {
         ),
 
     async execute({ interaction, ID_CARGO_ADMIN, verificarLimiteMestre }) {
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
         if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN)) {
-            return interaction.reply({
-                content: "🚫 **Acesso Negado:** Apenas administradores podem conferir avaliações.",
-                flags: MessageFlags.Ephemeral
+            return interaction.editReply({
+                content: "🚫 **Acesso Negado:** Apenas administradores podem conferir avaliações."
             });
         }
 
         const targetUser = interaction.options.getUser("mestre");
         if (targetUser.bot)
-            return interaction.reply({ content: "🚫 Bots não narram missões.", flags: MessageFlags.Ephemeral });
-
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            return interaction.editReply({ content: "🚫 Bots não narram missões." });
 
         try {
             // Busca dados do usuário para verificar o limite
