@@ -5,6 +5,9 @@ const {
     StringSelectMenuOptionBuilder,
     ButtonBuilder,
     ButtonStyle,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
     MessageFlags
 } = require("discord.js");
 const MestreService = require("../../services/MestreService.js");

@@ -316,7 +316,15 @@ module.exports = {
                 }
             } catch (err) {
                 console.error(err);
-                if (!i.replied) await i.reply({ content: "❌ Erro na operação.", flags: MessageFlags.Ephemeral });
+                let errorMessage = "❌ Erro na operação.";
+                if (err.message === "EQUIPE_CHEIA") errorMessage = "⚠️ A equipe já está cheia.";
+                if (err.message === "SEM_CANDIDATOS") errorMessage = "⚠️ Não há candidatos inscritos na fila.";
+
+                if (i.deferred || i.replied) {
+                    await i.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
+                } else {
+                    await i.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
+                }
             }
         });
     }
