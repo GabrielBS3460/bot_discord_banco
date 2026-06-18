@@ -6,10 +6,14 @@ module.exports = {
         .setName("help-admin")
         .setDescription("Exibe o painel de ajuda interativo com os comandos de administração."),
 
-    async execute({ interaction, client, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
-        if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN) && !interaction.member.roles.cache.has(ID_CARGO_MOD)) {
+    async execute({ interaction, client, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_CORRETOR }) {
+        if (
+            !interaction.member.roles.cache.has(ID_CARGO_ADMIN) &&
+            !interaction.member.roles.cache.has(ID_CARGO_MOD) &&
+            !interaction.member.roles.cache.has(ID_CARGO_CORRETOR)
+        ) {
             return interaction.reply({
-                content: "🚫 Apenas administradores e moderadores podem usar este comando.",
+                content: "🚫 Apenas administradores, moderadores e corretores podem usar este comando.",
                 ephemeral: true
             });
         }

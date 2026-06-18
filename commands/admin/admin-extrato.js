@@ -9,11 +9,12 @@ module.exports = {
             option.setName("jogador").setDescription("O jogador que você deseja investigar").setRequired(true)
         ),
 
-    async execute({ interaction, getPersonagemAtivo, formatarMoeda, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
+    async execute({ interaction, getPersonagemAtivo, formatarMoeda, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_CORRETOR }) {
         const eAdmin = interaction.member.roles.cache.has(ID_CARGO_ADMIN);
         const eMod = interaction.member.roles.cache.has(ID_CARGO_MOD);
+        const eCorretor = interaction.member.roles.cache.has(ID_CARGO_CORRETOR);
 
-        if (!eAdmin && !eMod) {
+        if (!eAdmin && !eMod && !eCorretor) {
             return interaction.reply({
                 content: "🚫 Você não tem permissão para usar este comando administrativo.",
                 flags: MessageFlags.Ephemeral

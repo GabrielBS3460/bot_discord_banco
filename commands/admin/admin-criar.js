@@ -10,9 +10,11 @@ module.exports = {
         )
         .addStringOption(option => option.setName("nome").setDescription("O nome do personagem").setRequired(true)),
 
-    async execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
+    async execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_CORRETOR }) {
         const temPermissao =
-            interaction.member.roles.cache.has(ID_CARGO_ADMIN) || interaction.member.roles.cache.has(ID_CARGO_MOD);
+            interaction.member.roles.cache.has(ID_CARGO_ADMIN) ||
+            interaction.member.roles.cache.has(ID_CARGO_MOD) ||
+            interaction.member.roles.cache.has(ID_CARGO_CORRETOR);
 
         if (!temPermissao) {
             return interaction.reply({
