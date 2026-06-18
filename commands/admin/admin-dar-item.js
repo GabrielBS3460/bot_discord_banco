@@ -33,9 +33,11 @@ module.exports = {
             opt.setName("descricao").setDescription("Link de imagem ou efeitos mecânicos (Opcional)").setRequired(false)
         ),
 
-    async execute({ interaction, getPersonagemAtivo, ID_CARGO_ADMIN, ID_CARGO_MOD }) {
+    async execute({ interaction, getPersonagemAtivo, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_CORRETOR }) {
         const temPermissao =
-            interaction.member.roles.cache.has(ID_CARGO_ADMIN) || interaction.member.roles.cache.has(ID_CARGO_MOD);
+            interaction.member.roles.cache.has(ID_CARGO_ADMIN) ||
+            interaction.member.roles.cache.has(ID_CARGO_MOD) ||
+            interaction.member.roles.cache.has(ID_CARGO_CORRETOR);
 
         if (!temPermissao) {
             return interaction.reply({
