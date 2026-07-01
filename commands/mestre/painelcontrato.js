@@ -23,15 +23,18 @@ module.exports = {
         .addStringOption(opt => opt.setName("nome").setDescription("Nome exato do contrato").setRequired(true)),
 
     async execute({ interaction, getPersonagemAtivo, ID_CARGO_ADMIN }) {
+        // Deferir imediatamente para evitar DiscordAPIError[10062] (interação expira em 3s)
+        await interaction.deferReply();
+
         const nomeMissao = interaction.options.getString("nome").trim();
         let missao = await ContratoRepository.buscarPorNomeCompleto(nomeMissao);
 
         if (!missao)
-            return interaction.reply({ content: "🚫 Contrato não encontrado.", flags: MessageFlags.Ephemeral });
+            return interaction.editReply({ content: "🚫 Contrato não encontrado." });
 
         const eAdmin = interaction.member.roles.cache.has(ID_CARGO_ADMIN);
         if (missao.criador_id !== interaction.user.id && !eAdmin) {
-            return interaction.reply({ content: "🚫 Sem permissão.", flags: MessageFlags.Ephemeral });
+            return interaction.editReply({ content: "🚫 Sem permissão." });
         }
 
         const atualizarInterface = async it => {
@@ -136,7 +139,8 @@ module.exports = {
             );
 
             const payload = { embeds: [embed], components: [buttons1, buttons2] };
-            return it.replied ? it.editReply(payload) : it.reply(payload);
+            // Após deferReply, sempre usar editReply na interação original
+            return it === interaction ? it.editReply(payload) : (it.replied ? it.editReply(payload) : it.reply(payload));
         };
 
         await atualizarInterface(interaction);
