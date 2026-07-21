@@ -80,6 +80,11 @@ const CATEGORIAS = {
                 cmd: "/conferirnota",
                 desc: "Mostra a avaliação média e as notas detalhadas de um mestre.",
                 syntax: "/conferirnota mestre:@usuario"
+            },
+            {
+                cmd: "/admin-nivel-narrador",
+                desc: "Altera ou define o nível de narrador de um Mestre (Apenas Admins/Mods).",
+                syntax: "/admin-nivel-narrador mestre:@usuario operacao:<SET|ADD|REM> nivel:<valor>"
             }
         ]
     },

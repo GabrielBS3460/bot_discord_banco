@@ -44,13 +44,11 @@ module.exports = {
         }
 
         try {
-            const mestreData = await prisma.usuarios.findUnique({
-                where: { discord_id: targetUser.id }
+            const mestreData = await prisma.usuarios.upsert({
+                where: { discord_id: targetUser.id },
+                update: {},
+                create: { discord_id: targetUser.id, nivel_narrador: 1 }
             });
-
-            if (!mestreData) {
-                return interaction.editReply({ content: "🚫 Usuário não encontrado no banco de dados." });
-            }
 
             const statsMestre = await verificarLimiteMestre(mestreData);
 

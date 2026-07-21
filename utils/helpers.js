@@ -33,8 +33,6 @@ async function verificarLimiteMestre(mestre) {
             break;
     }
 
-    if (limite === 0) return { limiteAtingido: true, limite: 0, contagem: 0 };
-
     const agora = new Date();
     const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
 
@@ -44,15 +42,31 @@ async function verificarLimiteMestre(mestre) {
     });
     const idsDosPersonagens = personagensDoMestre.map(p => p.id);
 
-    const missoesMestradas = await prisma.transacao.count({
+    let missoesMestradas = 0;
+    if (idsDosPersonagens.length > 0) {
+        missoesMestradas = await prisma.transacao.count({
+            where: {
+                personagem_id: { in: idsDosPersonagens },
+                data: { gte: inicioDoMes },
+                categoria: { in: ["MESTRAR_SOLICITADA", "MESTRAR_COLETA", "MESTRAR_CAPTURA"] }
+            }
+        });
+    }
+
+    const missoesQuadroConcluidas = await prisma.missoes.count({
         where: {
-            personagem_id: { in: idsDosPersonagens },
-            data: { gte: inicioDoMes },
-            categoria: { in: ["MESTRAR_SOLICITADA", "MESTRAR_COLETA", "MESTRAR_CAPTURA"] }
+            criador_id: mestre.discord_id,
+            status: "CONCLUIDA"
         }
     });
 
-    return { limiteAtingido: missoesMestradas >= limite, limite, contagem: missoesMestradas };
+    const contagemTotal = missoesMestradas + missoesQuadroConcluidas;
+
+    return {
+        limiteAtingido: limite === 0 ? true : contagemTotal >= limite,
+        limite,
+        contagem: contagemTotal
+    };
 }
 
 function calcularNivelEPatamar(classes) {
