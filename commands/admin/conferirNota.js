@@ -10,7 +10,7 @@ module.exports = {
         ),
 
     async execute({ interaction, ID_CARGO_ADMIN, verificarLimiteMestre }) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({ ephemeral: true });
 
         const eAdmin = interaction.member.roles.cache.has(ID_CARGO_ADMIN);
         const targetUser = interaction.options.getUser("mestre") || interaction.user;
