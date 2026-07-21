@@ -83,6 +83,14 @@ class PersonagemRepository {
         });
     }
 
+    async buscarAtivoDoJogador(discordId) {
+        const usuario = await prisma.usuarios.findUnique({
+            where: { discord_id: discordId },
+            include: { personagemAtivo: true }
+        });
+        return usuario?.personagemAtivo || null;
+    }
+
     async buscarPorNomeEJogador(nome, discordId) {
         return prisma.personagens.findFirst({
             where: {
