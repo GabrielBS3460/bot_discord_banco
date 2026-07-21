@@ -1,10 +1,11 @@
 const prisma = require("../database.js");
 
 class AgendaRepository {
-    async buscarAgendasGlobais() {
+    async buscarAgendasGlobais(nd = null) {
+        const where = nd !== null ? { nivel_personagem: nd } : {};
         return prisma.personagens.findMany({
-            select: { usuario_id: true, agenda: true },
-            distinct: ["usuario_id"]
+            where,
+            select: { usuario_id: true, agenda: true, nivel_personagem: true }
         });
     }
 

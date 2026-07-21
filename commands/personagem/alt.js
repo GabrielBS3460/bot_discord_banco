@@ -304,38 +304,62 @@ module.exports = {
             });
         }
 
-        const menuItens = new StringSelectMenuBuilder()
-            .setCustomId(`menu_alt_equip_${interaction.id}`)
-            .setPlaceholder("1️⃣ Selecione o item do inventário...");
+        const ITENS_POR_PAGINA = 25;
+        let pagina = 0;
+        const totalPaginas = Math.ceil(inventario.length / ITENS_POR_PAGINA);
 
-        inventario.slice(0, 25).forEach(item => {
-            menuItens.addOptions(
-                new StringSelectMenuOptionBuilder()
-                    .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
-                    .setDescription(`Tipo: ${item.tipo}`)
-                    .setValue(item.id.toString())
+        let itemId = null;
+        let destinoEscolhidoId = null;
+
+        const buildComponents = () => {
+            const inicio = pagina * ITENS_POR_PAGINA;
+            const itensPagina = inventario.slice(inicio, inicio + ITENS_POR_PAGINA);
+
+            const menuItens = new StringSelectMenuBuilder()
+                .setCustomId(`menu_alt_equip_${interaction.id}`)
+                .setPlaceholder(`1️⃣ Selecione o item (Página ${pagina + 1}/${totalPaginas})...`);
+
+            itensPagina.forEach(item => {
+                menuItens.addOptions(
+                    new StringSelectMenuOptionBuilder()
+                        .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
+                        .setDescription(`Tipo: ${item.tipo}`)
+                        .setValue(item.id.toString())
+                );
+            });
+
+            const menuAlts = new StringSelectMenuBuilder()
+                .setCustomId(`menu_alt_destequip_${interaction.id}`)
+                .setPlaceholder("2️⃣ Selecione o alt destino...");
+
+            meusAlts.forEach(alt =>
+                menuAlts.addOptions(new StringSelectMenuOptionBuilder().setLabel(alt.nome).setValue(String(alt.id)))
             );
-        });
 
-        const menuAlts = new StringSelectMenuBuilder()
-            .setCustomId(`menu_alt_destequip_${interaction.id}`)
-            .setPlaceholder("2️⃣ Selecione o alt destino...");
+            const btnConfirmar = new ButtonBuilder()
+                .setCustomId(`btn_conf_equip_${interaction.id}`)
+                .setLabel("Avançar para Quantidade")
+                .setStyle(ButtonStyle.Primary)
+                .setDisabled(!itemId || !destinoEscolhidoId);
 
-        meusAlts.forEach(alt =>
-            menuAlts.addOptions(new StringSelectMenuOptionBuilder().setLabel(alt.nome).setValue(String(alt.id)))
-        );
+            const rows = [
+                new ActionRowBuilder().addComponents(menuItens),
+                new ActionRowBuilder().addComponents(menuAlts)
+            ];
 
-        const btnConfirmar = new ButtonBuilder()
-            .setCustomId(`btn_conf_equip_${interaction.id}`)
-            .setLabel("Avançar para Quantidade")
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(true);
+            if (totalPaginas > 1) {
+                const rowNav = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder().setCustomId(`alt_item_prev_${interaction.id}`).setLabel("◀️").setStyle(ButtonStyle.Secondary).setDisabled(pagina === 0),
+                    new ButtonBuilder().setCustomId(`alt_item_next_${interaction.id}`).setLabel("▶️").setStyle(ButtonStyle.Secondary).setDisabled(pagina === totalPaginas - 1),
+                    btnConfirmar
+                );
+                rows.push(rowNav);
+            } else {
+                rows.push(new ActionRowBuilder().addComponents(btnConfirmar));
+            }
 
-        const buildComponents = () => [
-            new ActionRowBuilder().addComponents(menuItens),
-            new ActionRowBuilder().addComponents(menuAlts),
-            new ActionRowBuilder().addComponents(btnConfirmar)
-        ];
+            return rows;
+        };
 
         const replyMsg = await interaction.editReply({
             content: `🧳 **Transferência de Inventário (Alts)**\n**Origem:** ${charAtivo.nome}\n\nSelecione o Item e para qual personagem deseja enviar:`,
@@ -346,21 +370,30 @@ module.exports = {
             filter: i => i.user.id === interaction.user.id,
             time: 120000
         });
-
-        let itemId = null;
         let altId = null;
         let processando = false;
 
         collector.on("collect", async iComp => {
             if (processando) return;
 
+            if (iComp.isButton()) {
+                if (iComp.customId.startsWith("alt_item_prev_")) {
+                    pagina = Math.max(0, pagina - 1);
+                    await iComp.update({ components: buildComponents() });
+                    return;
+                }
+                if (iComp.customId.startsWith("alt_item_next_")) {
+                    pagina = Math.min(totalPaginas - 1, pagina + 1);
+                    await iComp.update({ components: buildComponents() });
+                    return;
+                }
+            }
+
             if (iComp.isStringSelectMenu()) {
                 if (iComp.customId.startsWith("menu_alt_equip_")) itemId = parseInt(iComp.values[0]);
-                if (iComp.customId.startsWith("menu_alt_destequip_")) altId = parseInt(iComp.values[0]);
-
-                if (itemId && altId) {
-                    btnConfirmar.setDisabled(false);
-                    btnConfirmar.setStyle(ButtonStyle.Success);
+                if (iComp.customId.startsWith("menu_alt_destequip_")) {
+                    altId = parseInt(iComp.values[0]);
+                    destinoEscolhidoId = altId;
                 }
                 await iComp.update({ components: buildComponents() });
             }
@@ -392,7 +425,7 @@ module.exports = {
                         time: 60000
                     });
 
-                    processando = true; // Trava de segurança no DB
+                    processando = true;
                     await modalSubmit.deferUpdate();
 
                     const qtdEnviar = parseInt(modalSubmit.fields.getTextInputValue("inp_qtd"));

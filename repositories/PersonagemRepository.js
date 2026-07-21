@@ -94,6 +94,7 @@ class PersonagemRepository {
 
     async apagarPersonagemCompleto(personagemId) {
         return prisma.$transaction([
+            prisma.mercado.deleteMany({ where: { vendedor_id: personagemId } }),
             prisma.transacao.deleteMany({ where: { personagem_id: personagemId } }),
             prisma.personagens.delete({ where: { id: personagemId } })
         ]);

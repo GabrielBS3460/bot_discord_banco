@@ -1,6 +1,9 @@
 const {
     SlashCommandBuilder,
+    EmbedBuilder,
     ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
     ModalBuilder,
@@ -69,6 +72,11 @@ module.exports = {
                     ? `Aprimorar: ${itemBase.nome.substring(0, 20)}`
                     : `Forjar: ${tipoSelecionado.substring(0, 30)}`;
 
+                let valorPadraoQtd = "1";
+                if (itemBase && itemBase.tipo === "Munição") {
+                    valorPadraoQtd = String(Math.min(20, itemBase.quantidade));
+                }
+
                 const modal = new ModalBuilder()
                     .setCustomId(modalId)
                     .setTitle(tituloModal)
@@ -77,6 +85,7 @@ module.exports = {
                             new TextInputBuilder()
                                 .setCustomId("inp_nome")
                                 .setLabel("Nome do NOVO Item")
+                                .setValue(itemBase ? itemBase.nome : "")
                                 .setPlaceholder(itemBase ? `Ex: ${itemBase.nome} +1` : "Nome do item")
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true)
@@ -86,7 +95,7 @@ module.exports = {
                                 .setCustomId("inp_qtd")
                                 .setLabel(itemBase ? `Quantidade (Máx: ${itemBase.quantidade})` : "Quantidade")
                                 .setStyle(TextInputStyle.Short)
-                                .setValue("1")
+                                .setValue(valorPadraoQtd)
                                 .setRequired(true)
                         ),
                         new ActionRowBuilder().addComponents(
@@ -116,8 +125,6 @@ module.exports = {
                         time: 120000
                     });
 
-                    await submit.deferReply({ flags: MessageFlags.Ephemeral });
-
                     const nomeItem = submit.fields.getTextInputValue("inp_nome");
                     let qtd = parseInt(submit.fields.getTextInputValue("inp_qtd"));
                     const custoOuro = parseFloat(submit.fields.getTextInputValue("inp_ouro").replace(",", "."));
@@ -125,13 +132,18 @@ module.exports = {
 
                     let custoPontosUnit = CUSTO_FORJA[tipoSelecionado];
 
-                    if (isNaN(qtd) || qtd <= 0) return submit.editReply("🚫 Quantidade inválida.");
-                    if (isNaN(custoOuro) || custoOuro < 0) return submit.editReply("🚫 Valor em Kwanzas inválido.");
+                    if (isNaN(qtd) || qtd <= 0) {
+                        return submit.reply({ content: "🚫 Quantidade inválida.", flags: MessageFlags.Ephemeral });
+                    }
+                    if (isNaN(custoOuro) || custoOuro < 0) {
+                        return submit.reply({ content: "🚫 Valor em Kwanzas inválido.", flags: MessageFlags.Ephemeral });
+                    }
 
                     if (itemBase && qtd > itemBase.quantidade) {
-                        return submit.editReply(
-                            `🚫 Você só possui **${itemBase.quantidade}x** de **${itemBase.nome}** para usar como base.`
-                        );
+                        return submit.reply({
+                            content: `🚫 Você só possui **${itemBase.quantidade}x** de **${itemBase.nome}** para usar como base.`,
+                            flags: MessageFlags.Ephemeral
+                        });
                     }
 
                     if (itemBase && itemBase.tipo === "Munição") {
@@ -140,44 +152,97 @@ module.exports = {
                         custoPontosUnit = custoTotalReal / qtd;
                     }
 
-                    const { saldoAtualizado, pontosAtualizados, custoPontosTotal } = await ForjaService.executarForja(
-                        char.id,
-                        tipoSelecionado,
-                        nomeItem,
-                        qtd,
-                        custoOuro,
-                        custoPontosUnit
+                    const custoPontosTotal = parseFloat((custoPontosUnit * qtd).toFixed(2));
+
+                    const confirmEmbed = new EmbedBuilder()
+                        .setColor("#F1C40F")
+                        .setTitle("⚒️ Confirmação de Forja")
+                        .setDescription("Verifique as informações abaixo antes de confirmar a execução da forja:")
+                        .addFields(
+                            { name: "📦 Item", value: nomeItem, inline: true },
+                            { name: "🔢 Quantidade", value: `${qtd}`, inline: true },
+                            { name: "💰 Custo em Kwanzas", value: formatarMoeda(custoOuro), inline: true },
+                            { name: "🔨 Pontos de Forja", value: `${custoPontosTotal} pts`, inline: true },
+                            { name: "📋 Tipo", value: tipoSelecionado, inline: true }
+                        );
+
+                    if (itemBase) {
+                        confirmEmbed.addFields({ name: "♻️ Item Base Consumido", value: itemBase.nome, inline: false });
+                    }
+
+                    const botoesConfirma = new ActionRowBuilder().addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`conf_forja_${Date.now()}`)
+                            .setLabel("Confirmar Forja")
+                            .setStyle(ButtonStyle.Success),
+                        new ButtonBuilder()
+                            .setCustomId(`canc_forja_${Date.now()}`)
+                            .setLabel("Cancelar")
+                            .setStyle(ButtonStyle.Danger)
                     );
 
-                    if (itemBase) {
-                        await ItensRepository.removerItem(itemBase.id, qtd);
-                    }
-
-                    let tipoFinal = tipoSelecionado;
-                    if (itemBase) {
-                        tipoFinal = itemBase.tipo;
-                    } else if (tipoSelecionado === "Melhorias") {
-                        tipoFinal = "Itens Permanentes";
-                    } else if (tipoSelecionado === "Encantamento") {
-                        tipoFinal = "Item Mágico";
-                    }
-
-                    const qtdAdicionar = !itemBase && tipoSelecionado === "Munição" ? qtd * 20 : qtd;
-
-                    await ItensRepository.adicionarItem(char.id, nomeItem, tipoFinal, qtdAdicionar, linkItem || null);
-
-                    const textoBase = itemBase ? `\n♻️ **Item Base Consumido:** ${itemBase.nome}` : "";
-
-                    await submit.editReply({
-                        content: `✅ Forja concluída e item salvo no inventário!\n⚙️ **Resumo:** Saldo: ${formatarMoeda(saldoAtualizado)} | Pts Restantes: ${pontosAtualizados.toFixed(1)}`
+                    const confirmMsg = await submit.reply({
+                        embeds: [confirmEmbed],
+                        components: [botoesConfirma],
+                        flags: MessageFlags.Ephemeral,
+                        fetchReply: true
                     });
 
-                    await interaction.channel.send({
-                        content: `⚒️ **NOVO ITEM NA FORJA!** ⚒️\n\n👤 **Ferreiro:** ${interaction.user}\n📦 **Item:** ${qtdAdicionar}x **${nomeItem}**\n📑 **Tipo:** ${tipoFinal}${textoBase}\n💰 **Custo:** ${formatarMoeda(custoOuro)}\n🔨 **Esforço:** ${custoPontosTotal} pts\n\n*A oficina ferve com o som do martelo!*`
+                    const confirmCollector = confirmMsg.createMessageComponentCollector({
+                        filter: iConf => iConf.user.id === interaction.user.id,
+                        time: 60000
                     });
 
-                    await msg.edit({ components: [] }).catch(() => {});
-                    collector.stop();
+                    confirmCollector.on("collect", async iConf => {
+                        await iConf.deferUpdate();
+
+                        if (iConf.customId.startsWith("canc_forja_")) {
+                            await iConf.editReply({ content: "❌ Forja cancelada pelo usuário.", embeds: [], components: [] });
+                            return confirmCollector.stop();
+                        }
+
+                        const { saldoAtualizado, pontosAtualizados } = await ForjaService.executarForja(
+                            char.id,
+                            tipoSelecionado,
+                            nomeItem,
+                            qtd,
+                            custoOuro,
+                            custoPontosUnit
+                        );
+
+                        if (itemBase) {
+                            await ItensRepository.removerItem(itemBase.id, qtd);
+                        }
+
+                        let tipoFinal = tipoSelecionado;
+                        if (itemBase) {
+                            tipoFinal = itemBase.tipo;
+                        } else if (tipoSelecionado === "Melhorias") {
+                            tipoFinal = "Itens Permanentes";
+                        } else if (tipoSelecionado === "Encantamento") {
+                            tipoFinal = "Item Mágico";
+                        }
+
+                        const qtdAdicionar = !itemBase && tipoSelecionado === "Munição" ? qtd * 20 : qtd;
+
+                        await ItensRepository.adicionarItem(char.id, nomeItem, tipoFinal, qtdAdicionar, linkItem || null);
+
+                        const textoBase = itemBase ? `\n♻️ **Item Base Consumido:** ${itemBase.nome}` : "";
+
+                        await iConf.editReply({
+                            content: `✅ Forja concluída e item salvo no inventário!\n⚙️ **Resumo:** Saldo: ${formatarMoeda(saldoAtualizado)} | Pts Restantes: ${pontosAtualizados.toFixed(1)}`,
+                            embeds: [],
+                            components: []
+                        });
+
+                        await interaction.channel.send({
+                            content: `⚒️ **NOVO ITEM NA FORJA!** ⚒️\n\n👤 **Ferreiro:** ${interaction.user}\n📦 **Item:** ${qtdAdicionar}x **${nomeItem}**\n📑 **Tipo:** ${tipoFinal}${textoBase}\n💰 **Custo:** ${formatarMoeda(custoOuro)}\n🔨 **Esforço:** ${custoPontosTotal} pts\n\n*A oficina ferve com o som do martelo!*`
+                        });
+
+                        await msg.edit({ components: [] }).catch(() => {});
+                        confirmCollector.stop();
+                        collector.stop();
+                    });
                 } catch (err) {
                     let erroTexto = "❌ Ocorreu um erro interno durante a forja.";
 

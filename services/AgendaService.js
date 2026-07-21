@@ -1,8 +1,8 @@
 const AgendaRepository = require("../repositories/AgendaRepository.js");
 
 class AgendaService {
-    async gerarMatrizHeatmap() {
-        const players = await AgendaRepository.buscarAgendasGlobais();
+    async gerarMatrizHeatmap(nd = null) {
+        const players = await AgendaRepository.buscarAgendasGlobais(nd);
 
         const matrix = Array(7)
             .fill(0)

@@ -24,7 +24,12 @@ module.exports = {
             sub.setName("construir").setDescription("Constrói um novo cômodo na sua base (K$ 1.000).")
         )
         .addSubcommand(sub =>
-            sub.setName("mobiliar").setDescription("Compra mobílias e instalações para seus cômodos.")
+            sub
+                .setName("mobiliar")
+                .setDescription("Compra mobílias e instalações para seus cômodos.")
+                .addNumberOption(opt =>
+                    opt.setName("desconto").setDescription("Percentual de desconto (0 a 100)").setRequired(false).setMinValue(0).setMaxValue(100)
+                )
         )
         .addSubcommand(sub =>
             sub
@@ -50,6 +55,20 @@ module.exports = {
         )
         .addSubcommand(sub =>
             sub.setName("upgrade").setDescription("Melhora o porte da sua base pagando a diferença de valor.")
+        )
+        .addSubcommand(sub =>
+            sub
+                .setName("trocar-dono")
+                .setDescription("Transfere a propriedade da base para outro jogador/residente.")
+                .addUserOption(option =>
+                    option.setName("novo_dono").setDescription("O novo proprietário da base").setRequired(true)
+                )
+        )
+        .addSubcommand(sub =>
+            sub.setName("comodo-destruir").setDescription("Destrói um cômodo existente na sua base.")
+        )
+        .addSubcommand(sub =>
+            sub.setName("mobilia-destruir").setDescription("Remove e destrói uma mobília da sua base.")
         ),
 
     async execute({ interaction, prisma, getPersonagemAtivo, formatarMoeda }) {
@@ -114,8 +133,11 @@ module.exports = {
                         )
                     );
 
+                const percentualDesconto = interaction.options.getNumber("desconto") || 0;
+                const textoDesconto = percentualDesconto > 0 ? ` (Desconto aplicado: ${percentualDesconto}%)` : "";
+
                 const response = await interaction.editReply({
-                    content: `🛋️ **Loja de Mobílias**\n**Base:** ${base.nome} | **Seu Saldo:** ${formatarMoeda(char.saldo)}\n\n*Selecione o item que deseja comprar:*`,
+                    content: `🛋️ **Loja de Mobílias**\n**Base:** ${base.nome} | **Seu Saldo:** ${formatarMoeda(char.saldo)}${textoDesconto}\n\n*Selecione o item que deseja comprar:*`,
                     components: [
                         new ActionRowBuilder().addComponents(menuA_L),
                         new ActionRowBuilder().addComponents(menuM_Z)
@@ -832,7 +854,7 @@ module.exports = {
                 const porteAtual = PORTES[base.porte];
                 
                 const upgradesDisponiveis = Object.entries(PORTES).filter(
-                    ([nome, dados]) => dados.valor > porteAtual.valor
+                    ([_nome, dados]) => dados.valor > porteAtual.valor
                 );
 
                 if (upgradesDisponiveis.length === 0) {
@@ -906,6 +928,143 @@ module.exports = {
                         components: []
                     });
                     
+                    collector.stop();
+                });
+            }
+
+            if (subcomando === "trocar-dono") {
+                const base = await prisma.base.findFirst({
+                    where: { dono_id: char.id }
+                });
+
+                if (!base) {
+                    return interaction.editReply({ content: "🚫 Apenas o **Dono da Base** pode transferir a propriedade dela." });
+                }
+
+                const novoDonoUser = interaction.options.getUser("novo_dono");
+                const novoDonoChar = await getPersonagemAtivo(novoDonoUser.id);
+
+                if (!novoDonoChar) {
+                    return interaction.editReply({ content: `🚫 O usuário **${novoDonoUser.username}** não possui um personagem ativo.` });
+                }
+
+                if (novoDonoChar.id === char.id) {
+                    return interaction.editReply({ content: "🚫 Você já é o dono desta base." });
+                }
+
+                await prisma.base.update({
+                    where: { id: base.id },
+                    data: { dono_id: novoDonoChar.id }
+                });
+
+                return interaction.editReply({
+                    content: `👑 **Propriedade Transferida!**\n**${novoDonoChar.nome}** (jogador ${novoDonoUser}) agora é o novo Dono da base **${base.nome}**.`
+                });
+            }
+
+            if (subcomando === "comodo-destruir") {
+                const base = await prisma.base.findFirst({
+                    where: { dono_id: char.id },
+                    include: { comodos: true }
+                });
+
+                if (!base) {
+                    return interaction.editReply({ content: "🚫 Apenas o Dono da Base pode destruir cômodos." });
+                }
+
+                if (base.comodos.length === 0) {
+                    return interaction.editReply({ content: "🏠 Sua base não possui cômodos para destruir." });
+                }
+
+                const menuComodos = new StringSelectMenuBuilder()
+                    .setCustomId(`sel_destruir_comodo_${interaction.id}`)
+                    .setPlaceholder("Selecione o cômodo que deseja destruir...");
+
+                base.comodos.forEach(c => {
+                    menuComodos.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(c.nome_comodo)
+                            .setValue(c.id.toString())
+                    );
+                });
+
+                const response = await interaction.editReply({
+                    content: `⚠️ **Destruir Cômodo:** Selecione qual cômodo deseja demolir permanentemente:`,
+                    components: [new ActionRowBuilder().addComponents(menuComodos)],
+                    fetchReply: true
+                });
+
+                const collector = response.createMessageComponentCollector({
+                    filter: i => i.user.id === interaction.user.id,
+                    time: 60000
+                });
+
+                collector.on("collect", async iSelect => {
+                    await iSelect.deferUpdate();
+                    const cId = parseInt(iSelect.values[0]);
+                    const comodoAlvo = base.comodos.find(c => c.id === cId);
+
+                    await prisma.$transaction([
+                        prisma.baseMobilia.deleteMany({ where: { comodo_id: cId } }),
+                        prisma.baseComodo.delete({ where: { id: cId } })
+                    ]);
+
+                    await interaction.editReply({
+                        content: `💣 O cômodo **${comodoAlvo.nome_comodo}** e suas mobílias foram demolidos com sucesso!`,
+                        components: []
+                    });
+                    collector.stop();
+                });
+            }
+
+            if (subcomando === "mobilia-destruir") {
+                const base = await prisma.base.findFirst({
+                    where: { dono_id: char.id },
+                    include: { mobilias: true }
+                });
+
+                if (!base) {
+                    return interaction.editReply({ content: "🚫 Apenas o Dono da Base pode remover mobílias." });
+                }
+
+                if (base.mobilias.length === 0) {
+                    return interaction.editReply({ content: "🛋️ Sua base não possui mobílias para destruir." });
+                }
+
+                const menuMobilias = new StringSelectMenuBuilder()
+                    .setCustomId(`sel_destruir_mob_${interaction.id}`)
+                    .setPlaceholder("Selecione a mobília que deseja destruir...");
+
+                base.mobilias.slice(0, 25).forEach(m => {
+                    menuMobilias.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(m.nome_item)
+                            .setValue(m.id.toString())
+                    );
+                });
+
+                const response = await interaction.editReply({
+                    content: `⚠️ **Destruir Mobília:** Selecione a mobília que deseja remover:`,
+                    components: [new ActionRowBuilder().addComponents(menuMobilias)],
+                    fetchReply: true
+                });
+
+                const collector = response.createMessageComponentCollector({
+                    filter: i => i.user.id === interaction.user.id,
+                    time: 60000
+                });
+
+                collector.on("collect", async iSelect => {
+                    await iSelect.deferUpdate();
+                    const mId = parseInt(iSelect.values[0]);
+                    const mobAlvo = base.mobilias.find(m => m.id === mId);
+
+                    await prisma.baseMobilia.delete({ where: { id: mId } });
+
+                    await interaction.editReply({
+                        content: `🗑️ A mobília **${mobAlvo.nome_item}** foi removida e destruída.`,
+                        components: []
+                    });
                     collector.stop();
                 });
             }

@@ -28,7 +28,7 @@ module.exports = {
         .setName("ficha")
         .setDescription("Exibe e permite editar a ficha do seu personagem ativo."),
 
-    async execute({ interaction, getPersonagemAtivo }) {
+    async execute({ interaction, getPersonagemAtivo, formatarMoeda }) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
@@ -68,11 +68,13 @@ module.exports = {
                 const custoProx = CUSTO_NIVEL[nivelReal] || "Max";
                 const barraProgresso = `${p.pontos_missao}/${custoProx}`;
 
+                const textoTitulo = p.titulo_ativo ? `👑 **Título:** ${p.titulo_ativo}\n` : "";
+
                 const embed = new EmbedBuilder()
                     .setColor("#2B2D31")
                     .setTitle(`Ficha de ${p.nome}`)
                     .setDescription(
-                        `**${textoClasses}**${avisoClasse}\nNível de Personagem: **${nivelReal}** (Patamar ${patamar})`
+                        `${textoTitulo}**${textoClasses}**${avisoClasse}\nNível de Personagem: **${nivelReal}** (Patamar ${patamar})`
                     )
                     .addFields(
                         { name: "❤️ Vida", value: txtVida, inline: true },
@@ -80,6 +82,7 @@ module.exports = {
                         { name: "📈 Progresso", value: `Pontos: **${barraProgresso}**`, inline: true },
                         { name: "🛠️ Forja", value: `${p.pontos_forja_atual.toFixed(1)} pts`, inline: true },
                         { name: "🏃 Deslocamento", value: `${p.deslocamento}m`, inline: true },
+                        { name: "👑 Título", value: p.titulo_ativo || "Nenhum", inline: true },
                         { name: "\u200B", value: "**Atributos**" },
                         {
                             name: "Físicos",
@@ -121,7 +124,12 @@ module.exports = {
                     .setCustomId("edit_pericias")
                     .setLabel("Perícias")
                     .setStyle(ButtonStyle.Secondary)
-                    .setEmoji("🎭")
+                    .setEmoji("🎭"),
+                new ButtonBuilder()
+                    .setCustomId("edit_titulos")
+                    .setLabel("Títulos")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("👑")
             );
 
             const botoes2 = new ActionRowBuilder().addComponents(
@@ -354,13 +362,54 @@ module.exports = {
                             }
                             
                             await interaction.channel.send({ content: msgDescanso });
-
-                            await modalSubmit.deleteReply().catch(() => {});
+                            await iBtn.editReply({ content: "✅ Descanso concluído com sucesso!", components: [] }).catch(() => {});
+                            descCollector.stop();
                         } catch (err) {
                             if (err.message === "SALDO_INSUFICIENTE") {
                                 await interaction.followUp({ content: "🚫 Você não tem saldo suficiente para esse descanso.", flags: MessageFlags.Ephemeral });
                             }
                         }
+                    });
+                    return;
+                }
+
+                if (iBtn.customId === "edit_titulos") {
+                    const titulosDisponiveis = char.titulos || [];
+                    if (titulosDisponiveis.length === 0) {
+                        return iBtn.reply({
+                            content: "🚫 Você não possui nenhum título. Títulos são concedidos por administradores.",
+                            flags: MessageFlags.Ephemeral
+                        });
+                    }
+
+                    const menuTitulos = new StringSelectMenuBuilder()
+                        .setCustomId(`menu_sel_titulo_${uniqueID}`)
+                        .setPlaceholder("Selecione o título que deseja equipar...")
+                        .addOptions(
+                            new StringSelectMenuOptionBuilder().setLabel("Nenhum (Remover Título)").setValue("NENHUM"),
+                            ...titulosDisponiveis.map(t => new StringSelectMenuOptionBuilder().setLabel(t).setValue(t))
+                        );
+
+                    const resp = await iBtn.reply({
+                        content: `👑 **Seus Títulos:**\nTítulo ativo: **${char.titulo_ativo || "Nenhum"}**`,
+                        components: [new ActionRowBuilder().addComponents(menuTitulos)],
+                        flags: MessageFlags.Ephemeral,
+                        fetchReply: true
+                    });
+
+                    const titCollector = resp.createMessageComponentCollector({
+                        filter: i => i.user.id === interaction.user.id,
+                        time: 60000
+                    });
+
+                    titCollector.on("collect", async iTit => {
+                        await iTit.deferUpdate();
+                        const valor = iTit.values[0];
+                        const novoTitulo = valor === "NENHUM" ? null : valor;
+                        char = await PersonagemRepository.atualizar(char.id, { titulo_ativo: novoTitulo });
+                        await interaction.editReply({ embeds: [montarEmbedFicha(char)] });
+                        await iTit.editReply({ content: `✅ Título ativo atualizado para: **${novoTitulo || "Nenhum"}**`, components: [] });
+                        titCollector.stop();
                     });
                     return;
                 }

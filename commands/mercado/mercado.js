@@ -195,10 +195,11 @@ module.exports = {
                         .setPlaceholder(`Selecione um item (Página ${pagina + 1} de ${totalPaginas})`);
 
                     itensPagina.forEach(anuncio => {
+                        const unitario = anuncio.preco / (anuncio.quantidade || 1);
                         menuCompra.addOptions(
                             new StringSelectMenuOptionBuilder()
                                 .setLabel(`${anuncio.quantidade}x ${anuncio.item_nome}`)
-                                .setDescription(`Vend: ${anuncio.vendedor_nome} | K$ ${anuncio.preco}`)
+                                .setDescription(`Vend: ${anuncio.vendedor_nome} | Unit: ${formatarMoeda(unitario)}`)
                                 .setValue(anuncio.id.toString())
                         );
                     });

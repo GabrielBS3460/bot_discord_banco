@@ -53,21 +53,25 @@ module.exports = {
         const personagens = await PersonagemRepository.buscarTodosDoJogador(interaction.user.id);
         if (personagens.length === 0) throw new Error("NENHUM_PERSONAGEM");
 
+        const charAtivo = await PersonagemRepository.buscarAtivoDoJogador(interaction.user.id);
+        const textoAtivo = charAtivo ? `\n👤 **Personagem Ativo Atual:** ${charAtivo.nome}` : "\n👤 **Personagem Ativo Atual:** Nenhum";
+
         const menuTroca = new StringSelectMenuBuilder()
             .setCustomId(`menu_trocar_${interaction.id}`)
             .setPlaceholder("Selecione o personagem que deseja ativar...");
 
         personagens.forEach(p => {
+            const eAtivo = charAtivo && charAtivo.id === p.id;
             menuTroca.addOptions(
                 new StringSelectMenuOptionBuilder()
-                    .setLabel(p.nome)
-                    .setDescription(`Nível ${p.nivel_personagem || 1}`)
+                    .setLabel(`${p.nome}${eAtivo ? " (ATIVO)" : ""}`)
+                    .setDescription(`Nível ${p.nivel_personagem || 1}${eAtivo ? " - Ativo Atualmente" : ""}`)
                     .setValue(p.nome)
             );
         });
 
         const msg = await interaction.reply({
-            content: "🔄 Selecione na lista abaixo qual personagem você quer tornar ativo:",
+            content: `🔄 Selecione na lista abaixo qual personagem você quer tornar ativo:${textoAtivo}`,
             components: [new ActionRowBuilder().addComponents(menuTroca)],
             flags: MessageFlags.Ephemeral,
             fetchReply: true

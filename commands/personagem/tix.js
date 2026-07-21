@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, MessageFlags } = require("discord.js");
 const TransacaoService = require("../../services/TransacaoService.js");
+const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -31,24 +32,57 @@ module.exports = {
         }
 
         try {
-            const [charRemetente, charDestinatario] = await Promise.all([
-                getPersonagemAtivo(interaction.user.id),
-                getPersonagemAtivo(destinatarioUser.id)
-            ]);
-
+            const charRemetente = await getPersonagemAtivo(interaction.user.id);
             if (!charRemetente) {
                 return interaction.reply({
-                    content:
-                        "🚫 Você não tem um personagem ativo para enviar dinheiro. Use `/cadastrar` ou `/personagem trocar`.",
+                    content: "🚫 Você não tem um personagem ativo para enviar dinheiro.",
                     flags: MessageFlags.Ephemeral
                 });
             }
 
-            if (!charDestinatario) {
+            const pjsDestinatario = await PersonagemRepository.buscarTodosDoJogador(destinatarioUser.id);
+            if (!pjsDestinatario || pjsDestinatario.length === 0) {
                 return interaction.reply({
-                    content: `🚫 O usuário **${destinatarioUser.username}** não tem um personagem ativo para receber.`,
+                    content: `🚫 O usuário **${destinatarioUser.username}** não tem nenhum personagem.`,
                     flags: MessageFlags.Ephemeral
                 });
+            }
+
+            let charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
+
+            if (pjsDestinatario.length > 1) {
+                const menuPj = new StringSelectMenuBuilder()
+                    .setCustomId(`menu_tix_pj_${interaction.id}`)
+                    .setPlaceholder(`Selecione para qual personagem de ${destinatarioUser.username} enviar...`);
+
+                pjsDestinatario.forEach(p => {
+                    menuPj.addOptions(new StringSelectMenuOptionBuilder().setLabel(p.nome).setValue(p.id.toString()));
+                });
+
+                const replySel = await interaction.reply({
+                    content: `💸 **Selecione o destinatário:** Para qual personagem de **${destinatarioUser.username}** você deseja enviar ${formatarMoeda(valor)}?`,
+                    components: [new ActionRowBuilder().addComponents(menuPj)],
+                    flags: MessageFlags.Ephemeral,
+                    fetchReply: true
+                });
+
+                const collector = replySel.createMessageComponentCollector({
+                    filter: i => i.user.id === interaction.user.id,
+                    time: 60000
+                });
+
+                const iSelect = await new Promise(resolve => {
+                    collector.on("collect", i => resolve(i));
+                    collector.on("end", () => resolve(null));
+                });
+
+                if (!iSelect) {
+                    return interaction.editReply({ content: "⌛ Seleção expirada.", components: [] });
+                }
+
+                await iSelect.deferUpdate();
+                const selectedId = parseInt(iSelect.values[0]);
+                charDestinatario = pjsDestinatario.find(p => p.id === selectedId);
             }
 
             await TransacaoService.transferirEntreJogadores(charRemetente, charDestinatario, valor);

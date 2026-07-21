@@ -20,6 +20,20 @@ class TransacaoRepository {
             take: limite
         });
     }
+    async buscarTransacoesPaginadas(personagemId, pagina = 1, limite = 10) {
+        return prisma.transacao.findMany({
+            where: { personagem_id: personagemId },
+            orderBy: { data: "desc" },
+            skip: (pagina - 1) * limite,
+            take: limite
+        });
+    }
+
+    async contarTransacoes(personagemId) {
+        return prisma.transacao.count({
+            where: { personagem_id: personagemId }
+        });
+    }
 }
 
 module.exports = new TransacaoRepository();

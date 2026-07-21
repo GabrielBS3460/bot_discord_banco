@@ -421,6 +421,7 @@ module.exports = {
                         new TextInputBuilder()
                             .setCustomId("inp_bonus")
                             .setLabel(`Seu bônus de ${pericia}`)
+                            .setPlaceholder("Nota: Penalidade de corte e população é debitada automaticamente")
                             .setStyle(TextInputStyle.Short)
                             .setRequired(true)
                     ));

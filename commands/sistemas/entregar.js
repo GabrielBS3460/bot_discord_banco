@@ -43,8 +43,8 @@ module.exports = {
                 });
             }
 
+            const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
             const charRemetente = await getPersonagemAtivo(interaction.user.id);
-            const charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
 
             if (!charRemetente) {
                 return interaction.reply({
@@ -53,11 +53,49 @@ module.exports = {
                 });
             }
 
-            if (!charDestinatario) {
+            const pjsDestinatario = await PersonagemRepository.buscarTodosDoJogador(destinatarioUser.id);
+            if (!pjsDestinatario || pjsDestinatario.length === 0) {
                 return interaction.reply({
-                    content: `🚫 O usuário **${destinatarioUser.username}** não tem um personagem ativo.`,
+                    content: `🚫 O usuário **${destinatarioUser.username}** não tem nenhum personagem.`,
                     flags: MessageFlags.Ephemeral
                 });
+            }
+
+            let charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
+
+            if (pjsDestinatario.length > 1) {
+                const menuPj = new StringSelectMenuBuilder()
+                    .setCustomId(`menu_entregar_pj_${interaction.id}`)
+                    .setPlaceholder(`Selecione para qual personagem de ${destinatarioUser.username} entregar...`);
+
+                pjsDestinatario.forEach(p => {
+                    menuPj.addOptions(new StringSelectMenuOptionBuilder().setLabel(p.nome).setValue(p.id.toString()));
+                });
+
+                const replySel = await interaction.reply({
+                    content: `📦 **Selecione o destinatário:** Para qual personagem de **${destinatarioUser.username}** você deseja entregar o item?`,
+                    components: [new ActionRowBuilder().addComponents(menuPj)],
+                    flags: MessageFlags.Ephemeral,
+                    fetchReply: true
+                });
+
+                const selCollector = replySel.createMessageComponentCollector({
+                    filter: i => i.user.id === interaction.user.id,
+                    time: 60000
+                });
+
+                const iSelect = await new Promise(resolve => {
+                    selCollector.on("collect", i => resolve(i));
+                    selCollector.on("end", () => resolve(null));
+                });
+
+                if (!iSelect) {
+                    return interaction.editReply({ content: "⌛ Seleção expirada.", components: [] });
+                }
+
+                await iSelect.deferUpdate();
+                const selectedId = parseInt(iSelect.values[0]);
+                charDestinatario = pjsDestinatario.find(p => p.id === selectedId);
             }
 
             let inventario = await ItensRepository.buscarInventario(charRemetente.id);

@@ -115,6 +115,12 @@ module.exports = {
 
             const buttons2 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
+                    .setCustomId("ms_devolver_fila")
+                    .setLabel("Devolver Jogador para fila")
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji("⏳")
+                    .setDisabled(missao.status === "CONCLUIDA"),
+                new ButtonBuilder()
                     .setCustomId("ms_iniciar")
                     .setLabel("Iniciar Contrato")
                     .setStyle(ButtonStyle.Success)
@@ -129,7 +135,10 @@ module.exports = {
                     .setLabel("Modificar Vagas")
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji("🔢")
-                    .setDisabled(missao.status === "CONCLUIDA"),
+                    .setDisabled(missao.status === "CONCLUIDA")
+            );
+
+            const buttons3 = new ActionRowBuilder().addComponents(
                 new ButtonBuilder()
                     .setCustomId("ms_cancelar")
                     .setLabel("Cancelar Missão")
@@ -138,8 +147,7 @@ module.exports = {
                     .setDisabled(missao.status === "CONCLUIDA")
             );
 
-            const payload = { embeds: [embed], components: [buttons1, buttons2] };
-            // Após deferReply, sempre usar editReply na interação original
+            const payload = { embeds: [embed], components: [buttons1, buttons2, buttons3] };
             return it === interaction ? it.editReply(payload) : (it.replied ? it.editReply(payload) : it.reply(payload));
         };
 
@@ -156,6 +164,43 @@ module.exports = {
                     await i.deferUpdate();
                     await ContratoService.sortearEquipe(missao);
                     return atualizarInterface(interaction);
+                }
+
+                if (i.customId === "ms_devolver_fila") {
+                    const selecionados = missao.inscricoes.filter(insc => insc.selecionado);
+                    if (selecionados.length === 0) {
+                        return i.reply({ content: "🚫 Ninguém na equipe para devolver à fila.", flags: MessageFlags.Ephemeral });
+                    }
+
+                    const menuDevolver = new StringSelectMenuBuilder()
+                        .setCustomId("sel_devolver_fila")
+                        .setPlaceholder("Selecione quem retorna para a fila...");
+
+                    selecionados.forEach(s =>
+                        menuDevolver.addOptions(
+                            new StringSelectMenuOptionBuilder().setLabel(s.personagem.nome).setValue(String(s.id))
+                        )
+                    );
+
+                    const prompt = await i.reply({
+                        content: "⏳ **Selecione o membro que será devolvido à fila:**",
+                        components: [new ActionRowBuilder().addComponents(menuDevolver)],
+                        flags: MessageFlags.Ephemeral,
+                        fetchReply: true
+                    });
+
+                    const sel = await prompt.awaitMessageComponent({ time: 30000 }).catch(() => null);
+                    if (sel) {
+                        await sel.deferUpdate();
+                        const inscId = parseInt(sel.values[0]);
+                        await prisma.inscricoes.update({
+                            where: { id: inscId },
+                            data: { selecionado: false }
+                        });
+                        await i.editReply({ content: "✅ Jogador colocado de volta na fila!", components: [] });
+                        return atualizarInterface(interaction);
+                    }
+                    return;
                 }
 
                 if (i.customId === "ms_iniciar") {

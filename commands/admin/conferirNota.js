@@ -6,24 +6,44 @@ module.exports = {
         .setName("conferirnota")
         .setDescription("Verifica as avaliações e a nota média de um Mestre (Apenas Admins).")
         .addUserOption(option =>
-            option.setName("mestre").setDescription("O Mestre que você deseja analisar").setRequired(true)
+            option.setName("mestre").setDescription("O Mestre que você deseja analisar (deixe em branco para ver sua própria nota)").setRequired(false)
         ),
 
     async execute({ interaction, ID_CARGO_ADMIN, verificarLimiteMestre }) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-        if (!interaction.member.roles.cache.has(ID_CARGO_ADMIN)) {
-            return interaction.editReply({
-                content: "🚫 **Acesso Negado:** Apenas administradores podem conferir avaliações."
-            });
-        }
+        const eAdmin = interaction.member.roles.cache.has(ID_CARGO_ADMIN);
+        const targetUser = interaction.options.getUser("mestre") || interaction.user;
 
-        const targetUser = interaction.options.getUser("mestre");
         if (targetUser.bot)
             return interaction.editReply({ content: "🚫 Bots não narram missões." });
 
+        if (!eAdmin && targetUser.id !== interaction.user.id) {
+            return interaction.editReply({
+                content: "🚫 **Acesso Negado:** Você só pode verificar a sua própria nota."
+            });
+        }
+
+        if (targetUser.id === interaction.user.id && !eAdmin) {
+            const userDb = await prisma.usuarios.findUnique({ where: { discord_id: interaction.user.id } });
+            if (userDb && userDb.ultimo_check_nota) {
+                const diasPassados = (Date.now() - new Date(userDb.ultimo_check_nota).getTime()) / (1000 * 60 * 60 * 24);
+                if (diasPassados < 7) {
+                    const diasRestantes = Math.ceil(7 - diasPassados);
+                    return interaction.editReply({
+                        content: `⏳ **Limite de consulta atingido:** Você só pode consultar sua própria nota 1 vez por semana. Tente novamente em **${diasRestantes} dia(s)**.`
+                    });
+                }
+            }
+
+            await prisma.usuarios.upsert({
+                where: { discord_id: interaction.user.id },
+                update: { ultimo_check_nota: new Date() },
+                create: { discord_id: interaction.user.id, ultimo_check_nota: new Date() }
+            });
+        }
+
         try {
-            // Busca dados do usuário para verificar o limite
             const mestreData = await prisma.usuarios.findUnique({
                 where: { discord_id: targetUser.id }
             });

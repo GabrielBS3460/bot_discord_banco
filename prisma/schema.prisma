@@ -13,12 +13,13 @@ generator client {
 //====================================
 
 model Usuarios {
-  discord_id     String  @id
-  nivel_narrador Int     @default(1)
+  discord_id          String       @id
+  nivel_narrador      Int          @default(1)
+  ultimo_check_nota   DateTime?
   
-  personagens Personagens[]
+  personagens         Personagens[]
   
-  personagemAtivo   Personagens? @relation("PersonagemAtivo", fields: [personagem_ativo_id], references: [id])
+  personagemAtivo     Personagens? @relation("PersonagemAtivo", fields: [personagem_ativo_id], references: [id])
   personagem_ativo_id Int?         @unique 
 }
 
@@ -30,14 +31,14 @@ model Personagens {
   ultimo_resgate_recompensa DateTime?
   ultimo_resgate_manavitra  DateTime?
   
-  nivel_personagem Int @default(3) 
-  pontos_missao Decimal @default(0)  
-  vida_atual    Int     @default(10)
-  vida_max      Int     @default(10)
-  vida_temp     Int     @default(0)
-  mana_atual    Int     @default(0)
-  mana_max      Int     @default(0)
-  mana_temp     Int     @default(0)
+  nivel_personagem Int     @default(3) 
+  pontos_missao    Decimal @default(0)  
+  vida_atual       Int     @default(10)
+  vida_max         Int     @default(10)
+  vida_temp        Int     @default(0)
+  mana_atual       Int     @default(0)
+  mana_max         Int     @default(0)
+  mana_temp        Int     @default(0)
   
   pontos_forja_atual   Float     @default(0)
   pontos_forja_diarios Int       @default(1)
@@ -54,6 +55,9 @@ model Personagens {
   deslocamento  String  @default("9m")
   observacoes   String?
   banner_url    String?
+
+  titulos       String[] @default([])
+  titulo_ativo  String?
 
   forca         Int     @default(0)
   destreza      Int     @default(0)

@@ -23,7 +23,8 @@ module.exports = {
                     { name: "🛡️ Itens Permanentes", value: "Itens Permanentes" },
                     { name: "⚒️ Melhorias", value: "Melhorias" },
                     { name: "✨ Item Mágico / Encantamento", value: "Item Mágico" },
-                    { name: "🧪 Poções e Pergaminhos", value: "Poções/Pergaminhos" }
+                    { name: "🧪 Poções e Pergaminhos", value: "Poções/Pergaminhos" },
+                    { name: "🏹 Munição", value: "Munição" }
                 )
         ),
 
@@ -70,7 +71,8 @@ module.exports = {
                 "Encantamento": "✨",
                 "Item Mágico": "🪄",
                 "Poções/Pergaminhos (1-2)": "🧪",
-                "Poções/Pergaminhos (3-5)": "🧪"
+                "Poções/Pergaminhos (3-5)": "🧪",
+                "Munição": "🏹"
             };
 
             const itensAgrupados = inventario.reduce((acc, item) => {

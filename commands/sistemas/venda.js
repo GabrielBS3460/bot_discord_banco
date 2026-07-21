@@ -51,22 +51,60 @@ module.exports = {
             });
 
         try {
-            const [charVendedor, charComprador] = await Promise.all([
-                getPersonagemAtivo(vendedorUser.id),
-                getPersonagemAtivo(compradorUser.id)
-            ]);
+            const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
+            const charVendedor = await getPersonagemAtivo(vendedorUser.id);
 
-            if (!charVendedor)
+            if (!charVendedor) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo.",
                     flags: MessageFlags.Ephemeral
                 });
+            }
 
-            if (!charComprador)
+            const pjsComprador = await PersonagemRepository.buscarTodosDoJogador(compradorUser.id);
+            if (!pjsComprador || pjsComprador.length === 0) {
                 return interaction.reply({
-                    content: `🚫 O comprador **${compradorUser.username}** não tem um personagem ativo.`,
+                    content: `🚫 O usuário **${compradorUser.username}** não tem nenhum personagem.`,
                     flags: MessageFlags.Ephemeral
                 });
+            }
+
+            let charComprador = await getPersonagemAtivo(compradorUser.id);
+
+            if (pjsComprador.length > 1) {
+                const menuPj = new StringSelectMenuBuilder()
+                    .setCustomId(`menu_venda_pj_${interaction.id}`)
+                    .setPlaceholder(`Selecione para qual personagem de ${compradorUser.username} vender...`);
+
+                pjsComprador.forEach(p => {
+                    menuPj.addOptions(new StringSelectMenuOptionBuilder().setLabel(p.nome).setValue(p.id.toString()));
+                });
+
+                const replySel = await interaction.reply({
+                    content: `🛒 **Selecione o comprador:** Para qual personagem de **${compradorUser.username}** você deseja propor a venda por ${formatarMoeda(valorVenda)}?`,
+                    components: [new ActionRowBuilder().addComponents(menuPj)],
+                    flags: MessageFlags.Ephemeral,
+                    fetchReply: true
+                });
+
+                const selCollector = replySel.createMessageComponentCollector({
+                    filter: i => i.user.id === interaction.user.id,
+                    time: 60000
+                });
+
+                const iSelect = await new Promise(resolve => {
+                    selCollector.on("collect", i => resolve(i));
+                    selCollector.on("end", () => resolve(null));
+                });
+
+                if (!iSelect) {
+                    return interaction.editReply({ content: "⌛ Seleção expirada.", components: [] });
+                }
+
+                await iSelect.deferUpdate();
+                const selectedId = parseInt(iSelect.values[0]);
+                charComprador = pjsComprador.find(p => p.id === selectedId);
+            }
 
             if (charComprador.saldo < valorVenda) {
                 return interaction.reply({

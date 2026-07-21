@@ -129,6 +129,21 @@ class ContratoService {
         }
     }
 
+    async desinscreverPersonagem(charId, missaoNome) {
+        const missao = await ContratoRepository.buscarPorNome(missaoNome);
+        if (!missao) throw new Error("MISSAO_NAO_ENCONTRADA");
+        if (missao.status !== "ABERTA") throw new Error("MISSAO_FECHADA");
+
+        const inscricao = await prisma.inscricoes.findFirst({
+            where: { missao_id: missao.id, personagem_id: charId }
+        });
+
+        if (!inscricao) throw new Error("NAO_INSCRITO");
+
+        await ContratoRepository.removerInscricao(inscricao.id);
+        return missao;
+    }
+
     async processarResgateMissao(char, inscId, nd, pontosGanhos, CUSTO_NIVEL) {
         const ouroGanho = nd * 100;
         const pontosAtuais = parseFloat(char.pontos_missao) || 0;

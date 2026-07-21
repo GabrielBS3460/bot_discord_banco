@@ -1,6 +1,5 @@
 const fs = require("fs/promises");
 const path = require("path");
-const { text } = require("stream/consumers");
 
 class TesouroService {
     #rollDHundred() {

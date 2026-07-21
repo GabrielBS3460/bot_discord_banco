@@ -3,6 +3,8 @@ const {
     StringSelectMenuBuilder,
     StringSelectMenuOptionBuilder,
     ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
     MessageFlags
 } = require("discord.js");
 
@@ -59,18 +61,39 @@ module.exports = {
                 });
             }
 
-            const menu = new StringSelectMenuBuilder()
-                .setCustomId("menu_aprender_receita")
-                .setPlaceholder(`Aprender Receita (${conhecidas.length}/${limiteReceitas})`);
+            let pagina = 0;
+            const ITENS_POR_PAGINA = 25;
+            const totalPaginas = Math.ceil(disponiveis.length / ITENS_POR_PAGINA);
 
-            disponiveis.slice(0, 25).forEach(nome => {
-                menu.addOptions(
-                    new StringSelectMenuOptionBuilder()
-                        .setLabel(nome)
-                        .setDescription(DB_CULINARIA.RECEITAS[nome].desc)
-                        .setValue(nome)
-                );
-            });
+            const buildMenuComponents = () => {
+                const inicio = pagina * ITENS_POR_PAGINA;
+                const receitasPagina = disponiveis.slice(inicio, inicio + ITENS_POR_PAGINA);
+
+                const menu = new StringSelectMenuBuilder()
+                    .setCustomId(`menu_aprender_receita_${interaction.id}`)
+                    .setPlaceholder(`Aprender Receita (${conhecidas.length}/${limiteReceitas}) - Pág ${pagina + 1}/${totalPaginas}`);
+
+                receitasPagina.forEach(nome => {
+                    menu.addOptions(
+                        new StringSelectMenuOptionBuilder()
+                            .setLabel(nome)
+                            .setDescription(DB_CULINARIA.RECEITAS[nome].desc.substring(0, 100))
+                            .setValue(nome)
+                    );
+                });
+
+                const rows = [new ActionRowBuilder().addComponents(menu)];
+
+                if (totalPaginas > 1) {
+                    rows.push(
+                        new ActionRowBuilder().addComponents(
+                            new ButtonBuilder().setCustomId(`rec_prev_${interaction.id}`).setLabel("◀️").setStyle(ButtonStyle.Secondary).setDisabled(pagina === 0),
+                            new ButtonBuilder().setCustomId(`rec_next_${interaction.id}`).setLabel("▶️").setStyle(ButtonStyle.Secondary).setDisabled(pagina === totalPaginas - 1)
+                        )
+                    );
+                }
+                return rows;
+            };
 
             let textoCabecalho = `📚 **Livro de Receitas**\nSua capacidade: **${limiteReceitas}** pratos`;
             if (temAsDaCozinha) textoCabecalho += ` *(Bônus do Ás da Cozinha aplicado!)*`;
@@ -78,32 +101,40 @@ module.exports = {
 
             const replyMsg = await interaction.reply({
                 content: textoCabecalho,
-                components: [new ActionRowBuilder().addComponents(menu)],
+                components: buildMenuComponents(),
                 flags: MessageFlags.Ephemeral,
                 fetchReply: true
             });
 
             const collector = replyMsg.createMessageComponentCollector({
-                filter: i => i.user.id === interaction.user.id && i.customId === "menu_aprender_receita",
+                filter: i => i.user.id === interaction.user.id,
                 time: 60000
             });
 
             collector.on("collect", async i => {
                 try {
-                    await i.deferUpdate();
-                    const receitaEscolhida = i.values[0];
+                    if (i.isButton()) {
+                        if (i.customId.startsWith("rec_prev_")) pagina = Math.max(0, pagina - 1);
+                        if (i.customId.startsWith("rec_next_")) pagina = Math.min(totalPaginas - 1, pagina + 1);
+                        return await i.update({ components: buildMenuComponents() });
+                    }
 
-                    const charUp = await getPersonagemAtivo(interaction.user.id);
-                    const receitasAtuais = charUp.receitas_conhecidas || [];
-                    const limiteAtual = CulinariaService.calcularLimiteReceitas(charUp, temAsDaCozinha);
+                    if (i.isStringSelectMenu()) {
+                        await i.deferUpdate();
+                        const receitaEscolhida = i.values[0];
 
-                    await CulinariaService.aprenderReceita(charUp.id, receitaEscolhida, receitasAtuais, limiteAtual);
+                        const charUp = await getPersonagemAtivo(interaction.user.id);
+                        const receitasAtuais = charUp.receitas_conhecidas || [];
+                        const limiteAtual = CulinariaService.calcularLimiteReceitas(charUp, temAsDaCozinha);
 
-                    await interaction.editReply({
-                        content: `✅ **Você aprendeu a fazer:** ${receitaEscolhida}!\n*Abra o fogão com /cozinhar para preparar.*`,
-                        components: []
-                    });
-                    collector.stop();
+                        await CulinariaService.aprenderReceita(charUp.id, receitaEscolhida, receitasAtuais, limiteAtual);
+
+                        await interaction.editReply({
+                            content: `✅ **Você aprendeu a fazer:** ${receitaEscolhida}!\n*Abra o fogão com /cozinhar para preparar.*`,
+                            components: []
+                        });
+                        collector.stop();
+                    }
                 } catch (err) {
                     if (err.message === "LIMITE_ATINGIDO")
                         return i.followUp({

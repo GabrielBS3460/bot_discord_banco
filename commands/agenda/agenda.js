@@ -61,7 +61,14 @@ module.exports = {
         .setName("agenda")
         .setDescription("Sistema de disponibilidade para RPG.")
         .addSubcommand(sub => sub.setName("marcar").setDescription("Define seus horários disponíveis."))
-        .addSubcommand(sub => sub.setName("mapa").setDescription("Exibe o Heatmap do servidor.")),
+        .addSubcommand(sub =>
+            sub
+                .setName("mapa")
+                .setDescription("Exibe o Heatmap do servidor.")
+                .addIntegerOption(opt =>
+                    opt.setName("nd").setDescription("Filtrar disponibilidade por Nível/ND específico").setRequired(false).setMinValue(1).setMaxValue(20)
+                )
+        ),
 
     async execute({ interaction, getPersonagemAtivo }) {
         const subcomando = interaction.options.getSubcommand();
@@ -151,7 +158,8 @@ module.exports = {
 
             if (subcomando === "mapa") {
                 await interaction.deferReply();
-                const { matrix, totalAtivos } = await AgendaService.gerarMatrizHeatmap();
+                const filtroNd = interaction.options.getInteger("nd");
+                const { matrix, totalAtivos } = await AgendaService.gerarMatrizHeatmap(filtroNd);
 
                 if (totalAtivos === 0) return interaction.editReply("🚫 Nenhuma agenda preenchida ainda!");
 
