@@ -83,6 +83,16 @@ class ContratoService {
                     update: { selecionado: true },
                     create: { missao_id: missaoId, personagem_id: mestreCharId, selecionado: true }
                 });
+
+                await tx.transacao.create({
+                    data: {
+                        personagem_id: mestreCharId,
+                        descricao: "Mestrou Contrato de Quadro",
+                        valor: 0,
+                        tipo: "RECOMPENSA",
+                        categoria: "MESTRAR_QUADRO"
+                    }
+                });
             }
 
             await tx.missoes.update({

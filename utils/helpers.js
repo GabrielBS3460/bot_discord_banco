@@ -23,25 +23,27 @@ async function verificarLimiteMestre(mestre) {
     });
     const idsDosPersonagens = personagensDoMestre.map(p => p.id);
 
-    let missoesMestradas = 0;
+    let transacoesNoMes = 0;
     if (idsDosPersonagens.length > 0) {
-        missoesMestradas = await prisma.transacao.count({
+        transacoesNoMes = await prisma.transacao.count({
             where: {
                 personagem_id: { in: idsDosPersonagens },
                 data: { gte: inicioDoMes },
-                categoria: { in: ["MESTRAR_SOLICITADA", "MESTRAR_COLETA", "MESTRAR_CAPTURA"] }
+                categoria: { startsWith: "MESTRAR_" }
             }
         });
     }
 
-    const missoesQuadroConcluidas = await prisma.missoes.count({
+    const avaliacoesNoMes = await prisma.avaliacao.findMany({
         where: {
-            criador_id: mestre.discord_id,
-            status: "CONCLUIDA"
-        }
+            mestre_id: mestre.discord_id,
+            data_avaliacao: { gte: inicioDoMes }
+        },
+        select: { nome_missao: true }
     });
 
-    const contagemTotal = missoesMestradas + missoesQuadroConcluidas;
+    const missoesAvaliadasNoMes = new Set(avaliacoesNoMes.map(a => a.nome_missao)).size;
+    const contagemTotal = Math.max(transacoesNoMes, missoesAvaliadasNoMes);
 
     return {
         limiteAtingido: false,
