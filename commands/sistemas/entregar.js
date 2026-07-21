@@ -12,6 +12,7 @@ const {
 
 const TransacaoService = require("../../services/TransacaoService.js");
 const ItensRepository = require("../../repositories/ItensRepository.js");
+const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -43,9 +44,7 @@ module.exports = {
                 });
             }
 
-            const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
             const charRemetente = await getPersonagemAtivo(interaction.user.id);
-
             if (!charRemetente) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo.",
@@ -61,7 +60,7 @@ module.exports = {
                 });
             }
 
-            let charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
+            let charDestinatario = null;
 
             if (pjsDestinatario.length > 1) {
                 const menuPj = new StringSelectMenuBuilder()
@@ -96,15 +95,17 @@ module.exports = {
                 await iSelect.deferUpdate();
                 const selectedId = parseInt(iSelect.values[0]);
                 charDestinatario = pjsDestinatario.find(p => p.id === selectedId);
+            } else {
+                charDestinatario = pjsDestinatario[0];
             }
 
             let inventario = await ItensRepository.buscarInventario(charRemetente.id);
 
             if (!inventario || inventario.length === 0) {
-                return interaction.reply({
-                    content: "🎒 Seu inventário está vazio. Não há nada para entregar.",
-                    flags: MessageFlags.Ephemeral
-                });
+                const msgVazio = "🎒 Seu inventário está vazio. Não há nada para entregar.";
+                return interaction.replied || interaction.deferred
+                    ? interaction.editReply({ content: msgVazio, components: [] })
+                    : interaction.reply({ content: msgVazio, flags: MessageFlags.Ephemeral });
             }
 
             if (filtro) {
@@ -112,10 +113,10 @@ module.exports = {
                 inventario = inventario.filter(i => i.nome.toLowerCase().includes(termo));
 
                 if (inventario.length === 0) {
-                    return interaction.reply({
-                        content: `🎒 Nenhum item encontrado com o filtro **"${filtro}"**.`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    const msgFiltro = `🎒 Nenhum item encontrado com o filtro **"${filtro}"**.`;
+                    return interaction.replied || interaction.deferred
+                        ? interaction.editReply({ content: msgFiltro, components: [] })
+                        : interaction.reply({ content: msgFiltro, flags: MessageFlags.Ephemeral });
                 }
             }
 
@@ -142,12 +143,16 @@ module.exports = {
 
             const rowMenu = new ActionRowBuilder().addComponents(menuItens);
 
-            const msg = await interaction.reply({
+            const payloadMenu = {
                 content: `📦 **Transferência de Itens**\nSelecione o item da sua mochila que deseja entregar para **${charDestinatario.nome}**:`,
                 components: [rowMenu],
                 flags: MessageFlags.Ephemeral,
                 fetchReply: true
-            });
+            };
+
+            const msg = interaction.replied || interaction.deferred
+                ? await interaction.editReply(payloadMenu)
+                : await interaction.reply(payloadMenu);
 
             const collector = msg.createMessageComponentCollector({
                 filter: i => i.user.id === interaction.user.id,
@@ -234,7 +239,7 @@ module.exports = {
                             components: []
                         });
 
-                        await msg.edit({ components: [] }).catch(() => null);
+                        await interaction.editReply({ components: [] }).catch(() => null);
                         collector.stop();
                     } catch (err) {
                         console.error("Erro no submit do modal de entrega:", err);
@@ -244,13 +249,16 @@ module.exports = {
         } catch (err) {
             console.error("Erro no comando entregar:", err);
 
-            if (interaction.isRepliable() && !interaction.replied) {
-                await interaction
-                    .reply({
-                        content: "❌ Ocorreu um erro ao preparar a entrega.",
-                        flags: MessageFlags.Ephemeral
-                    })
-                    .catch(() => {});
+            const erroMsg = {
+                content: "❌ Ocorreu um erro ao preparar a entrega.",
+                flags: MessageFlags.Ephemeral,
+                components: []
+            };
+
+            if (interaction.replied || interaction.deferred) {
+                await interaction.editReply(erroMsg).catch(() => {});
+            } else {
+                await interaction.reply(erroMsg).catch(() => {});
             }
         }
     }

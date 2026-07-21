@@ -13,6 +13,7 @@ const {
 } = require("discord.js");
 const TransacaoService = require("../../services/TransacaoService.js");
 const ItensRepository = require("../../repositories/ItensRepository.js");
+const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -39,7 +40,7 @@ module.exports = {
         const vendedorUser = interaction.user;
         const compradorUser = interaction.options.getUser("comprador");
         const valorVenda = interaction.options.getNumber("valor");
-        const filtro = interaction.options.getString("filtro"); // Capturamos o filtro digitado
+        const filtro = interaction.options.getString("filtro");
 
         if (compradorUser.bot)
             return interaction.reply({ content: "🚫 Bots não compram itens.", flags: MessageFlags.Ephemeral });
@@ -51,9 +52,7 @@ module.exports = {
             });
 
         try {
-            const PersonagemRepository = require("../../repositories/PersonagemRepository.js");
             const charVendedor = await getPersonagemAtivo(vendedorUser.id);
-
             if (!charVendedor) {
                 return interaction.reply({
                     content: "🚫 Você não tem um personagem ativo.",
@@ -69,7 +68,7 @@ module.exports = {
                 });
             }
 
-            let charComprador = await getPersonagemAtivo(compradorUser.id);
+            let charComprador = null;
 
             if (pjsComprador.length > 1) {
                 const menuPj = new StringSelectMenuBuilder()
@@ -104,22 +103,24 @@ module.exports = {
                 await iSelect.deferUpdate();
                 const selectedId = parseInt(iSelect.values[0]);
                 charComprador = pjsComprador.find(p => p.id === selectedId);
+            } else {
+                charComprador = pjsComprador[0];
             }
 
             if (charComprador.saldo < valorVenda) {
-                return interaction.reply({
-                    content: `🚫 **${charComprador.nome}** não tem saldo suficiente para essa compra (Saldo: ${formatarMoeda(charComprador.saldo)}).`,
-                    flags: MessageFlags.Ephemeral
-                });
+                const msgSaldo = `🚫 **${charComprador.nome}** não tem saldo suficiente para essa compra (Saldo: ${formatarMoeda(charComprador.saldo)}).`;
+                return interaction.replied || interaction.deferred
+                    ? interaction.editReply({ content: msgSaldo, components: [] })
+                    : interaction.reply({ content: msgSaldo, flags: MessageFlags.Ephemeral });
             }
 
             const inventario = await ItensRepository.buscarInventario(charVendedor.id);
 
             if (!inventario || inventario.length === 0) {
-                return interaction.reply({
-                    content: "🎒 Seu inventário está vazio. Você não tem nada para vender.",
-                    flags: MessageFlags.Ephemeral
-                });
+                const msgInv = "🎒 Seu inventário está vazio. Você não tem nada para vender.";
+                return interaction.replied || interaction.deferred
+                    ? interaction.editReply({ content: msgInv, components: [] })
+                    : interaction.reply({ content: msgInv, flags: MessageFlags.Ephemeral });
             }
 
             let itensFiltrados = inventario;
@@ -130,10 +131,10 @@ module.exports = {
                 );
 
                 if (itensFiltrados.length === 0) {
-                    return interaction.reply({
-                        content: `🎒 Nenhum item encontrado no seu inventário com o filtro **"${filtro}"**.`,
-                        flags: MessageFlags.Ephemeral
-                    });
+                    const msgFiltro = `🎒 Nenhum item encontrado no seu inventário com o filtro **"${filtro}"**.`;
+                    return interaction.replied || interaction.deferred
+                        ? interaction.editReply({ content: msgFiltro, components: [] })
+                        : interaction.reply({ content: msgFiltro, flags: MessageFlags.Ephemeral });
                 }
             }
 
@@ -156,12 +157,16 @@ module.exports = {
 
             const rowMenu = new ActionRowBuilder().addComponents(menuItens);
 
-            const msgMenu = await interaction.reply({
+            const payloadMenu = {
                 content: `🛒 **Mercado Aberto**\nSelecione o item que deseja vender para **${charComprador.nome}** pelo valor de **${formatarMoeda(valorVenda)}**:`,
                 components: [rowMenu],
                 flags: MessageFlags.Ephemeral,
                 fetchReply: true
-            });
+            };
+
+            const msgMenu = interaction.replied || interaction.deferred
+                ? await interaction.editReply(payloadMenu)
+                : await interaction.reply(payloadMenu);
 
             const collectorMenu = msgMenu.createMessageComponentCollector({
                 filter: i => i.user.id === vendedorUser.id,
@@ -171,7 +176,6 @@ module.exports = {
             collectorMenu.on("collect", async iSelect => {
                 if (iSelect.isStringSelectMenu() && iSelect.customId.startsWith("menu_venda_item_")) {
                     const itemId = parseInt(iSelect.values[0]);
-
                     const itemSelecionado = inventario.find(item => item.id === itemId);
 
                     if (!itemSelecionado)
@@ -214,7 +218,7 @@ module.exports = {
                             );
                         }
 
-                        await msgMenu.edit({ components: [] }).catch(() => null);
+                        await interaction.editReply({ components: [] }).catch(() => null);
                         await submit.editReply({
                             content: `⏳ A proposta de venda de **${qtd}x ${itemSelecionado.nome}** foi enviada publicamente. Aguardando o comprador...`
                         });
@@ -375,7 +379,8 @@ module.exports = {
             console.error("Erro ao processar venda:", err);
             const erroMsg = {
                 content: "❌ Ocorreu um erro ao iniciar a proposta de venda.",
-                flags: MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral,
+                components: []
             };
             interaction.replied
                 ? await interaction.followUp(erroMsg).catch(() => {})

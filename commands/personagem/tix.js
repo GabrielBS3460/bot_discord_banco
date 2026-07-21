@@ -48,7 +48,7 @@ module.exports = {
                 });
             }
 
-            let charDestinatario = await getPersonagemAtivo(destinatarioUser.id);
+            let charDestinatario = null;
 
             if (pjsDestinatario.length > 1) {
                 const menuPj = new StringSelectMenuBuilder()
@@ -83,6 +83,8 @@ module.exports = {
                 await iSelect.deferUpdate();
                 const selectedId = parseInt(iSelect.values[0]);
                 charDestinatario = pjsDestinatario.find(p => p.id === selectedId);
+            } else {
+                charDestinatario = pjsDestinatario[0];
             }
 
             await TransacaoService.transferirEntreJogadores(charRemetente, charDestinatario, valor);
@@ -97,23 +99,29 @@ module.exports = {
                 )
                 .setTimestamp();
 
+            if (interaction.replied || interaction.deferred) {
+                await interaction.editReply({ content: `✅ Transferência realizada com sucesso!`, components: [] });
+                return interaction.channel.send({ content: `<@${destinatarioUser.id}>`, embeds: [embed] });
+            }
+
             return interaction.reply({ content: `<@${destinatarioUser.id}>`, embeds: [embed] });
         } catch (err) {
             if (err.message === "SALDO_INSUFICIENTE") {
-                return interaction.reply({
-                    content: `💸 Saldo insuficiente. O personagem possui apenas **${formatarMoeda(err.saldoAtual || 0)}**.`,
-                    flags: MessageFlags.Ephemeral
-                });
+                const msgIns = `💸 Saldo insuficiente. O personagem possui apenas **${formatarMoeda(err.saldoAtual || 0)}**.`;
+                return interaction.replied || interaction.deferred
+                    ? interaction.editReply({ content: msgIns, components: [] })
+                    : interaction.reply({ content: msgIns, flags: MessageFlags.Ephemeral });
             }
 
             console.error("Erro no comando tix:", err);
             const erroMsg = {
                 content: "❌ Ocorreu um erro ao processar a transferência.",
-                flags: MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral,
+                components: []
             };
 
             if (interaction.replied || interaction.deferred) {
-                await interaction.followUp(erroMsg).catch(() => {});
+                await interaction.editReply(erroMsg).catch(() => {});
             } else {
                 await interaction.reply(erroMsg).catch(() => {});
             }
