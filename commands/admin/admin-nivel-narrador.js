@@ -1,21 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const prisma = require("../../database.js");
 
-function calcularLimiteNarrador(nivel) {
-    switch (nivel) {
-        case 1:
-            return 0;
-        case 2:
-            return 2;
-        case 3:
-            return 4;
-        case 4:
-            return 4;
-        default:
-            return nivel > 3 ? Math.pow(2, nivel - 1) : 0;
-    }
-}
-
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("admin-nivel-narrador")
@@ -89,9 +74,6 @@ module.exports = {
                 create: { discord_id: targetUser.id, nivel_narrador: novoNivel }
             });
 
-            const limiteAntigo = calcularLimiteNarrador(nivelAntigo);
-            const novoLimite = calcularLimiteNarrador(novoNivel);
-
             const embed = new EmbedBuilder()
                 .setTitle("🧙‍♂️ Nível de Narrador Atualizado")
                 .setColor("#5865F2")
@@ -99,8 +81,7 @@ module.exports = {
                 .addFields(
                     { name: "Mestre", value: `${targetUser}`, inline: true },
                     { name: "Operação", value: operacao === "SET" ? "Definir" : operacao === "ADD" ? "Aumentar" : "Reduzir", inline: true },
-                    { name: "Nível", value: `${nivelAntigo} ➔ **${novoNivel}**`, inline: true },
-                    { name: "Limite Mensal de Missões", value: `${limiteAntigo} ➔ **${novoLimite} missões**`, inline: false }
+                    { name: "Nível", value: `${nivelAntigo} ➔ **${novoNivel}**`, inline: true }
                 )
                 .setFooter({ text: `Alterado por ${interaction.user.username}` })
                 .setTimestamp();

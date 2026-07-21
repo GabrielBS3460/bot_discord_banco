@@ -14,25 +14,6 @@ function formatarMoeda(valor) {
 }
 
 async function verificarLimiteMestre(mestre) {
-    let limite = 0;
-    switch (mestre.nivel_narrador) {
-        case 1:
-            limite = 0;
-            break;
-        case 2:
-            limite = 2;
-            break;
-        case 3:
-            limite = 4;
-            break;
-        case 4:
-            limite = 4;
-            break;
-        default:
-            if (mestre.nivel_narrador > 3) limite = Math.pow(2, mestre.nivel_narrador - 1);
-            break;
-    }
-
     const agora = new Date();
     const inicioDoMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
 
@@ -63,8 +44,7 @@ async function verificarLimiteMestre(mestre) {
     const contagemTotal = missoesMestradas + missoesQuadroConcluidas;
 
     return {
-        limiteAtingido: limite === 0 ? true : contagemTotal >= limite,
-        limite,
+        limiteAtingido: false,
         contagem: contagemTotal
     };
 }

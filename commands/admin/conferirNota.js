@@ -113,7 +113,7 @@ module.exports = {
                     { name: "AVALIAÇÕES DE SOLICITADAS", value: formatarNotas(statsSolicitadas), inline: true },
                     {
                         name: "📈 Atividade Mensal",
-                        value: `**Mesas Narradas:** ${statsMestre.contagem} / ${statsMestre.limite}\n*A atividade é baseada em registros de missões concluídas este mês.*`,
+                        value: `**Mesas Narradas:** ${statsMestre.contagem}\n*A atividade é baseada em registros de missões concluídas este mês.*`,
                         inline: false
                     }
                 )
