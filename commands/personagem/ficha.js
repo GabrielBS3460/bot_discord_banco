@@ -300,10 +300,18 @@ module.exports = {
 
                     const descCollector = response.createMessageComponentCollector({
                         filter: i => i.user.id === interaction.user.id,
+                        max: 1,
                         time: 60000
                     });
 
                     descCollector.on("collect", async iDesc => {
+                        if (!PersonagemService.verificarPodeDescansar(char)) {
+                            return iDesc.reply({
+                                content: `🚫 **${char.nome}** já descansou hoje!`,
+                                flags: MessageFlags.Ephemeral
+                            });
+                        }
+
                         const modal = new ModalBuilder()
                             .setCustomId(`modal_descanso_${uniqueID}`)
                             .setTitle("Descanso")
@@ -362,11 +370,15 @@ module.exports = {
                             }
                             
                             await interaction.channel.send({ content: msgDescanso });
+                            await modalSubmit.editReply({ content: "✅ Descanso concluído com sucesso!", components: [] }).catch(() => {});
                             await iBtn.editReply({ content: "✅ Descanso concluído com sucesso!", components: [] }).catch(() => {});
-                            descCollector.stop();
                         } catch (err) {
                             if (err.message === "SALDO_INSUFICIENTE") {
                                 await interaction.followUp({ content: "🚫 Você não tem saldo suficiente para esse descanso.", flags: MessageFlags.Ephemeral });
+                            } else if (err.message === "JA_DESCANSOU_HOJE") {
+                                await interaction.followUp({ content: `🚫 **${char.nome}** já descansou hoje!`, flags: MessageFlags.Ephemeral });
+                            } else if (err.code !== "InteractionCollectorError") {
+                                console.error("Erro no modal de descanso:", err);
                             }
                         }
                     });

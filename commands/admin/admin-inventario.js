@@ -90,6 +90,7 @@ module.exports = {
                     Alimento: "🍔",
                     Consumíveis: "🎒",
                     "Itens Permanentes": "🛡️",
+                    Engenhoca: "⚙️",
                     Melhorias: "⚒️",
                     Encantamento: "✨",
                     "Item Mágico": "🪄",

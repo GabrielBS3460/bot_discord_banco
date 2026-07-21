@@ -129,7 +129,10 @@ module.exports = {
 
             const msg = await interaction.editReply({ embeds: [embed], components: [row] });
 
-            const collector = msg.createMessageComponentCollector({ time: 60000 });
+            const collector = msg.createMessageComponentCollector({
+                filter: i => i.user.id === interaction.user.id,
+                time: 60000
+            });
 
             collector.on("collect", async i => {
                 if (i.customId === `feedbacks_${targetUser.id}`) {

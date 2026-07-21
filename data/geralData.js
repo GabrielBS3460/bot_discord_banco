@@ -1,11 +1,13 @@
 const ID_CARGO_ADMIN = "1463009702807081217";
 const ID_CARGO_MOD = "1462994696921157652";
 const ID_CARGO_CORRETOR = "1516244551629799474";
+const ID_CARGO_NARRADOR = "1463371588467429477";
 
 const CUSTO_FORJA = {
     Alimento: 0.2,
     Consumíveis: 1,
     "Itens Permanentes": 2,
+    Engenhoca: 2,
     Munição: 2,
     "Emulsão": 6,
     Melhorias: 16,
@@ -209,6 +211,7 @@ module.exports = {
     ID_CARGO_ADMIN,
     ID_CARGO_MOD,
     ID_CARGO_CORRETOR,
+    ID_CARGO_NARRADOR,
     CUSTO_FORJA,
     DB_CULINARIA,
     BICHOS_T20,

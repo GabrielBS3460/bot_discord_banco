@@ -18,6 +18,7 @@ module.exports = {
                     { name: "🍔 Alimento", value: "Alimento" },
                     { name: "🎒 Consumível", value: "Consumíveis" },
                     { name: "🛡️ Item Permanente", value: "Itens Permanentes" },
+                    { name: "⚙️ Engenhoca", value: "Engenhoca" },
                     { name: "🪄 Item Mágico", value: "Item Mágico" },
                     { name: "✨ Encantamento", value: "Encantamento" },
                     { name: "⚒️ Melhoria", value: "Melhorias" },

@@ -14,6 +14,10 @@ class PersonagemService {
     }
 
     async processarDescanso(char, tipoCustomId, bonusVida, bonusMana, gasto = 0) {
+        if (!this.verificarPodeDescansar(char)) {
+            throw new Error("JA_DESCANSOU_HOJE");
+        }
+
         const { nivelReal } = this.calcularDadosBase(char);
 
         if (gasto > 0) {

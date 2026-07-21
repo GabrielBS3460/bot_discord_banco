@@ -19,7 +19,17 @@ module.exports = {
                 .setMinValue(1)
         ),
 
-    async execute({ interaction }) {
+    async execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_NARRADOR }) {
+        const eAdmin = interaction.member.roles.cache.has(ID_CARGO_ADMIN);
+        const eNarrador = interaction.member.roles.cache.has(ID_CARGO_NARRADOR);
+
+        if (!eAdmin && !eNarrador) {
+            return interaction.reply({
+                content: "🚫 **Acesso Negado:** Você precisa do cargo de **Narrador** ou **Admin** para criar contratos.",
+                flags: MessageFlags.Ephemeral
+            });
+        }
+
         const nomeMissao = interaction.options.getString("nome");
         const nd = interaction.options.getInteger("nd");
         const vagas = interaction.options.getInteger("vagas");

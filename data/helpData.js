@@ -229,6 +229,11 @@ module.exports = {
                 cmd: "/loot",
                 desc: "Concede K$, Itens ou Ingredientes a um jogador.",
                 syntax: "/loot <dinheiro | item | ingrediente>"
+            },
+            {
+                cmd: "/mesas-quadro",
+                desc: "Exibe a quantidade total de missões do Quadro narradas.",
+                syntax: "/mesas-quadro [mestre:@usuario]"
             }
         ]
     }
