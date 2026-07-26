@@ -313,3 +313,31 @@ model DominioTropa {
   nome            String    
   quantidade      Int       @default(1)
 }
+
+//====================================
+// Catarse (assinaturas e emails)
+//====================================
+
+model CatarseAssinante {
+  id              String   @id
+  nome            String?
+  email           String   @unique
+  pagamentoMensal Float?
+  totalPago       Float?
+  status          String?
+  dataDeInicio    String?
+  mesesAssinante  Float?
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  @@map("catarse_assinantes")
+}
+
+model CatarseEmail {
+  id       String   @id
+  userId   String
+  email    String
+  criadoEm DateTime @default(now())
+
+  @@map("catarse_emails")
+}

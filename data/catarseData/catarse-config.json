@@ -1,0 +1,17 @@
+{
+    "Custo_Apoio": 5,
+    "cargos": [
+        { "cargo_id": "1476595853207535716", "cargo_nome": "Bronze", "quantidade_meses": 1 },
+        { "cargo_id": "1476596726210105524", "cargo_nome": "Prata", "quantidade_meses": 2 },
+        { "cargo_id": "1476597140032589866", "cargo_nome": "Ouro", "quantidade_meses": 3 },
+        { "cargo_id": "1476597897133949020", "cargo_nome": "Jade", "quantidade_meses": 4 },
+        { "cargo_id": "1476598479588556864", "cargo_nome": "Safira", "quantidade_meses": 5 },
+        { "cargo_id": "1476599309192532111", "cargo_nome": "Rubi", "quantidade_meses": 6 },
+        { "cargo_id": "1521938644800110624", "cargo_nome": "Esmeralda", "quantidade_meses": 7 },
+        { "cargo_id": "1521938644800110624", "cargo_nome": "Diamante", "quantidade_meses": 9 },
+        { "cargo_id": "1521938757853642772", "cargo_nome": "Opala", "quantidade_meses": 11 },
+        { "cargo_id": "1521938729718251562", "cargo_nome": "Mítico", "quantidade_meses": 12 },
+        { "cargo_id": "1521938931682377961", "cargo_nome": "Lendário", "quantidade_meses": 18 },
+        { "cargo_id": "1521938827038687444", "cargo_nome": "Eterno", "quantidade_meses": 24 }
+    ]
+}

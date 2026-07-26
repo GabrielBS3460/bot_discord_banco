@@ -58,6 +58,15 @@ for (const folder of commandFolders) {
 }
 
 client.on("interactionCreate", async interaction => {
+    if (interaction.isButton()) {
+        const conectarCmd = client.commands.get("conectar-catarse");
+        if (conectarCmd?.handleButtonInteraction) {
+            const handled = await conectarCmd.handleButtonInteraction(interaction);
+            if (handled) return;
+        }
+        return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
