@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const catarseRepo = require("../../repositories/CatarseRepository.js");
 const catarseService = require("../../services/CatarseService.js");
 
@@ -48,9 +48,17 @@ function buildSummaryEmbed(stats) {
         .setTimestamp();
 }
 
-async function execute({ interaction }) {
-    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-        return interaction.reply({ content: "Este comando é restrito a administradores.", flags: MessageFlags.Ephemeral });
+async function execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_CORRETOR }) {
+    const temPermissao =
+        interaction.member.roles.cache.has(ID_CARGO_ADMIN) ||
+        interaction.member.roles.cache.has(ID_CARGO_MOD) ||
+        interaction.member.roles.cache.has(ID_CARGO_CORRETOR);
+
+    if (!temPermissao) {
+        return interaction.reply({
+            content: "🚫 Você não tem permissão para usar este comando.",
+            flags: MessageFlags.Ephemeral
+        });
     }
 
     await interaction.deferReply({ ephemeral: true });
@@ -110,7 +118,6 @@ async function execute({ interaction }) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("admin-catarse-resumo")
-        .setDescription("Resumo das assinaturas do Catarse")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+        .setDescription("Resumo das assinaturas do Catarse"),
     execute,
 };

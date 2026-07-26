@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require("discord.js");
 const catarseService = require("../../services/CatarseService.js");
 
 function buildSyncSummaryEmbed(summary) {
@@ -23,7 +23,19 @@ function buildSyncSummaryEmbed(summary) {
         .setTimestamp();
 }
 
-async function execute({ interaction }) {
+async function execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_CORRETOR }) {
+    const temPermissao =
+        interaction.member.roles.cache.has(ID_CARGO_ADMIN) ||
+        interaction.member.roles.cache.has(ID_CARGO_MOD) ||
+        interaction.member.roles.cache.has(ID_CARGO_CORRETOR);
+
+    if (!temPermissao) {
+        return interaction.reply({
+            content: "🚫 Você não tem permissão para usar este comando.",
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
     await interaction.deferReply({ ephemeral: true });
 
     try {

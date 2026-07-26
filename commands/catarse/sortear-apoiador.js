@@ -6,7 +6,19 @@ function getRandomItem(list) {
     return list[Math.floor(Math.random() * list.length)];
 }
 
-async function execute({ interaction }) {
+async function execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_CORRETOR }) {
+    const temPermissao =
+        interaction.member.roles.cache.has(ID_CARGO_ADMIN) ||
+        interaction.member.roles.cache.has(ID_CARGO_MOD) ||
+        interaction.member.roles.cache.has(ID_CARGO_CORRETOR);
+
+    if (!temPermissao) {
+        return interaction.reply({
+            content: "🚫 Você não tem permissão para usar este comando.",
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
     const linkedEmails = await catarseRepo.listarEmails();
 
     if (linkedEmails.length === 0) {
