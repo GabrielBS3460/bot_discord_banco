@@ -4,8 +4,13 @@ const catarseRepo = require("../../repositories/CatarseRepository.js");
 const catarseService = require("../../services/CatarseService.js");
 
 const COL = {
-    nomeCompleto: 0, emailCatarse: 4, pagamentoMensal: 5,
-    totalPago: 8, statusAssinatura: 9, dataInicio: 12,
+    nomeCompleto: 2,
+    emailCatarse: 4,
+    pagamentoMensal: 11,
+    totalPago: 18,
+    statusAssinatura: 9,
+    dataInicio: 8,
+    mesesAssinante: 17
 };
 
 function parseDateValue(value) {
@@ -19,9 +24,23 @@ function parseDateValue(value) {
     const text = String(value).trim();
     if (!text) return null;
 
+    const brDateTime = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (brDateTime) {
+        const day = Number(brDateTime[1]),
+            month = Number(brDateTime[2]),
+            year = Number(brDateTime[3].length === 2 ? `20${brDateTime[3]}` : brDateTime[3]),
+            hour = Number(brDateTime[4] || 0),
+            minute = Number(brDateTime[5] || 0),
+            second = Number(brDateTime[6] || 0);
+        const parsed = new Date(year, month - 1, day, hour, minute, second);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
     const brDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
     if (brDate) {
-        const day = Number(brDate[1]), month = Number(brDate[2]), year = Number(brDate[3].length === 2 ? `20${brDate[3]}` : brDate[3]);
+        const day = Number(brDate[1]),
+            month = Number(brDate[2]),
+            year = Number(brDate[3].length === 2 ? `20${brDate[3]}` : brDate[3]);
         const parsed = new Date(year, month - 1, day);
         return Number.isNaN(parsed.getTime()) ? null : parsed;
     }
@@ -29,13 +48,30 @@ function parseDateValue(value) {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-function calculateMonths(startDate) {
-    if (!startDate) return null;
-    const now = new Date();
-    const diffMs = now.getTime() - startDate.getTime();
-    if (diffMs < 0) return 0;
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    return Number((diffDays / 30.4375).toFixed(1));
+function parseMonthsValue(value) {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+
+    const text = String(value).trim();
+    if (!text) return null;
+
+    const parsed = Number(text.replace(",", "."));
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getDateValueFromRow(row, preferredIndex) {
+    const candidateIndexes = [preferredIndex, preferredIndex - 1, preferredIndex + 1];
+
+    for (const index of candidateIndexes) {
+        const candidate = row[index];
+        if (candidate === null || candidate === undefined || candidate === "") continue;
+        if (typeof candidate === "number" && index !== preferredIndex) continue;
+
+        const parsed = parseDateValue(candidate);
+        if (parsed) return parsed;
+    }
+
+    return null;
 }
 
 async function readAttachmentBuffer(url) {
@@ -51,7 +87,7 @@ function mapRowToRecord(row) {
     const totalPago = catarseService.parseCurrencyLike(row[COL.totalPago]);
     const pagamentoMensal = catarseService.parseCurrencyLike(row[COL.pagamentoMensal]);
     const status = String(row[COL.statusAssinatura] || "").trim();
-    const dataInicioDate = parseDateValue(row[COL.dataInicio]);
+    const dataInicioDate = getDateValueFromRow(row, COL.dataInicio);
 
     return {
         id: email,
@@ -61,7 +97,7 @@ function mapRowToRecord(row) {
         totalPago,
         status,
         dataDeInicio: dataInicioDate ? dataInicioDate.toISOString().slice(0, 10) : null,
-        mesesAssinante: calculateMonths(dataInicioDate),
+        mesesAssinante: parseMonthsValue(row[COL.mesesAssinante])
     };
 }
 
@@ -101,19 +137,29 @@ async function execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_COR
     const existingRows = await catarseRepo.listarAssinantes();
     const existingById = new Map(existingRows.map(item => [item.id, item]));
 
-    let inserted = 0, updated = 0, skipped = 0;
+    let inserted = 0,
+        updated = 0,
+        skipped = 0;
     const emailsValidos = [];
 
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
-        const hasData = [row[COL.nomeCompleto], row[COL.emailCatarse], row[COL.pagamentoMensal],
-            row[COL.totalPago], row[COL.statusAssinatura], row[COL.dataInicio]]
-            .some(value => String(value || "").trim() !== "");
+        const hasData = [
+            row[COL.nomeCompleto],
+            row[COL.emailCatarse],
+            row[COL.pagamentoMensal],
+            row[COL.totalPago],
+            row[COL.statusAssinatura],
+            row[COL.dataInicio]
+        ].some(value => String(value || "").trim() !== "");
 
         if (!hasData) continue;
 
         const record = mapRowToRecord(row);
-        if (!record.email || !catarseService.isValidEmail(record.email)) { skipped++; continue; }
+        if (!record.email || !catarseService.isValidEmail(record.email)) {
+            skipped++;
+            continue;
+        }
 
         emailsValidos.push(record.email);
         await catarseRepo.upsertAssinante(record);
@@ -123,10 +169,11 @@ async function execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_COR
 
     const [emailsRemovidos, assinantesRemovidos] = await Promise.all([
         catarseRepo.removerEmailsForaDaLista(emailsValidos),
-        catarseRepo.removerAssinantesForaDaLista(emailsValidos),
+        catarseRepo.removerAssinantesForaDaLista(emailsValidos)
     ]);
 
-    let syncSummary = null, syncError = null;
+    let syncSummary = null,
+        syncError = null;
     try {
         syncSummary = await catarseService.syncCatarseRoles(interaction.client, interaction.guildId);
     } catch (error) {
@@ -144,12 +191,16 @@ async function execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_COR
             { name: "Assinantes Removidos", value: String(assinantesRemovidos), inline: true },
             { name: "Sync Processados", value: String(syncSummary ? syncSummary.processed : 0), inline: true },
             { name: "Sync Cargos Atribuídos", value: String(syncSummary ? syncSummary.roleAssigned : 0), inline: true },
-            { name: "Sync Erros", value: String(syncSummary ? syncSummary.errors.length : 0), inline: true },
+            { name: "Sync Erros", value: String(syncSummary ? syncSummary.errors.length : 0), inline: true }
         )
         .setTimestamp();
 
     if (syncError) {
-        embed.addFields({ name: "Aviso", value: `Importação concluída, mas a sync de cargos falhou: ${syncError}`, inline: false });
+        embed.addFields({
+            name: "Aviso",
+            value: `Importação concluída, mas a sync de cargos falhou: ${syncError}`,
+            inline: false
+        });
     }
 
     return interaction.editReply({ embeds: [embed] });
@@ -160,7 +211,7 @@ module.exports = {
         .setName("admin-catarse-importar")
         .setDescription("Importa assinantes de uma planilha XLSX")
         .addAttachmentOption(option =>
-            option.setName("arquivo").setDescription("Planilha .xlsx com dados de assinantes").setRequired(true),
+            option.setName("arquivo").setDescription("Planilha .xlsx com dados de assinantes").setRequired(true)
         ),
-    execute,
+    execute
 };

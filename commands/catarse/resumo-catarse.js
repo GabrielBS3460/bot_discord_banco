@@ -19,6 +19,21 @@ function buildRoleCountsText(roleConfigs, roleCounts, noEligibleRole) {
     return lines.length > 0 ? lines.join("\n") : "Nenhum cargo configurado.";
 }
 
+function buildTopPaidText(subscribers) {
+    const topPaid = [...subscribers]
+        .map(item => ({
+            nome: String(item.nome || item.email || "Sem nome").trim() || "Sem nome",
+            totalPago: Number(item.totalPago)
+        }))
+        .filter(item => Number.isFinite(item.totalPago))
+        .sort((a, b) => b.totalPago - a.totalPago)
+        .slice(0, 3);
+
+    if (topPaid.length === 0) return "Nenhum valor disponível.";
+
+    return topPaid.map((item, index) => `${index + 1}. ${item.nome} - ${formatMoney(item.totalPago)}`).join("\n");
+}
+
 function buildSummaryEmbed(stats) {
     return new EmbedBuilder()
         .setColor(0x1c7ed6)
@@ -30,20 +45,18 @@ function buildSummaryEmbed(stats) {
             {
                 name: "Tempo médio de apoio",
                 value: stats.averageMonths !== null ? formatMonths(stats.averageMonths) : "Indisponível",
-                inline: true,
+                inline: true
             },
             {
-                name: "Maior valor pago",
-                value: stats.richestSubscriber
-                    ? `${stats.richestSubscriber.nome || "Sem nome"} (${stats.richestSubscriber.email || "sem email"})\n${formatMoney(stats.richestSubscriber.totalPago)}`
-                    : "Indisponível",
-                inline: false,
+                name: "Top 3 por total pago",
+                value: buildTopPaidText(stats.subscribers),
+                inline: false
             },
             {
                 name: "Assinaturas por cargo",
                 value: buildRoleCountsText(stats.roleConfigs, stats.roleCounts, stats.noEligibleRole),
-                inline: false,
-            },
+                inline: false
+            }
         )
         .setTimestamp();
 }
@@ -63,16 +76,14 @@ async function execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_COR
 
     await interaction.deferReply({ ephemeral: true });
 
-    const [subscribers, linkedEmails] = await Promise.all([
-        catarseRepo.listarAssinantes(),
-        catarseRepo.listarEmails(),
-    ]);
+    const [subscribers, linkedEmails] = await Promise.all([catarseRepo.listarAssinantes(), catarseRepo.listarEmails()]);
 
     const roleConfigs = catarseService.getRoleConfigs();
     const roleCounts = new Map(roleConfigs.map(item => [item.cargo_nome, 0]));
 
-    let totalMonths = 0, validMonthsCount = 0, noEligibleRole = 0;
-    let richestSubscriber = null, richestTotalPago = -Infinity;
+    let totalMonths = 0,
+        validMonthsCount = 0,
+        noEligibleRole = 0;
 
     for (const subscriber of subscribers) {
         const months = Number(subscriber.mesesAssinante);
@@ -89,35 +100,32 @@ async function execute({ interaction, ID_CARGO_ADMIN, ID_CARGO_MOD, ID_CARGO_COR
         } else {
             noEligibleRole++;
         }
-
-        const totalPago = Number(subscriber.totalPago);
-        if (Number.isFinite(totalPago) && totalPago > richestTotalPago) {
-            richestTotalPago = totalPago;
-            richestSubscriber = subscriber;
-        }
     }
 
     const activeSubscriptions = subscribers.filter(
-        item => String(item.status || "").trim().toLowerCase() === "ativa",
+        item =>
+            String(item.status || "")
+                .trim()
+                .toLowerCase() === "ativa"
     ).length;
 
     const stats = {
         totalSubscriptions: subscribers.length,
         activeSubscriptions,
-        connectedEmails: new Set(linkedEmails.map(item => catarseService.normalizeEmail(item.email)).filter(Boolean)).size,
+        connectedEmails: new Set(linkedEmails.map(item => catarseService.normalizeEmail(item.email)).filter(Boolean))
+            .size,
         averageMonths: validMonthsCount > 0 ? totalMonths / validMonthsCount : null,
-        richestSubscriber,
+
         roleConfigs,
         roleCounts,
-        noEligibleRole,
+        subscribers,
+        noEligibleRole
     };
 
     return interaction.editReply({ embeds: [buildSummaryEmbed(stats)] });
 }
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName("admin-catarse-resumo")
-        .setDescription("Resumo das assinaturas do Catarse"),
-    execute,
+    data: new SlashCommandBuilder().setName("admin-catarse-resumo").setDescription("Resumo das assinaturas do Catarse"),
+    execute
 };
