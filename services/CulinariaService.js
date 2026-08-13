@@ -178,11 +178,12 @@ class CulinariaService {
 
     async atualizarFeirinhaSeNecessario(personagem, DB_CULINARIA) {
         const agora = new Date();
-        const ultimaGeracao = personagem.feira_data_geracao ? new Date(personagem.feira_data_geracao) : new Date(0);
-        const diffDias = (agora - ultimaGeracao) / (1000 * 60 * 60 * 24);
+        const ultimaGeracao = personagem.feira_data_geracao ? new Date(personagem.feira_data_geracao) : null;
+        const diffDias = ultimaGeracao ? (agora - ultimaGeracao) / (1000 * 60 * 60 * 24) : 999;
         let itensLoja = personagem.feira_itens || [];
 
-        if (diffDias >= 7 || itensLoja.length === 0) {
+        // Renova a feirinha APENAS se nunca gerou antes ou se já se passaram 7 dias completos
+        if (!ultimaGeracao || diffDias >= 7) {
             const todosIngredientes = Object.keys(DB_CULINARIA.INGREDIENTES);
             const sorteados = [];
 

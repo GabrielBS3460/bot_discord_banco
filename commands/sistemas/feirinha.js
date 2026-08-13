@@ -65,9 +65,11 @@ module.exports = {
             const rowInicial = montarMenu(itensLoja);
             const componentsInicial = rowInicial ? [rowInicial] : [];
 
+            const diasRestantes = Math.max(1, Math.ceil(7 - diffDias));
+
             const contentInicial = rowInicial
-                ? `🥦 **Feirinha da Semana** (Reseta em: ${7 - Math.floor(diffDias)} dias)\n💰 **Seu Saldo:** K$ ${char.saldo}\n🎒 **Seu Estoque:** ${listaEstoque}\n\n*Selecione abaixo para comprar:*`
-                : `🥦 **Feirinha da Semana**\n🚫 **Estoque Esgotado!** Volte na próxima semana.`;
+                ? `🥦 **Feirinha da Semana** (Reseta em: ${diasRestantes} dia(s))\n💰 **Seu Saldo:** K$ ${char.saldo}\n🎒 **Seu Estoque:** ${listaEstoque}\n\n*Selecione abaixo para comprar:*`
+                : `🥦 **Feirinha da Semana**\n🚫 **Estoque Esgotado!** Você comprou todos os 15 itens desta semana. A feirinha será renovada em **${diasRestantes} dia(s)**.`;
 
             const msg = await interaction.reply({
                 content: contentInicial,
@@ -101,7 +103,7 @@ module.exports = {
 
                     const novoConteudo = novoRow
                         ? `✅ Comprou **${nome}**!\n💰 **Saldo:** K$ ${saldoAtualizado.toFixed(2)}\n🎒 **Estoque:** ${estoqueFormatado}\n\n*Continue comprando:*`
-                        : `✅ Comprou **${nome}**!\n🚫 **Estoque da Feirinha acabou!**`;
+                        : `✅ Comprou **${nome}**!\n🚫 **Estoque da Feirinha esgotado!** Você comprou os 15 itens da semana. Volte em **${diasRestantes} dia(s)**.`;
 
                     await i.update({
                         content: novoConteudo,
