@@ -23,6 +23,17 @@ class AvaliacaoRepository {
             where: { mestre_id: mestreId }
         });
     }
+
+    async buscarPorNomeMissao(nomeMissao) {
+        return prisma.avaliacao.findMany({
+            where: {
+                nome_missao: {
+                    equals: nomeMissao,
+                    mode: "insensitive"
+                }
+            }
+        });
+    }
 }
 
 module.exports = new AvaliacaoRepository();

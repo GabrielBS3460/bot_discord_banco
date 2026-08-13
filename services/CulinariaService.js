@@ -41,6 +41,66 @@ class CulinariaService {
         });
     }
 
+    async aprenderReceitaPorForja(personagemId, nomeReceita, custoKwanzas) {
+        const CUSTO_FORJA = 6.0;
+
+        const charAtual = await prisma.personagens.findUnique({
+            where: { id: personagemId }
+        });
+
+        if (!charAtual) {
+            throw new Error("PERSONAGEM_NAO_ENCONTRADO");
+        }
+
+        this.verificarPericia(charAtual);
+
+        const conhecidas = charAtual.receitas_conhecidas || [];
+        if (conhecidas.includes(nomeReceita)) {
+            throw new Error("RECEITA_JA_CONHECIDA");
+        }
+
+        if (charAtual.pontos_forja_atual < CUSTO_FORJA) {
+            throw new Error("PONTOS_INSUFICIENTES");
+        }
+
+        if (charAtual.saldo < custoKwanzas) {
+            throw new Error("SALDO_INSUFICIENTE");
+        }
+
+        const novasConhecidas = [...conhecidas, nomeReceita];
+
+        await prisma.$transaction([
+            prisma.personagens.update({
+                where: { id: charAtual.id },
+                data: {
+                    receitas_conhecidas: novasConhecidas,
+                    pontos_forja_atual: { decrement: CUSTO_FORJA },
+                    saldo: { decrement: custoKwanzas }
+                }
+            }),
+            prisma.transacao.create({
+                data: {
+                    personagem_id: charAtual.id,
+                    descricao: `Aprendeu a receita: ${nomeReceita} (Culinária)`,
+                    valor: custoKwanzas,
+                    tipo: "GASTO",
+                    categoria: "CULINARIA"
+                }
+            })
+        ]);
+
+        return {
+            saldoAnterior: charAtual.saldo,
+            saldoAtualizado: charAtual.saldo - custoKwanzas,
+            pontosAnteriores: charAtual.pontos_forja_atual,
+            pontosAtualizados: charAtual.pontos_forja_atual - CUSTO_FORJA,
+            receita: nomeReceita,
+            custoKwanzas,
+            custoForja: CUSTO_FORJA,
+            totalConhecidas: novasConhecidas.length
+        };
+    }
+
     analisarIngredientes(receitasSelecionadas, estoque, pontosForja, DB_CULINARIA) {
         let ingredientesAgregados = {};
         let efeitosPadrao = [];

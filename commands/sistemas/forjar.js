@@ -54,7 +54,7 @@ module.exports = {
                 : "";
 
             const msg = await interaction.reply({
-                content: `🔨 **Oficina de Forja**\n💰 Saldo: ${formatarMoeda(char.saldo)}\n🔥 Pontos de Forja: ${char.pontos_forja_atual.toFixed(1)}${msgFiltroAviso}\n\nSelecione o **TIPO** de item que deseja criar ou aprimorar:`,
+                content: `🔨 **Oficina de Forja**\n👤 **Ferreiro:** **${char.nome}** (${interaction.user})\n💰 **Saldo:** ${formatarMoeda(char.saldo)}\n🔥 **Pontos de Forja:** ${char.pontos_forja_atual.toFixed(1)} pts${msgFiltroAviso}\n\nSelecione o **TIPO** de item que deseja criar ou aprimorar:`,
                 components: [new ActionRowBuilder().addComponents(menuTipos)],
                 flags: MessageFlags.Ephemeral,
                 fetchReply: true
@@ -159,12 +159,17 @@ module.exports = {
                         .setTitle("⚒️ Confirmação de Forja")
                         .setDescription("Verifique as informações abaixo antes de confirmar a execução da forja:")
                         .addFields(
+                            { name: "👤 Personagem", value: `**${char.nome}**`, inline: true },
                             { name: "📦 Item", value: nomeItem, inline: true },
                             { name: "🔢 Quantidade", value: `${qtd}`, inline: true },
                             { name: "💰 Custo em Kwanzas", value: formatarMoeda(custoOuro), inline: true },
                             { name: "🔨 Pontos de Forja", value: `${custoPontosTotal} pts`, inline: true },
                             { name: "📋 Tipo", value: tipoSelecionado, inline: true }
                         );
+
+                    if (linkItem) {
+                        confirmEmbed.addFields({ name: "📝 Descrição", value: linkItem, inline: false });
+                    }
 
                     if (itemBase) {
                         confirmEmbed.addFields({ name: "♻️ Item Base Consumido", value: itemBase.nome, inline: false });
@@ -211,16 +216,17 @@ module.exports = {
                         );
 
                         if (itemBase) {
-                            await ItensRepository.removerItem(itemBase.id, qtd);
+                            const qtdRemover = itemBase.tipo === "Munição" ? Math.min(qtd, itemBase.quantidade) : itemBase.quantidade;
+                            await ItensRepository.removerItem(itemBase.id, qtdRemover);
                         }
 
                         let tipoFinal = tipoSelecionado;
-                        if (itemBase) {
+                        if (tipoSelecionado === "Encantamento") {
+                            tipoFinal = "Item Mágico";
+                        } else if (itemBase) {
                             tipoFinal = itemBase.tipo;
                         } else if (tipoSelecionado === "Melhorias") {
                             tipoFinal = "Itens Permanentes";
-                        } else if (tipoSelecionado === "Encantamento") {
-                            tipoFinal = "Item Mágico";
                         }
 
                         const qtdAdicionar = !itemBase && tipoSelecionado === "Munição" ? qtd * 20 : qtd;
@@ -228,15 +234,16 @@ module.exports = {
                         await ItensRepository.adicionarItem(char.id, nomeItem, tipoFinal, qtdAdicionar, linkItem || null);
 
                         const textoBase = itemBase ? `\n♻️ **Item Base Consumido:** ${itemBase.nome}` : "";
+                        const textoDescricao = linkItem ? `\n📝 **Descrição:** ${linkItem}` : "";
 
                         await iConf.editReply({
-                            content: `✅ Forja concluída e item salvo no inventário!\n⚙️ **Resumo:** Saldo: ${formatarMoeda(saldoAtualizado)} | Pts Restantes: ${pontosAtualizados.toFixed(1)}`,
+                            content: `✅ Forja de **${char.nome}** concluída e item salvo no inventário!\n⚙️ **Resumo:** Saldo: ${formatarMoeda(saldoAtualizado)} | Pts Restantes: ${pontosAtualizados.toFixed(1)}`,
                             embeds: [],
                             components: []
                         });
 
                         await interaction.channel.send({
-                            content: `⚒️ **NOVO ITEM NA FORJA!** ⚒️\n\n👤 **Ferreiro:** ${interaction.user}\n📦 **Item:** ${qtdAdicionar}x **${nomeItem}**\n📑 **Tipo:** ${tipoFinal}${textoBase}\n💰 **Custo:** ${formatarMoeda(custoOuro)}\n🔨 **Esforço:** ${custoPontosTotal} pts\n\n*A oficina ferve com o som do martelo!*`
+                            content: `⚒️ **NOVO ITEM NA FORJA!** ⚒️\n\n👤 **Ferreiro:** **${char.nome}** (${interaction.user})\n📦 **Item:** ${qtdAdicionar}x **${nomeItem}**\n📑 **Tipo:** ${tipoFinal}${textoBase}${textoDescricao}\n💰 **Custo:** ${formatarMoeda(custoOuro)}\n🔨 **Esforço:** ${custoPontosTotal} pts\n\n*A oficina ferve com o som do martelo!*`
                         });
 
                         await msg.edit({ components: [] }).catch(() => {});
@@ -271,9 +278,12 @@ module.exports = {
                     if (tipoSelecionado === "Melhorias" || tipoSelecionado === "Encantamento") {
                         const inventario = await ItensRepository.buscarInventario(char.id);
 
-                        let itensValidos = inventario.filter(
-                            item => item.tipo === "Itens Permanentes" || item.tipo === "Munição"
-                        );
+                        let itensValidos = inventario.filter(item => {
+                            if (tipoSelecionado === "Encantamento") {
+                                return item.tipo === "Itens Permanentes" || item.tipo === "Item Mágico" || item.tipo === "Munição";
+                            }
+                            return item.tipo === "Itens Permanentes" || item.tipo === "Munição";
+                        });
 
                         if (filtroNome) {
                             itensValidos = itensValidos.filter(item => item.nome.toLowerCase().includes(filtroNome));

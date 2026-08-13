@@ -102,6 +102,10 @@ module.exports = {
                     });
                 }
 
+                const percentualDesconto = interaction.options.getNumber("desconto") || 0;
+                const textoDesconto = percentualDesconto > 0 ? ` (Desconto: ${percentualDesconto}%)` : "";
+                const calcularCustoMob = custoBase => Math.round(custoBase * (1 - percentualDesconto / 100));
+
                 const mobiliasArray = Object.entries(MOBILIAS).sort((a, b) => a[0].localeCompare(b[0]));
                 const half = Math.ceil(mobiliasArray.length / 2);
 
@@ -114,27 +118,26 @@ module.exports = {
 
                 mobiliasArray
                     .slice(0, half)
-                    .forEach(([nome, d]) =>
+                    .forEach(([nome, d]) => {
+                        const custoReal = calcularCustoMob(d.custo);
                         menuA_L.addOptions(
                             new StringSelectMenuOptionBuilder()
-                                .setLabel(`${nome} (K$ ${d.custo})`)
+                                .setLabel(`${nome} (${formatarMoeda(custoReal)})`)
                                 .setDescription(d.desc.substring(0, 100))
                                 .setValue(nome)
-                        )
-                    );
+                        );
+                    });
                 mobiliasArray
                     .slice(half)
-                    .forEach(([nome, d]) =>
+                    .forEach(([nome, d]) => {
+                        const custoReal = calcularCustoMob(d.custo);
                         menuM_Z.addOptions(
                             new StringSelectMenuOptionBuilder()
-                                .setLabel(`${nome} (K$ ${d.custo})`)
+                                .setLabel(`${nome} (${formatarMoeda(custoReal)})`)
                                 .setDescription(d.desc.substring(0, 100))
                                 .setValue(nome)
-                        )
-                    );
-
-                const percentualDesconto = interaction.options.getNumber("desconto") || 0;
-                const textoDesconto = percentualDesconto > 0 ? ` (Desconto aplicado: ${percentualDesconto}%)` : "";
+                        );
+                    });
 
                 const response = await interaction.editReply({
                     content: `🛋️ **Loja de Mobílias**\n**Base:** ${base.nome} | **Seu Saldo:** ${formatarMoeda(char.saldo)}${textoDesconto}\n\n*Selecione o item que deseja comprar:*`,
@@ -154,10 +157,11 @@ module.exports = {
                     await iSelect.deferUpdate();
                     const escolhido = iSelect.values[0];
                     const dadosMob = MOBILIAS[escolhido];
+                    const custoMob = calcularCustoMob(dadosMob.custo);
 
-                    if (char.saldo < dadosMob.custo) {
+                    if (char.saldo < custoMob) {
                         return iSelect.followUp({
-                            content: `💸 Você não tem K$ ${dadosMob.custo} para comprar **${escolhido}**.`,
+                            content: `💸 Você não tem ${formatarMoeda(custoMob)} para comprar **${escolhido}**.${textoDesconto}`,
                             flags: MessageFlags.Ephemeral
                         });
                     }
@@ -184,13 +188,13 @@ module.exports = {
                         await prisma.$transaction([
                             prisma.personagens.update({
                                 where: { id: char.id },
-                                data: { saldo: { decrement: dadosMob.custo } }
+                                data: { saldo: { decrement: custoMob } }
                             }),
                             prisma.transacao.create({
                                 data: {
                                     personagem_id: char.id,
-                                    descricao: `Comprou: Gárgula animada`,
-                                    valor: dadosMob.custo,
+                                    descricao: `Comprou: Gárgula animada${textoDesconto}`,
+                                    valor: custoMob,
                                     tipo: "GASTO"
                                 }
                             }),
@@ -199,7 +203,7 @@ module.exports = {
                         ]);
 
                         await interaction.editReply({
-                            content: `✅ **Gárgula Animada** instalada nos muros! K$ ${dadosMob.custo} deduzidos.\n🛡️ Segurança da base aumentou em +2!`,
+                            content: `✅ **Gárgula Animada** instalada nos muros! ${formatarMoeda(custoMob)} deduzidos.${textoDesconto}\n🛡️ Segurança da base aumentou em +2!`,
                             components: []
                         });
                         return collector.stop();
@@ -243,7 +247,7 @@ module.exports = {
                     });
 
                     const msgConfirm = await iSelect.followUp({
-                        content: `**Item:** ${escolhido} (K$ ${dadosMob.custo})\nSelecione o cômodo de destino:`,
+                        content: `**Item:** ${escolhido} (${formatarMoeda(custoMob)})${textoDesconto}\nSelecione o cômodo de destino:`,
                         components: [new ActionRowBuilder().addComponents(menuInstalar)],
                         flags: MessageFlags.Ephemeral,
                         withResponse: true
@@ -259,20 +263,20 @@ module.exports = {
                         const comodoId = parseInt(iInst.values[0]);
 
                         const charNaHora = await prisma.personagens.findUnique({ where: { id: char.id } });
-                        if (charNaHora.saldo < dadosMob.custo) {
+                        if (charNaHora.saldo < custoMob) {
                             return iInst.followUp({ content: "💸 Saldo insuficiente.", flags: MessageFlags.Ephemeral });
                         }
 
                         await prisma.$transaction([
                             prisma.personagens.update({
                                 where: { id: char.id },
-                                data: { saldo: { decrement: dadosMob.custo } }
+                                data: { saldo: { decrement: custoMob } }
                             }),
                             prisma.transacao.create({
                                 data: {
                                     personagem_id: char.id,
-                                    descricao: `Comprou mobília: ${escolhido}`,
-                                    valor: dadosMob.custo,
+                                    descricao: `Comprou mobília: ${escolhido}${textoDesconto}`,
+                                    valor: custoMob,
                                     tipo: "GASTO"
                                 }
                             }),
@@ -282,7 +286,7 @@ module.exports = {
                         ]);
 
                         await interaction.editReply({
-                            content: `✅ **${escolhido}** instalada com sucesso! K$ ${dadosMob.custo} deduzidos.`,
+                            content: `✅ **${escolhido}** instalada com sucesso! ${formatarMoeda(custoMob)} deduzidos.${textoDesconto}`,
                             components: []
                         });
 
