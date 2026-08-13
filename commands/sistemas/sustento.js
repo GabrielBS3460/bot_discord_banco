@@ -108,6 +108,8 @@ module.exports = {
                             time: 120000
                         });
 
+                        await submit.deferReply();
+
                         const bonusTesteRaw = submit.fields.getTextInputValue("inp_bonus_teste").replace("+", "").trim();
                         const bonusGanhoRaw = submit.fields.getTextInputValue("inp_bonus_ganho").replace("+", "").trim();
                         const semanasRaw = submit.fields.getTextInputValue("inp_semanas").trim();
@@ -117,9 +119,8 @@ module.exports = {
                         const semanas = Math.max(1, parseInt(semanasRaw) || 1);
 
                         if (isNaN(bonusTeste)) {
-                            return submit.reply({
-                                content: "🚫 **Bônus de teste inválido!** Digite um número inteiro.",
-                                flags: MessageFlags.Ephemeral
+                            return submit.editReply({
+                                content: "🚫 **Bônus de teste inválido!** Digite um número inteiro."
                             });
                         }
 
@@ -154,7 +155,7 @@ module.exports = {
                                 .setTimestamp();
 
                             collector.stop();
-                            return submit.reply({ embeds: [embedFalha] });
+                            return submit.editReply({ embeds: [embedFalha] });
                         }
 
                         const embedSucesso = new EmbedBuilder()
@@ -174,7 +175,7 @@ module.exports = {
                             .setTimestamp();
 
                         collector.stop();
-                        return submit.reply({ embeds: [embedSucesso] });
+                        return submit.editReply({ embeds: [embedSucesso] });
                     } catch (err) {
                         if (err.code === "InteractionCollectorError" || err.message?.includes("time")) {
                             return;
