@@ -279,10 +279,11 @@ module.exports = {
                         const inventario = await ItensRepository.buscarInventario(char.id);
 
                         let itensValidos = inventario.filter(item => {
-                            if (tipoSelecionado === "Encantamento") {
-                                return item.tipo === "Itens Permanentes" || item.tipo === "Item Mágico" || item.tipo === "Munição";
-                            }
-                            return item.tipo === "Itens Permanentes" || item.tipo === "Munição";
+                            return (
+                                item.tipo === "Itens Permanentes" ||
+                                item.tipo === "Item Mágico" ||
+                                item.tipo === "Munição"
+                            );
                         });
 
                         if (filtroNome) {
@@ -292,7 +293,7 @@ module.exports = {
                         if (itensValidos.length === 0) {
                             const msgErro = filtroNome
                                 ? `🚫 Você não possui nenhum item base contendo "**${interaction.options.getString("filtro")}**" no inventário.`
-                                : "🚫 Você não possui nenhum **Item Permanente** ou **Munição** no inventário para usar como base.";
+                                : "🚫 Você não possui nenhum **Item Permanente**, **Item Mágico** ou **Munição** no inventário para usar como base.";
 
                             return i.reply({
                                 content: msgErro,

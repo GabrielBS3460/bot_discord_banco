@@ -17,7 +17,7 @@ module.exports = {
         ),
 
     async execute({ interaction, ID_CARGO_ADMIN }) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({ ephemeral: true });
 
         const nomeMissao = interaction.options.getString("nome").trim();
         const missao = await ContratoRepository.buscarPorNomeCompleto(nomeMissao);
