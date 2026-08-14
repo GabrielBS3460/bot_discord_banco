@@ -86,7 +86,7 @@ module.exports = {
                                 .setCustomId("inp_nome")
                                 .setLabel("Nome do NOVO Item")
                                 .setValue(itemBase ? itemBase.nome : "")
-                                .setPlaceholder(itemBase ? `Ex: ${itemBase.nome} +1` : "Nome do item")
+                                .setPlaceholder(itemBase ? `Ex: ${itemBase.nome.substring(0, 85)} +1` : "Nome do item")
                                 .setStyle(TextInputStyle.Short)
                                 .setRequired(true)
                         ),
@@ -306,9 +306,11 @@ module.exports = {
                             .setPlaceholder("Selecione o Item Base que será modificado...");
 
                         itensValidos.slice(0, 25).forEach(item => {
+                            const labelBruta = `${item.nome} (Qtd: ${item.quantidade})`;
+                            const labelTruncada = labelBruta.length > 100 ? labelBruta.substring(0, 97) + "..." : labelBruta;
                             menuBase.addOptions(
                                 new StringSelectMenuOptionBuilder()
-                                    .setLabel(`${item.nome} (Qtd: ${item.quantidade})`)
+                                    .setLabel(labelTruncada)
                                     .setValue(item.id.toString())
                             );
                         });
